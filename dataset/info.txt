@@ -1,0 +1,8 @@
+Dataset includes interactions. An episodes starts 2secs before a merging
+car initiations a lc. Initiation is determined by lat-speed greater than 0.1m/s.
+
+
+Data flow:
+raw-data + filtered states >>> long_lat_vel.py >>> df_all.txt (somehow it becomes df_mod)
+df_all >>> fe_run.py >>> feature_set.txt >>> data_clipper.py - clips maxes >>> feature_set2.txt
+feature_set2.txt >>> f_extraction_run.py >>> focus_set (merging episodes)
