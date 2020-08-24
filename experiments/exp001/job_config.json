@@ -10,5 +10,6 @@
     "features": [],
     "history_drop": {"percentage":0, "vehicle":3},
     "scaler":"StandardScaler"
+number of modes a parameters. 
 }
 }

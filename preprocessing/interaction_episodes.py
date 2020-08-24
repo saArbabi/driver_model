@@ -7,12 +7,39 @@ from driver_model.preprocessing import utils
 from importlib import reload
 
 reload(utils)
-
 os.getcwd()
 """
 mveh_df - merge_vehicle_df
 yveh_df - yield_vehicle_df
 """
+col = ['id','frm','scenario','lane_id',
+                                'bool_r','bool_l','pc','v_long','e_class',
+                                            'ff_id','ff_long','ff_lat','ff_v',
+                                            'fl_id','fl_long','fl_lat','fl_v',
+                                            'bl_id','bl_long','bl_lat','bl_v',
+                                            'fr_id','fr_long','fr_lat','fr_v',
+                                            'br_id','br_long','br_lat','br_v',
+                                            'bb_id','bb_long','bb_lat','bb_v',
+                                            'a_long','v_lat','a_long_f','v_lat_f']
+
+
+datasets = {
+        "i101_1": "trajdata_i101_trajectories-0750am-0805am.txt",
+        "i101_2": "trajdata_i101_trajectories-0805am-0820am.txt",
+        "i101_3": "trajdata_i101_trajectories-0820am-0835am.txt",
+        "i80_1": "trajdata_i80_trajectories-0400-0415.txt",
+        "i80_2": "trajdata_i80_trajectories-0500-0515.txt",
+        "i80_3": "trajdata_i80_trajectories-0515-0530.txt"}
+
+all_states = ['id','frm','scenario','lane_id','pc','fr_id','br_id','fl_id','bl_id',
+                                    'fl_long','bl_long','fr_long','br_long',
+                                        'v_long','a_long','v_lat','a_lat']
+
+
+
+drop_col = ['a_long_f','v_lat_f']
+feature_set = pd.read_csv('./Driver_model/feature_extraction/feature_set2.txt', delimiter=' ',header=None, names=col).drop(drop_col,axis=1)
+
 
 def get_glob_pos(initiation_frm, completion_frm, id, scenario):
     """
@@ -74,12 +101,15 @@ for scenario in datasets:
 
             mveh_glob_pos = get_glob_pos(initiation_frm, completion_frm, id, scenario)
             yveh_glob_pos = get_glob_pos(initiation_frm, completion_frm, yveh_id, scenario)
+            if ():
+                any missing frms, raise error.
+                raise
             dx, pc = get_dxpc(frm_range, mveh_glob_pos, yveh_glob_pos)
 
 
 
 
-
+be vary of model cheating
 'frm'
 'mveh_id',
 'mveh_vel',
