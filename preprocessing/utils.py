@@ -32,10 +32,26 @@ def get_p(car_glob_pos, xc, yc):
     p = A + g*U # shaddow point on centreline/current
     return p
 
+def correct_glitch(vehicle_df):
+    glitch = vehicle_df['lane_id'].diff().rolling(2).apply(lambda x: abs(all(x))==1, raw=False) == 1
+
+    if glitch.eq(False).all():
+        pass
+    else:
+        indexes = glitch.loc[glitch == True].index
+        for indx in indexes:
+            indx -= 1
+            vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
+            vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
+                                                    0.1*vehicle_df['v_lat'].iloc[indx-1]
+
+
 def lc_entrance(vehicle_df):
     """
     :return: lane change frames for a given car
     """
+    correct_glitch(vehicle_df)
+
     lc_frms = {}
     lc_frms['left'] = vehicle_df[vehicle_df['lane_id'].diff() == -1
                                             ][['frm', 'lane_id']].values.tolist()
@@ -94,6 +110,9 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
             initiation_frm -= 20
         return initiation_frm
     else:
+        if len(vehicle_df) > 50:
+            return vehicle_df.loc[(vehicle_df['frm'] < lc_frm)].iloc[-50]['frm']
+
         return vehicle_df.iloc[0]['frm']
 
 def get_vehglob_pos(glob_pos, vehicle_id):
@@ -145,7 +164,16 @@ def get_veh_feats(mveh_df, yveh_df, gap_size, dx):
     mveh_df.loc[:,'dx'] = pd.Series(dx)
     mveh_df = mveh_df.rename(columns={'a_long':'act_long', 'v_lat':'act_lat', 'v_long':'vel'})
     mveh_df.insert(loc=6, column='gap_size', value=gap_size)
-    mveh_df.insert(loc=3, column='name', value='mveh')
-    yveh_df.insert(loc=3, column='name', value='yveh')
+    mveh_df.insert(loc=1, column='name', value='mveh')
+    yveh_df.insert(loc=1, column='name', value='yveh')
+    yveh_df = yveh_df[['id', 'name','frm', 'scenario', 'vel', 'act_long']]
+    if len(mveh_df) != len(yveh_df):
+        raise Exception("mveh and yveh have different lengths")
 
     return mveh_df, yveh_df
+
+def data_saver(mveh_df, yveh_df):
+    mveh_df.to_csv('./driver_model/datasets/mveh_df.txt',
+                                    header=None, index=None, sep=' ', mode='a')
+    yveh_df.to_csv('./driver_model/datasets/yveh_df.txt',
+                                    header=None, index=None, sep=' ', mode='a')

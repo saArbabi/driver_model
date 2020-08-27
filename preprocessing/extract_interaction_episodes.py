@@ -45,7 +45,7 @@ col_df_all = ['id','frm','scenario','lane_id','length','x_front','y_front','clas
 # %%
 
 feature_set = pd.read_csv('./driver_model/datasets/feature_set.txt', delimiter=' ',
-                        header=None, names=col, nrows=10000).drop(col_drop,axis=1)
+                        header=None, names=col).drop(col_drop,axis=1)
 
 df_all = pd.read_csv('./driver_model/datasets/df_all.txt', delimiter=' ',
                                                             header=None, names=col_df_all)
@@ -57,9 +57,7 @@ reload(road_geometry)
 xc_80, yc_80 = road_geometry.get_centerlines('./NGSIM DATA/centerlines80.txt')
 xc_101, yc_101 = road_geometry.get_centerlines('./NGSIM DATA/centerlines101.txt')
 
-
 os.chdir(cwd)
-
 # %%
 
 def get_glob_df(case_info):
@@ -83,8 +81,6 @@ def get_lane_cor(scenario, lane_id):
 
     return [xc, yc]
 
-
-
 # def get_act_lat():
 reload(utils)
 
@@ -101,8 +97,6 @@ for scenario in datasets:
     for id in ids:
         veh_df = feat_df.loc[(feat_df['id'] == id)].reset_index(drop = True)
         lc_frms = utils.lc_entrance(veh_df)
-        if counter > 10:
-            break
 
         for lc_frm, lane_id in lc_frms['right']:
 
@@ -151,11 +145,10 @@ for scenario in datasets:
                     test_list.append([case_info, gap_size])
                     counter += 1
                     case_info['gap_size'] = gap_size
-                    # draw_traj(mveh_df, yveh_df, case_info)
                     print(counter, ' ### vehicles processed ###')
 
-                    mveh_df.to_csv('./driver_model/datasets/mveh_df.txt', header=None, index=None, sep=' ', mode='a')
-                    yveh_df.to_csv('./driver_model/datasets/yveh_df.txt', header=None, index=None, sep=' ', mode='a')
+                    # draw_traj(mveh_df, yveh_df, case_info)
+                    utils.data_saver(mveh_df, yveh_df)
 
         for lc_frm, lane_id in lc_frms['left']:
 
@@ -176,6 +169,7 @@ for scenario in datasets:
 
                 frm_range = int(completion_frm-initiation_frm)
                 if frm_range > 20:
+
                     case_info = {
                     'scenario':scenario,
                     'id':id,
@@ -185,6 +179,85 @@ for scenario in datasets:
                     'initiation_frm':initiation_frm,
                     'completion_frm':completion_frm,
                     }
+
+
+# %%
+veh_df
+plt.plot(veh_df['v_lat'].iloc[350:])
+test = veh_df.iloc[400:430].copy()
+
+
+plt.plot(veh_df['pc'].iloc[350:])
+def correct_glitch(vehicle_df):
+    glitch = vehicle_df['lane_id'].diff().rolling(2).apply(lambda x: abs(all(x))==1, raw=False) == 1
+
+    if glitch.eq(False).all():
+        pass
+    else:
+        indexes = glitch.loc[glitch == True].index
+        for indx in indexes:
+            indx -= 1
+            vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
+            vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
+                                                    0.1*vehicle_df['v_lat'].iloc[indx-1]
+
+
+vehicle_df = test
+vehicle_df['lane_id'].diff().abs().isin([1]).sum()
+
+
+.rolling(5)
+
+
+apply(lambda x: abs(all(x))==1, raw=False)
+
+ == 1
+
+== 1
+test
+
+# %%
+
+ plt.plot(mveh_df['v_lat'])
+ plt.plot(veh_df['v_lat'])
+ veh_df.iloc[380:400]
+ plt.plot(test['lane_id'].iloc[380:])
+ plt.plot(test['pc'].iloc[380:])
+
+
+ test = veh_df.copy()
+ vehicle_df = pd.DataFrame([1,1,1,1,2,1,1,1,1,1,1,1,1])
+ glitch = test['lane_id'].diff().rolling(2).apply(lambda x: abs(all(x))==1, raw=False) == 1
+ glitch.eq(False).all()
+ indx =
+ glitch.loc[glitch == True].index
+
+ [0] - 1
+
+
+
+ for i in range(10):
+     i+=1
+     print(i)
+
+df
+bool.iloc[0][0]
+df.iloc[indx] = df.iloc[indx - 1]
+df.iloc[2] = 2
+df
+.astype(bool)
+
+
+
+
+
+
+plt.plot(veh_df['pc'].iloc[350:])
+mveh_df.loc[mveh_df['frm'] == 1234]
+
+['ff_id']
+
+.iloc[0]
 
                     if all(mveh_df['frm'].diff().dropna() != 1):
                         raise ValueError("There are missing frames", case_info)
@@ -203,14 +276,21 @@ for scenario in datasets:
                     test_list.append([case_info, gap_size])
                     counter += 1
                     case_info['gap_size'] = gap_size
-                    # draw_traj(mveh_df, yveh_df, case_info)
                     print(counter, ' ### vehicles processed ###')
+                    # draw_traj(mveh_df, yveh_df, case_info)
+                    utils.data_saver(mveh_df, yveh_df)
 
-                    mveh_df.to_csv('./driver_model/datasets/mveh_df.txt', header=None, index=None, sep=' ', mode='a')
-                    yveh_df.to_csv('./driver_model/datasets/yveh_df.txt', header=None, index=None, sep=' ', mode='a')
+
 
 
 # %%
+vehicle_df = veh_df
+
+initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
+                            # (vehicle_df['bl_id'] == yveh_id) &
+                            (vehicle_df['lane_id'] == 3) &
+                            (vehicle_df['v_lat'].abs() < 0.1)]
+
 mveh_df.columns
 feat_df = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
                                     (feature_set['lane_id'] < 7)] # feat_set_scene
