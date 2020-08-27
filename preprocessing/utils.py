@@ -48,9 +48,6 @@ def get_yveh(vehicle_df, lc_frm):
     yveh_id = vehicle_df.loc[vehicle_df['frm'] == lc_frm
                                                 ][['bb_id', 'e_class']]
 
-    if yveh_id.empty:
-        return 0
-
     return yveh_id.iloc[0].tolist()
 
 def get_fveh(vehicle_df, lc_frm):
@@ -79,11 +76,11 @@ def lc_completion(vehicle_df, lc_frm, yveh_id, lane_id):
 def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
     if lc_direction == 'right':
         yveh_name = 'br_id'
-        lane_id += 1
+        lane_id -= 1
 
     else:
         yveh_name = 'bl_id'
-        lane_id -= 1
+        lane_id += 1
 
     initiation_frm = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
                                 (vehicle_df[yveh_name] == yveh_id) &
@@ -92,11 +89,12 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
 
 
     if not initiation_frm.empty:
-        initiation_frm = initiation_frm.iloc[0]
+        initiation_frm = initiation_frm.iloc[-1]
         if not vehicle_df.loc[vehicle_df['frm'] == initiation_frm - 20].empty:
             initiation_frm -= 20
         return initiation_frm
     else:
+        print(vehicle_df['id'].iloc[0])
         return vehicle_df.iloc[0]['frm']
 
 def get_vehglob_pos(glob_pos, vehicle_id):
@@ -145,7 +143,7 @@ def get_veh_feats(mveh_df, yveh_df, gap_size, dx):
     mveh_df = mveh_df[['id', 'frm', 'scenario', 'v_long', 'a_long',
                                 'v_lat','pc']]
 
-    mveh_df['dx'] = pd.DataFrame(dx)
+    mveh_df.loc[:,'dx'] = pd.Series(dx)
     mveh_df = mveh_df.rename(columns={'a_long':'act_long', 'v_lat':'act_lat', 'v_long':'vel'})
     mveh_df.insert(loc=6, column='gap_size', value=gap_size)
     mveh_df.insert(loc=3, column='name', value='mveh')

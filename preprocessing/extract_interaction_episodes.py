@@ -169,9 +169,9 @@ car_df = feat_df.loc[(feat_df['id'] == 97)].reset_index(drop = True)
 def draw_traj(mveh_df, yveh_df, case_info):
     # for some vis
     fig = plt.figure()
-    item = 'act_long'
+    item = 'pc'
     plt.plot(mveh_df[item])
-    plt.plot(yveh_df[item])
+    # plt.plot(yveh_df[item])
 
     # plt.plot(yveh_df[item])
     indx = mveh_df.loc[mveh_df['frm'] == case_info['lc_frm']].index[0]
@@ -180,16 +180,18 @@ def draw_traj(mveh_df, yveh_df, case_info):
     plt.grid()
     plt.legend(['merge vehicle','yield vehicle'])
 
-    #
-    # fig = plt.figure()
-    # item = 'act_long'
+
+    fig = plt.figure()
+    item = 'act_lat'
+    plt.plot(mveh_df[item])
+
     # plt.plot(yveh_df[item])
-    # # plt.plot(yveh_df[item])
-    # indx = mveh_df.loc[mveh_df['frm'] == case_info['lc_frm']].index[0]
-    # plt.scatter(indx, mveh_df[item].iloc[indx])
-    # plt.title([case_info['id'], case_info['lc_frm']])
-    #
-    # plt.grid()
-    # plt.legend(['merge vehicle','yield vehicle'])
+    # plt.plot(yveh_df[item])
+    indx = mveh_df.loc[mveh_df['frm'] == case_info['lc_frm']].index[0]
+    plt.scatter(indx, mveh_df[item].iloc[indx])
+    plt.title([case_info['id'], case_info['lc_frm']])
+
+    plt.grid()
+    plt.legend(['merge vehicle','yield vehicle'])
 
 # %%
