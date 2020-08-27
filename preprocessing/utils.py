@@ -82,15 +82,15 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
         yveh_name = 'bl_id'
         lane_id += 1
 
-    initiation_frm = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
+    initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
                                 (vehicle_df[yveh_name] == yveh_id) &
                                 (vehicle_df['lane_id'] == lane_id) &
-                                (vehicle_df['v_lat'].abs() < 0.1)]['frm']
+                                (vehicle_df['v_lat'].abs() < 0.1)]
 
 
-    if not initiation_frm.empty:
-        initiation_frm = initiation_frm.iloc[-1]
-        if not vehicle_df.loc[vehicle_df['frm'] == initiation_frm - 20].empty:
+    if not initiation_frms.empty:
+        initiation_frm = initiation_frms['frm'].iloc[-1]
+        if not initiation_frms.loc[initiation_frms['frm'] == initiation_frm - 20].empty:
             initiation_frm -= 20
         return initiation_frm
     else:
