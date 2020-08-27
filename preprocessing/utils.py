@@ -33,17 +33,33 @@ def get_p(car_glob_pos, xc, yc):
     return p
 
 def correct_glitch(vehicle_df):
-    glitch = vehicle_df['lane_id'].diff().rolling(2).apply(lambda x: abs(all(x))==1, raw=False) == 1
+    indexes = vehicle_df[vehicle_df['lane_id'].diff() == -1].index
 
-    if glitch.eq(False).all():
-        pass
-    else:
-        indexes = glitch.loc[glitch == True].index
-        for indx in indexes:
-            indx -= 1
-            vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
-            vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
-                                                    0.1*vehicle_df['v_lat'].iloc[indx-1]
+    if len(indexes) > 1:
+        for i in range(len(indexes)-1):
+            lc_i = indexes[i]
+            lc_ii = indexes[i+1]
+            if lc_ii - lc_i < 20:
+                for indx in range(lc_i, lc_ii):
+
+                    vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
+                    vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
+                                                            0.1*vehicle_df['v_lat'].iloc[indx-1]
+
+
+    indexes = vehicle_df[vehicle_df['lane_id'].diff() == 1].index
+
+    if len(indexes) > 1:
+        for i in range(len(indexes)-1):
+            lc_i = indexes[i]
+            lc_ii = indexes[i+1]
+            if lc_ii - lc_i < 20:
+                for indx in range(lc_i, lc_ii):
+
+                    vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
+                    vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
+                                                            0.1*vehicle_df['v_lat'].iloc[indx-1]
+
 
 
 def lc_entrance(vehicle_df):
@@ -110,8 +126,8 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
             initiation_frm -= 20
         return initiation_frm
     else:
-        if len(vehicle_df) > 50:
-            return vehicle_df.loc[(vehicle_df['frm'] < lc_frm)].iloc[-50]['frm']
+        if len(vehicle_df.loc[(vehicle_df['frm'] < lc_frm)]) > 50:
+            return vehicle_df.iloc[-50]['frm']
 
         return vehicle_df.iloc[0]['frm']
 

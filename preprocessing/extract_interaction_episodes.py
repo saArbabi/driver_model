@@ -182,14 +182,22 @@ for scenario in datasets:
 
 
 # %%
+plt.plot(veh_df['v_lat'])
 veh_df
 plt.plot(veh_df['v_lat'].iloc[350:])
 test = veh_df.iloc[400:430].copy()
 
 
-plt.plot(veh_df['pc'].iloc[350:])
+plt.plot(veh_df['lane_id'].iloc[400:430])
+
+plt.plot(vehicle_df['lane_id'])
+
+
 def correct_glitch(vehicle_df):
-    glitch = vehicle_df['lane_id'].diff().rolling(2).apply(lambda x: abs(all(x))==1, raw=False) == 1
+    vehicle_df[vehicle_df['lane_id'].diff() == 1].index
+
+
+    .rolling(2).apply(lambda x: abs(all(x))==1, raw=False) == 1
 
     if glitch.eq(False).all():
         pass
@@ -202,8 +210,24 @@ def correct_glitch(vehicle_df):
                                                     0.1*vehicle_df['v_lat'].iloc[indx-1]
 
 
+plt.plot(vehicle_df['pc'].iloc[350:])
+vehicle_df = test.reset_index(drop=True)
+indexes = vehicle_df[vehicle_df['lane_id'].diff() == -1].index
+
+if len(indexes) > 1:
+    for i in range(len(indexes)-1):
+        lc_i = indexes[i]
+        lc_ii = indexes[i+1]
+        if lc_ii - lc_i < 20:
+            for indx in range(lc_i, lc_ii):
+
+                vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
+                vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
+                                                        0.1*vehicle_df['v_lat'].iloc[indx-1]
+
 vehicle_df = test
-vehicle_df['lane_id'].diff().abs().isin([1]).sum()
+vehicle_df[vehicle_df['lane_id'].diff() == -1]
+.abs().isin([1]).sum()
 
 
 .rolling(5)
