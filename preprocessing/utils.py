@@ -94,7 +94,6 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
             initiation_frm -= 20
         return initiation_frm
     else:
-        print(vehicle_df['id'].iloc[0])
         return vehicle_df.iloc[0]['frm']
 
 def get_vehglob_pos(glob_pos, vehicle_id):

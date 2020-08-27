@@ -44,10 +44,10 @@ col_df_all = ['id','frm','scenario','lane_id','length','x_front','y_front','clas
 
 # %%
 
-feature_set = pd.read_csv('./driver_model/dataset/feature_set.txt', delimiter=' ',
+feature_set = pd.read_csv('./driver_model/datasets/feature_set.txt', delimiter=' ',
                         header=None, names=col, nrows=10000).drop(col_drop,axis=1)
 
-df_all = pd.read_csv('./driver_model/dataset/df_all.txt', delimiter=' ',
+df_all = pd.read_csv('./driver_model/datasets/df_all.txt', delimiter=' ',
                                                             header=None, names=col_df_all)
 
 os.chdir('../NGSIM_data_and_visualisations')
@@ -143,7 +143,7 @@ for scenario in datasets:
                     mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
                     yveh_glob_pos = utils.get_vehglob_pos(glob_pos, yveh_id)
 
-                    dx = utils.get_dxpc(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
+                    dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
                     gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
 
                     mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx)
@@ -154,8 +154,8 @@ for scenario in datasets:
                     # draw_traj(mveh_df, yveh_df, case_info)
                     print(counter, ' ### vehicles processed ###')
 
-                    mveh_df.to_csv('./driver_model/dataset/mveh_df.txt', header=None, index=None, sep=' ', mode='a')
-                    yveh_df.to_csv('./driver_model/dataset/yveh_df.txt', header=None, index=None, sep=' ', mode='a')
+                    mveh_df.to_csv('./driver_model/datasets/mveh_df.txt', header=None, index=None, sep=' ', mode='a')
+                    yveh_df.to_csv('./driver_model/datasets/yveh_df.txt', header=None, index=None, sep=' ', mode='a')
 
         for lc_frm, lane_id in lc_frms['left']:
 
@@ -195,7 +195,7 @@ for scenario in datasets:
                     mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
                     yveh_glob_pos = utils.get_vehglob_pos(glob_pos, yveh_id)
 
-                    dx = utils.get_dxpc(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
+                    dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
                     gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
 
                     mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx)
@@ -206,8 +206,8 @@ for scenario in datasets:
                     # draw_traj(mveh_df, yveh_df, case_info)
                     print(counter, ' ### vehicles processed ###')
 
-                    mveh_df.to_csv('./driver_model/dataset/mveh_df.txt', header=None, index=None, sep=' ', mode='a')
-                    yveh_df.to_csv('./driver_model/dataset/yveh_df.txt', header=None, index=None, sep=' ', mode='a')
+                    mveh_df.to_csv('./driver_model/datasets/mveh_df.txt', header=None, index=None, sep=' ', mode='a')
+                    yveh_df.to_csv('./driver_model/datasets/yveh_df.txt', header=None, index=None, sep=' ', mode='a')
 
 
 # %%
