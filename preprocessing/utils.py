@@ -37,8 +37,10 @@ def lc_entrance(vehicle_df):
     :return: lane change frames for a given car
     """
     lc_frms = {}
-    lc_frms['left'] = vehicle_df[vehicle_df['lane_id'].diff() == -1]['frm'].values.tolist()
-    lc_frms['right'] = vehicle_df[vehicle_df['lane_id'].diff() == 1]['frm'].values.tolist()
+    lc_frms['left'] = vehicle_df[vehicle_df['lane_id'].diff() == -1
+                                            ][['frm', 'lane_id']].values.tolist()
+    lc_frms['right'] = vehicle_df[vehicle_df['lane_id'].diff() == 1
+                                            ][['frm', 'lane_id']].values.tolist()
 
     return lc_frms
 
@@ -57,14 +59,16 @@ def get_fveh(vehicle_df, lc_frm):
 
     return fveh_id.iloc[0]
 
-def lc_completion(vehicle_df, lc_frm, yveh_id):
+def lc_completion(vehicle_df, lc_frm, yveh_id, lane_id):
     """
     :return: lane change completion frame
     """
 
     completion_frm = vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
                                 (vehicle_df['bb_id'] == yveh_id) &
-                                (vehicle_df['pc'].abs() < 1)]['frm']
+                                (vehicle_df['lane_id'] == lane_id) &
+                                ((vehicle_df['pc'].abs() < 1) |
+                                (vehicle_df['v_lat'].abs() < 0.1))]['frm']
 
     if not completion_frm.empty:
         return completion_frm.iloc[0], yveh_id
@@ -72,14 +76,18 @@ def lc_completion(vehicle_df, lc_frm, yveh_id):
         return vehicle_df.iloc[-1]['frm'], yveh_id
 
 
-def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction):
+def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
     if lc_direction == 'right':
         yveh_name = 'br_id'
+        lane_id += 1
+
     else:
         yveh_name = 'bl_id'
+        lane_id -= 1
 
     initiation_frm = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
                                 (vehicle_df[yveh_name] == yveh_id) &
+                                (vehicle_df['lane_id'] == lane_id) &
                                 (vehicle_df['v_lat'].abs() < 0.1)]['frm']
 
 
@@ -94,7 +102,7 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction):
 def get_vehglob_pos(glob_pos, vehicle_id):
     return glob_pos.loc[glob_pos['id'] == vehicle_id].drop(['id','frm'],axis=1).values.tolist()
 
-def get_dxpc(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor):
+def get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor):
     dx = []
 
     for i in range(case_info['frm_range']+1):
@@ -111,18 +119,6 @@ def get_dxpc(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor):
         dx.append(yveh_long)
 
     return dx
-
-def rolling_average(values, N):
-    values_ = []
-
-    for n in range(len(values)):
-        if n == len(values)-N:
-            c = values[n:]
-        else:
-            c = values[n:n+N]
-
-        values_.append(np.mean(c))
-    return values_
 
 def get_gap_size(vehicle_df, case_info, glob_pos, lane_cor):
     fveh_id = get_fveh(vehicle_df, case_info['lc_frm'])
@@ -145,29 +141,14 @@ def get_gap_size(vehicle_df, case_info, glob_pos, lane_cor):
     else:
         return 70
 
-def get_var_deltarate(var):
-    # rate of change of variable
-    var_deltarate = []
-    for n in range(len(var)):
-        if n == len(var)-1:
-            var_c = var[n-1]
-            var_ff = var[n]
-        else:
-            var_c = var[n]
-            var_ff = var[n+1]
-
-        var_deltarate.append((var_ff - var_c)/0.1)
-    return var_deltarate
-
-
-def get_veh_feats(mveh_df, yveh_df, gap_size, dx, pc):
+def get_veh_feats(mveh_df, yveh_df, gap_size, dx):
     mveh_df = mveh_df[['id', 'frm', 'scenario', 'v_long', 'a_long',
                                 'v_lat','pc']]
 
     mveh_df['dx'] = pd.DataFrame(dx)
-
+    mveh_df = mveh_df.rename(columns={'a_long':'act_long', 'v_lat':'act_lat', 'v_long':'vel'})
     mveh_df.insert(loc=6, column='gap_size', value=gap_size)
-    veh_feats = pd.concat([mveh_df,yveh_df], axis=1)
-    veh_feats = veh_feats.loc[veh_feats['dx']>=0].reset_index(drop = True)
+    mveh_df.insert(loc=3, column='name', value='mveh')
+    yveh_df.insert(loc=3, column='name', value='yveh')
 
-    return veh_feats
+    return mveh_df, yveh_df

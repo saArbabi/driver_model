@@ -142,10 +142,10 @@ for scenario in datasets:
                 mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
                 yveh_glob_pos = utils.get_vehglob_pos(glob_pos, yveh_id)
 
-                dx, pc = utils.get_dxpc(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
+                dx = utils.get_dxpc(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
                 gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
 
-                mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, pc)
+                mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx)
 
                 test_list.append([case_info, gap_size])
                 counter += 1
@@ -154,60 +154,7 @@ for scenario in datasets:
 
         #         mveh_df.to_csv('./driver_model/dataset/mveh_df.txt', header=None, index=None, sep=' ', mode='a')
         #         yveh_df.to_csv('./driver_model/dataset/yveh_df.txt', header=None, index=None, sep=' ', mode='a')
-        #
 
-        for lc_frm, lane_id in lc_frms['left']:
-
-            yveh_id, yveh_class = utils.get_yveh(veh_df, lc_frm)
-            lane_cor = get_lane_cor(scenario, lane_id)
-            veh_class = veh_df['e_class'].iloc[0]
-
-            if yveh_id and yveh_class == veh_class == 2:
-
-                completion_frm, yveh_id = utils.lc_completion(veh_df, lc_frm, yveh_id, lane_id)
-                initiation_frm = utils.lc_initation(veh_df, lc_frm-1, yveh_id, 'left', lane_id)
-
-                mveh_df = veh_df.loc[(veh_df['frm'] >= initiation_frm) &
-                            (veh_df['frm'] <= completion_frm)].reset_index(drop = True)
-
-                yveh_df = feat_df.loc[(feat_df['id'] == yveh_id) &
-                            (feat_df['frm'] >= initiation_frm) &
-                    (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
-
-                frm_range = int(completion_frm-initiation_frm)
-
-                case_info = {
-                'scenario':scenario,
-                'id':id,
-                'frm_range':frm_range,
-                'yveh_id':yveh_id,
-                'lc_frm':lc_frm,
-                'initiation_frm':initiation_frm,
-                'completion_frm':completion_frm,
-                }
-
-                if all(mveh_df['frm'].diff().dropna() != 1):
-                    raise ValueError("There are missing frames", case_info)
-
-                yveh_df = yveh_df[['scenario','frm','id','v_long','a_long']].rename(columns=yveh_names)
-
-                glob_pos = get_glob_df(case_info)
-                mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
-                yveh_glob_pos = utils.get_vehglob_pos(glob_pos, yveh_id)
-
-                dx, pc = utils.get_dxpc(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
-                gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
-
-                mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, pc)
-
-                test_list.append([case_info, gap_size])
-                counter += 1
-                draw_traj(mveh_df, yveh_df, case_info)
-                print(counter, ' ### vehicles processed ###')
-
-                # mveh_df.to_csv('./driver_model/dataset/mveh_df.txt', header=None, index=None, sep=' ', mode='a')
-                # yveh_df.to_csv('./driver_model/dataset/yveh_df.txt', header=None, index=None, sep=' ', mode='a')
-                #
 
 # %%
 yveh_df.columns
