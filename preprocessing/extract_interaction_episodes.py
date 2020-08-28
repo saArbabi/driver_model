@@ -95,8 +95,7 @@ for scenario in datasets:
 
 
     for id in ids:
-        if counter > 15:
-            break
+
         veh_df = feat_df.loc[(feat_df['id'] == id)].reset_index(drop = True)
         lc_frms = utils.lc_entrance(veh_df)
 
@@ -118,7 +117,7 @@ for scenario in datasets:
                     (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
 
                 frm_range = int(completion_frm-initiation_frm)
-                if frm_range > 20 and initiation_frm != 0:
+                if frm_range > 20 and initiation_frm != 0 and completion_frm != 0:
 
                     case_info = {
                     'scenario':scenario,
@@ -151,8 +150,8 @@ for scenario in datasets:
                     case_info['gap_size'] = gap_size
                     print(counter, ' ### lane change extracted ###')
 
-                    draw_traj(mveh_df, yveh_df, case_info)
-                    # utils.data_saver(mveh_df, yveh_df)
+                    # draw_traj(mveh_df, yveh_df, case_info)
+                    utils.data_saver(mveh_df, yveh_df)
 
         for lc_frm, lane_id in lc_frms['left']:
 
@@ -172,7 +171,7 @@ for scenario in datasets:
                     (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
 
                 frm_range = int(completion_frm-initiation_frm)
-                if frm_range > 20 and initiation_frm != 0:
+                if frm_range > 20 and initiation_frm != 0 and completion_frm != 0:
 
                     case_info = {
                     'scenario':scenario,
@@ -205,12 +204,32 @@ for scenario in datasets:
                     case_info['gap_size'] = gap_size
                     print(counter, ' ### lane change extracted ###')
 
-                    draw_traj(mveh_df, yveh_df, case_info)
-                    # utils.data_saver(mveh_df, yveh_df)
+                    # draw_traj(mveh_df, yveh_df, case_info)
+                    utils.data_saver(mveh_df, yveh_df)
 
 # %%
+case_info
+feat_df = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
+                                    (feature_set['lane_id'] < 7)] # feat_set_scene
 
-  
+car_df = feat_df.loc[(feat_df['id'] == 695)].reset_index(drop = True)
+
+plt.plot(mveh_df['v_lat'])
+car_df
+car_df
+plt.plot(car_df['pc'])
+plt.plot(veh_df['bb_id'].iloc[25:])
+
+vehicle_df = veh_df
+
+vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
+                            # (vehicle_df['bb_id'] == 699) &
+                            (vehicle_df['lane_id'] == lane_id) &
+                            ((vehicle_df['pc'].abs() < 1) |
+                            (vehicle_df['v_lat'].abs() < 0.1))]['frm']
+plt.plot(veh_df['lane_id'].iloc[25:])
+
+case_info
 
 vehicle_df = veh_df
 
@@ -226,10 +245,7 @@ vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
                             ((vehicle_df['pc'].abs() < 1) |
                             (vehicle_df['v_lat'].abs() < 0.1))]['frm'].min()
 mveh_df.columns
-feat_df = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
-                                    (feature_set['lane_id'] < 7)] # feat_set_scene
 
-car_df = feat_df.loc[(feat_df['id'] == 97)].reset_index(drop = True)
 
 
 

@@ -96,7 +96,7 @@ def lc_completion(vehicle_df, lc_frm, yveh_id, lane_id):
     if not completion_frm.empty:
         return completion_frm.iloc[0]
     else:
-        return vehicle_df.iloc[-1]['frm']
+        return 0
 
 
 def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
@@ -119,9 +119,6 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
         if not initiation_frms.loc[initiation_frms['frm'] < initiation_frm - 20].empty:
             initiation_frm -= 20
         return initiation_frm
-    elif len(vehicle_df) < 50:
-        return vehicle_df['frm'].iloc[0]
-
     else:
         return 0
 
