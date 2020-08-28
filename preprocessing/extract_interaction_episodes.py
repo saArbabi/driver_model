@@ -128,6 +128,8 @@ for scenario in datasets:
                     'lc_frm':lc_frm,
                     'initiation_frm':initiation_frm,
                     'completion_frm':completion_frm,
+                    'episode_id':'r' + str(counter),
+
                     }
 
                     if all(mveh_df['frm'].diff().dropna() != 1):
@@ -142,7 +144,7 @@ for scenario in datasets:
                     dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
                     gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
 
-                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx)
+                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info['episode_id'])
 
                     test_list.append([case_info, gap_size])
                     counter += 1
@@ -180,6 +182,8 @@ for scenario in datasets:
                     'lc_frm':lc_frm,
                     'initiation_frm':initiation_frm,
                     'completion_frm':completion_frm,
+                    'episode_id':'l' + str(counter),
+
                     }
 
                     if all(mveh_df['frm'].diff().dropna() != 1):
@@ -194,7 +198,7 @@ for scenario in datasets:
                     dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
                     gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
 
-                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx)
+                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info['episode_id'])
 
                     test_list.append([case_info, gap_size])
                     counter += 1
@@ -205,37 +209,8 @@ for scenario in datasets:
                     # utils.data_saver(mveh_df, yveh_df)
 
 # %%
-mveh_df[['ff_id', 'bl_id', 'br_id']].iloc[2:10] = mveh_df[['ff_id', 'bl_id', 'br_id']].iloc[2].values
-"mveh and yveh have different lengths - {} vs {}".format(
-                                                2, 2)
-len(yveh_df)
-len(mveh_df)
-# %%
-vehicle_df = veh_df
-if len(indexes) > 1:
-    for i in range(len(indexes)-1):
-        lc_i = indexes[i]
-        lc_ii = indexes[i+1]
-        min_pc = vehicle_df['pc'].iloc[lc_i:lc_ii].abs().min()
-        if min_pc > 1.25 or lc_ii-lc_i < 20:
-            # not really a lane change!
-            keep_fixed = ['ff_id', 'bb_id', 'bl_id', 'br_id', 'lane_id']
 
-            vehicle_df.loc[lc_i:lc_ii, keep_fixed] = \
-                                vehicle_df.iloc[lc_i - 1][keep_fixed].values
-
-            for indx in range(lc_i,lc_ii):
-                vehicle_df.at[indx, 'pc'] = vehicle_df['pc'].iloc[indx-1] + \
-                                                        0.1*vehicle_df['v_lat'].iloc[indx-1]
-
-
-indexes = vehicle_df[vehicle_df['lane_id'].diff().abs() == 1].index
-
-len(indexes)
-correct_glitch(vehicle_df, indexes)
-vehicle_df.at[4, 'lane_id'] = 3
-
-plt.plot(vehicle_df['lane_id'])
+  
 
 vehicle_df = veh_df
 

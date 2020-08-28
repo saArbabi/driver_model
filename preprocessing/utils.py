@@ -173,16 +173,19 @@ def get_gap_size(vehicle_df, case_info, glob_pos, lane_cor):
     else:
         return 70
 
-def get_veh_feats(mveh_df, yveh_df, gap_size, dx):
+def get_veh_feats(mveh_df, yveh_df, gap_size, dx, episode_id):
     mveh_df = mveh_df[['id', 'frm', 'scenario', 'v_long', 'a_long',
                                 'v_lat','pc']]
 
     mveh_df.loc[:,'dx'] = pd.Series(dx)
     mveh_df = mveh_df.rename(columns={'a_long':'act_long', 'v_lat':'act_lat', 'v_long':'vel'})
     mveh_df.insert(loc=6, column='gap_size', value=gap_size)
-    mveh_df.insert(loc=1, column='name', value='mveh')
-    yveh_df.insert(loc=1, column='name', value='yveh')
-    yveh_df = yveh_df[['id', 'name','frm', 'scenario', 'vel', 'act_long']]
+    mveh_df.insert(loc=1, column='episode_id', value=episode_id)
+    yveh_df.insert(loc=1, column='episode_id', value=episode_id)
+    mveh_df.insert(loc=2, column='name', value='mveh')
+    yveh_df.insert(loc=2, column='name', value='yveh')
+    yveh_df = yveh_df[['id', 'episode_id', 'name','frm', 'scenario',
+                                                            'vel', 'act_long']]
 
     return mveh_df, yveh_df
 
