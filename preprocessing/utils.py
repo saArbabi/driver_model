@@ -32,41 +32,35 @@ def get_p(car_glob_pos, xc, yc):
     p = A + g*U # shaddow point on centreline/current
     return p
 
-def correct_glitch(vehicle_df):
-    indexes = vehicle_df[vehicle_df['lane_id'].diff() == -1].index
-
+def correct_glitch(vehicle_df, indexes):
     if len(indexes) > 1:
         for i in range(len(indexes)-1):
             lc_i = indexes[i]
             lc_ii = indexes[i+1]
-            if lc_ii - lc_i < 20:
-                for indx in range(lc_i, lc_ii):
+            min_pc = vehicle_df['pc'].iloc[lc_i:lc_ii].abs().min()
+            if min_pc > 1.25 or lc_ii-lc_i < 20:
+                # not really a lane change!
+                keep_fixed = ['ff_id', 'bb_id', 'bl_id', 'br_id', 'lane_id']
 
-                    vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
-                    vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
+                vehicle_df.loc[lc_i:lc_ii, keep_fixed] = \
+                                    vehicle_df.iloc[lc_i - 1][keep_fixed].values
+
+                for indx in range(lc_i,lc_ii):
+                    vehicle_df.at[indx, 'pc'] = vehicle_df['pc'].iloc[indx-1] + \
                                                             0.1*vehicle_df['v_lat'].iloc[indx-1]
 
-
-    indexes = vehicle_df[vehicle_df['lane_id'].diff() == 1].index
-
-    if len(indexes) > 1:
-        for i in range(len(indexes)-1):
-            lc_i = indexes[i]
-            lc_ii = indexes[i+1]
-            if lc_ii - lc_i < 20:
-                for indx in range(lc_i, lc_ii):
-
-                    vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
-                    vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
-                                                            0.1*vehicle_df['v_lat'].iloc[indx-1]
-
-
+def detect_glitch(vehicle_df):
+    """
+    Detects some glitch in lane_id and pc values. Glitch cause not investigated.
+    """
+    indexes = vehicle_df[vehicle_df['lane_id'].diff().abs() == 1].index
+    correct_glitch(vehicle_df, indexes)
 
 def lc_entrance(vehicle_df):
     """
     :return: lane change frames for a given car
     """
-    correct_glitch(vehicle_df)
+    detect_glitch(vehicle_df)
 
     lc_frms = {}
     lc_frms['left'] = vehicle_df[vehicle_df['lane_id'].diff() == -1
@@ -100,9 +94,9 @@ def lc_completion(vehicle_df, lc_frm, yveh_id, lane_id):
                                 (vehicle_df['v_lat'].abs() < 0.1))]['frm']
 
     if not completion_frm.empty:
-        return completion_frm.iloc[0], yveh_id
+        return completion_frm.iloc[0]
     else:
-        return vehicle_df.iloc[-1]['frm'], yveh_id
+        return vehicle_df.iloc[-1]['frm']
 
 
 def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
@@ -117,25 +111,31 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
     initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
                                 (vehicle_df[yveh_name] == yveh_id) &
                                 (vehicle_df['lane_id'] == lane_id) &
-                                (vehicle_df['v_lat'].abs() < 0.1)]
-
+                                ((vehicle_df['pc'].abs() < 0.1) |
+                                (vehicle_df['v_lat'].abs() < 0.1))]
 
     if not initiation_frms.empty:
         initiation_frm = initiation_frms['frm'].iloc[-1]
-        if not initiation_frms.loc[initiation_frms['frm'] == initiation_frm - 20].empty:
+        if not initiation_frms.loc[initiation_frms['frm'] < initiation_frm - 20].empty:
             initiation_frm -= 20
         return initiation_frm
-    else:
-        if len(vehicle_df.loc[(vehicle_df['frm'] < lc_frm)]) > 50:
-            return vehicle_df.iloc[-50]['frm']
+    elif len(vehicle_df) < 50:
+        return vehicle_df['frm'].iloc[0]
 
-        return vehicle_df.iloc[0]['frm']
+    else:
+        return 0
 
 def get_vehglob_pos(glob_pos, vehicle_id):
     return glob_pos.loc[glob_pos['id'] == vehicle_id].drop(['id','frm'],axis=1).values.tolist()
 
 def get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor):
     dx = []
+    mveh_size = len(mveh_glob_pos)
+    yveh_size = len(yveh_glob_pos)
+
+    if yveh_size != mveh_size:
+        raise Exception("mveh and yveh have different lengths: {} vs {}".format(
+                                                        mveh_size, yveh_size))
 
     for i in range(case_info['frm_range']+1):
         mveh_c_x = mveh_glob_pos[i][0]
@@ -183,8 +183,6 @@ def get_veh_feats(mveh_df, yveh_df, gap_size, dx):
     mveh_df.insert(loc=1, column='name', value='mveh')
     yveh_df.insert(loc=1, column='name', value='yveh')
     yveh_df = yveh_df[['id', 'name','frm', 'scenario', 'vel', 'act_long']]
-    if len(mveh_df) != len(yveh_df):
-        raise Exception("mveh and yveh have different lengths")
 
     return mveh_df, yveh_df
 

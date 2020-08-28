@@ -95,6 +95,8 @@ for scenario in datasets:
 
 
     for id in ids:
+        if counter > 15:
+            break
         veh_df = feat_df.loc[(feat_df['id'] == id)].reset_index(drop = True)
         lc_frms = utils.lc_entrance(veh_df)
 
@@ -105,7 +107,7 @@ for scenario in datasets:
             veh_class = veh_df['e_class'].iloc[0]
 
             if yveh_id and yveh_class == veh_class == 2:
-                completion_frm, yveh_id = utils.lc_completion(veh_df, lc_frm, yveh_id, lane_id)
+                completion_frm = utils.lc_completion(veh_df, lc_frm, yveh_id, lane_id)
                 initiation_frm = utils.lc_initation(veh_df, lc_frm-1, yveh_id, 'right', lane_id)
 
                 mveh_df = veh_df.loc[(veh_df['frm'] >= initiation_frm) &
@@ -116,7 +118,7 @@ for scenario in datasets:
                     (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
 
                 frm_range = int(completion_frm-initiation_frm)
-                if frm_range > 20:
+                if frm_range > 20 and initiation_frm != 0:
 
                     case_info = {
                     'scenario':scenario,
@@ -145,10 +147,10 @@ for scenario in datasets:
                     test_list.append([case_info, gap_size])
                     counter += 1
                     case_info['gap_size'] = gap_size
-                    print(counter, ' ### vehicles processed ###')
+                    print(counter, ' ### lane change extracted ###')
 
-                    # draw_traj(mveh_df, yveh_df, case_info)
-                    utils.data_saver(mveh_df, yveh_df)
+                    draw_traj(mveh_df, yveh_df, case_info)
+                    # utils.data_saver(mveh_df, yveh_df)
 
         for lc_frm, lane_id in lc_frms['left']:
 
@@ -157,7 +159,7 @@ for scenario in datasets:
             veh_class = veh_df['e_class'].iloc[0]
 
             if yveh_id and yveh_class == veh_class == 2:
-                completion_frm, yveh_id = utils.lc_completion(veh_df, lc_frm, yveh_id, lane_id)
+                completion_frm = utils.lc_completion(veh_df, lc_frm, yveh_id, lane_id)
                 initiation_frm = utils.lc_initation(veh_df, lc_frm-1, yveh_id, 'left', lane_id)
 
                 mveh_df = veh_df.loc[(veh_df['frm'] >= initiation_frm) &
@@ -168,7 +170,7 @@ for scenario in datasets:
                     (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
 
                 frm_range = int(completion_frm-initiation_frm)
-                if frm_range > 20:
+                if frm_range > 20 and initiation_frm != 0:
 
                     case_info = {
                     'scenario':scenario,
@@ -179,109 +181,6 @@ for scenario in datasets:
                     'initiation_frm':initiation_frm,
                     'completion_frm':completion_frm,
                     }
-
-
-# %%
-plt.plot(veh_df['v_lat'])
-veh_df
-plt.plot(veh_df['v_lat'].iloc[350:])
-test = veh_df.iloc[400:430].copy()
-
-
-plt.plot(veh_df['lane_id'].iloc[400:430])
-
-plt.plot(vehicle_df['lane_id'])
-
-
-def correct_glitch(vehicle_df):
-    vehicle_df[vehicle_df['lane_id'].diff() == 1].index
-
-
-    .rolling(2).apply(lambda x: abs(all(x))==1, raw=False) == 1
-
-    if glitch.eq(False).all():
-        pass
-    else:
-        indexes = glitch.loc[glitch == True].index
-        for indx in indexes:
-            indx -= 1
-            vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
-            vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
-                                                    0.1*vehicle_df['v_lat'].iloc[indx-1]
-
-
-plt.plot(vehicle_df['pc'].iloc[350:])
-vehicle_df = test.reset_index(drop=True)
-indexes = vehicle_df[vehicle_df['lane_id'].diff() == -1].index
-
-if len(indexes) > 1:
-    for i in range(len(indexes)-1):
-        lc_i = indexes[i]
-        lc_ii = indexes[i+1]
-        if lc_ii - lc_i < 20:
-            for indx in range(lc_i, lc_ii):
-
-                vehicle_df['lane_id'].iloc[indx] = vehicle_df['lane_id'].iloc[indx - 1]
-                vehicle_df['pc'].iloc[indx] = vehicle_df['pc'].iloc[indx-1] + \
-                                                        0.1*vehicle_df['v_lat'].iloc[indx-1]
-
-vehicle_df = test
-vehicle_df[vehicle_df['lane_id'].diff() == -1]
-.abs().isin([1]).sum()
-
-
-.rolling(5)
-
-
-apply(lambda x: abs(all(x))==1, raw=False)
-
- == 1
-
-== 1
-test
-
-# %%
-
- plt.plot(mveh_df['v_lat'])
- plt.plot(veh_df['v_lat'])
- veh_df.iloc[380:400]
- plt.plot(test['lane_id'].iloc[380:])
- plt.plot(test['pc'].iloc[380:])
-
-
- test = veh_df.copy()
- vehicle_df = pd.DataFrame([1,1,1,1,2,1,1,1,1,1,1,1,1])
- glitch = test['lane_id'].diff().rolling(2).apply(lambda x: abs(all(x))==1, raw=False) == 1
- glitch.eq(False).all()
- indx =
- glitch.loc[glitch == True].index
-
- [0] - 1
-
-
-
- for i in range(10):
-     i+=1
-     print(i)
-
-df
-bool.iloc[0][0]
-df.iloc[indx] = df.iloc[indx - 1]
-df.iloc[2] = 2
-df
-.astype(bool)
-
-
-
-
-
-
-plt.plot(veh_df['pc'].iloc[350:])
-mveh_df.loc[mveh_df['frm'] == 1234]
-
-['ff_id']
-
-.iloc[0]
 
                     if all(mveh_df['frm'].diff().dropna() != 1):
                         raise ValueError("There are missing frames", case_info)
@@ -300,14 +199,44 @@ mveh_df.loc[mveh_df['frm'] == 1234]
                     test_list.append([case_info, gap_size])
                     counter += 1
                     case_info['gap_size'] = gap_size
-                    print(counter, ' ### vehicles processed ###')
-                    # draw_traj(mveh_df, yveh_df, case_info)
-                    utils.data_saver(mveh_df, yveh_df)
+                    print(counter, ' ### lane change extracted ###')
 
-
-
+                    draw_traj(mveh_df, yveh_df, case_info)
+                    # utils.data_saver(mveh_df, yveh_df)
 
 # %%
+mveh_df[['ff_id', 'bl_id', 'br_id']].iloc[2:10] = mveh_df[['ff_id', 'bl_id', 'br_id']].iloc[2].values
+"mveh and yveh have different lengths - {} vs {}".format(
+                                                2, 2)
+len(yveh_df)
+len(mveh_df)
+# %%
+vehicle_df = veh_df
+if len(indexes) > 1:
+    for i in range(len(indexes)-1):
+        lc_i = indexes[i]
+        lc_ii = indexes[i+1]
+        min_pc = vehicle_df['pc'].iloc[lc_i:lc_ii].abs().min()
+        if min_pc > 1.25 or lc_ii-lc_i < 20:
+            # not really a lane change!
+            keep_fixed = ['ff_id', 'bb_id', 'bl_id', 'br_id', 'lane_id']
+
+            vehicle_df.loc[lc_i:lc_ii, keep_fixed] = \
+                                vehicle_df.iloc[lc_i - 1][keep_fixed].values
+
+            for indx in range(lc_i,lc_ii):
+                vehicle_df.at[indx, 'pc'] = vehicle_df['pc'].iloc[indx-1] + \
+                                                        0.1*vehicle_df['v_lat'].iloc[indx-1]
+
+
+indexes = vehicle_df[vehicle_df['lane_id'].diff().abs() == 1].index
+
+len(indexes)
+correct_glitch(vehicle_df, indexes)
+vehicle_df.at[4, 'lane_id'] = 3
+
+plt.plot(vehicle_df['lane_id'])
+
 vehicle_df = veh_df
 
 initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
@@ -315,6 +244,12 @@ initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
                             (vehicle_df['lane_id'] == 3) &
                             (vehicle_df['v_lat'].abs() < 0.1)]
 
+completion_frm
+vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
+                            (vehicle_df['bb_id'] == yveh_id) &
+                            (vehicle_df['lane_id'] == lane_id) &
+                            ((vehicle_df['pc'].abs() < 1) |
+                            (vehicle_df['v_lat'].abs() < 0.1))]['frm'].min()
 mveh_df.columns
 feat_df = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
                                     (feature_set['lane_id'] < 7)] # feat_set_scene
