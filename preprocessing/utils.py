@@ -170,19 +170,29 @@ def get_gap_size(vehicle_df, case_info, glob_pos, lane_cor):
     else:
         return 70
 
-def get_veh_feats(mveh_df, yveh_df, gap_size, dx, episode_id):
-    mveh_df = mveh_df[['id', 'frm', 'scenario', 'v_long', 'a_long',
+def get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info):
+    mveh_df = mveh_df[['id', 'frm', 'scenario', 'v_long',
                                 'v_lat','pc']]
 
-    mveh_df.loc[:,'dx'] = pd.Series(dx)
-    mveh_df = mveh_df.rename(columns={'a_long':'act_long', 'v_lat':'act_lat', 'v_long':'vel'})
+    mveh_df = mveh_df.rename(columns={'v_lat':'act_lat', 'v_long':'vel'})
     mveh_df.insert(loc=6, column='gap_size', value=gap_size)
-    mveh_df.insert(loc=1, column='episode_id', value=episode_id)
-    yveh_df.insert(loc=1, column='episode_id', value=episode_id)
+    mveh_df.insert(loc=1, column='episode_id', value=case_info['episode_id'])
     mveh_df.insert(loc=2, column='name', value='mveh')
+    mveh_df.insert(loc=3, column='lc_type', value=case_info['lc_type'])
+
+    mveh_df.loc[:,'dx'] = pd.Series(dx)
+    mveh_df.loc[:,'act_long'] = pd.Series(dx)
+    get_act_long(mveh_df)
+    get_past_action(mveh_df, 'mveh')
+    get_act_long(yveh_df)
+    get_past_action(yveh_df, 'yveh')
+    yveh_df.insert(loc=1, column='episode_id', value=case_info['episode_id'])
     yveh_df.insert(loc=2, column='name', value='yveh')
-    yveh_df = yveh_df[['id', 'episode_id', 'name','frm', 'scenario',
-                                                            'vel', 'act_long']]
+    yveh_df.insert(loc=3, column='lc_type', value=case_info['lc_type'])
+
+    yveh_df = yveh_df[['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'act_long_p', 'act_long']]
+    mveh_df = mveh_df[['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'pc',
+           'gap_size', 'dx', 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']]
 
     return mveh_df, yveh_df
 
@@ -195,13 +205,32 @@ def data_saver(mveh_df, yveh_df):
         yveh_df.to_csv('./driver_model/datasets/yveh_df.txt',
                                         header=None, index=None, sep=' ', mode='a')
 
+def get_act_long(vehicle_df):
+    acc = (vehicle_df['vel'].iloc[1:].values - vehicle_df['vel'].iloc[:-1].values)/0.1
+    vehicle_df.drop(vehicle_df.index[-1],  inplace=True)
+    vehicle_df.reset_index(drop=True,  inplace=True)
+
+    vehicle_df.loc[:,'act_long'] = acc
+
+def get_past_action(vehicle_df, name):
+    if name ==  'mveh':
+        action_names = ['act_long', 'act_lat']
+    else:
+        action_names = ['act_long']
+
+    action_p = vehicle_df[action_names].iloc[:-1].values
+    action_names_p = [name +'_p' for name in action_names]
+    vehicle_df.drop(vehicle_df.index[0],  inplace=True)
+    vehicle_df.reset_index(drop=True,  inplace=True)
+    vehicle_df[action_names_p] = pd.DataFrame(action_p)
+
 def episode_checker(mveh_df, yveh_df):
     """
     Exclusion of some cars from training.
     If return 1, accept the car
     """
-    mveh_size = len(mveh_glob_pos)
-    yveh_size = len(yveh_glob_pos)
+    mveh_size = len(mveh_df)
+    yveh_size = len(yveh_df)
     vel_min = mveh_df['vel'].min()
     gap_size = mveh_df['gap_size'].iloc[0]
 

@@ -25,7 +25,7 @@ col = ['id','frm','scenario','lane_id',
                                 'br_id','br_long','br_lat','br_v',
                                 'bb_id','bb_long','bb_lat','bb_v']
 
-col_drop = ['bool_r','bool_l','a_lat',
+col_drop = ['bool_r','bool_l','a_lat','a_long',
                     'fr_id','fr_long','fr_lat','fr_v',
                     'fl_id','fl_long','fl_lat','fl_v']
 datasets = {
@@ -58,7 +58,6 @@ xc_80, yc_80 = road_geometry.get_centerlines('./NGSIM DATA/centerlines80.txt')
 xc_101, yc_101 = road_geometry.get_centerlines('./NGSIM DATA/centerlines101.txt')
 
 os.chdir(cwd)
-df_all['length'].mean()
 # %%
 
 def get_glob_df(case_info):
@@ -85,8 +84,6 @@ def get_lane_cor(scenario, lane_id):
 # def get_act_lat():
 reload(utils)
 
-test_list = []
-yveh_names = {'v_long':'vel','a_long':'act_long'}
 counter = 0
 for scenario in datasets:
 
@@ -115,7 +112,7 @@ for scenario in datasets:
 
                 yveh_df = feat_df.loc[(feat_df['id'] == yveh_id) &
                             (feat_df['frm'] >= initiation_frm) &
-                    (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
+                            (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
 
                 frm_range = int(completion_frm-initiation_frm)
                 if frm_range > 20 and initiation_frm != 0 and completion_frm != 0:
@@ -128,14 +125,15 @@ for scenario in datasets:
                     'lc_frm':lc_frm,
                     'initiation_frm':initiation_frm,
                     'completion_frm':completion_frm,
-                    'episode_id':'r' + str(counter),
+                    'episode_id': counter,
+                    'lc_type': -1
 
                     }
 
                     if all(mveh_df['frm'].diff().dropna() != 1):
                         raise ValueError("There are missing frames", case_info)
 
-                    yveh_df = yveh_df[['scenario','frm','id','v_long','a_long']].rename(columns=yveh_names)
+                    yveh_df = yveh_df[['scenario','frm','id','v_long']].rename(columns={'v_long':'vel'})
 
                     glob_pos = get_glob_df(case_info)
                     mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
@@ -144,15 +142,15 @@ for scenario in datasets:
                     dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
                     gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
 
-                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info['episode_id'])
+                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info)
 
-                    test_list.append([case_info, gap_size])
                     counter += 1
                     case_info['gap_size'] = gap_size
                     print(counter, ' ### lane change extracted ###')
 
                     # draw_traj(mveh_df, yveh_df, case_info)
                     utils.data_saver(mveh_df, yveh_df)
+
 
         for lc_frm, lane_id in lc_frms['left']:
 
@@ -182,14 +180,14 @@ for scenario in datasets:
                     'lc_frm':lc_frm,
                     'initiation_frm':initiation_frm,
                     'completion_frm':completion_frm,
-                    'episode_id':'l' + str(counter),
-
+                    'episode_id': counter,
+                    'lc_type': 1
                     }
 
                     if all(mveh_df['frm'].diff().dropna() != 1):
                         raise ValueError("There are missing frames", case_info)
 
-                    yveh_df = yveh_df[['scenario','frm','id','v_long','a_long']].rename(columns=yveh_names)
+                    yveh_df = yveh_df[['scenario','frm','id','v_long']].rename(columns={'v_long':'vel'})
 
                     glob_pos = get_glob_df(case_info)
                     mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
@@ -198,9 +196,8 @@ for scenario in datasets:
                     dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
                     gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
 
-                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info['episode_id'])
+                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info)
 
-                    test_list.append([case_info, gap_size])
                     counter += 1
                     case_info['gap_size'] = gap_size
                     print(counter, ' ### lane change extracted ###')
@@ -210,6 +207,8 @@ for scenario in datasets:
 
 # %%
 case_info
+yveh_df.columns
+
 mveh_df.columns
 feat_df = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
                                     (feature_set['lane_id'] < 7)] # feat_set_scene

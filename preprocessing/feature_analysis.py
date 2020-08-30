@@ -24,6 +24,7 @@ mveh_df['dx'].max()
 
 feature_col = ['vel', 'act_long', 'act_lat', 'gap_size', 'pc', 'dx']
 
+mveh_df['act_long'].plot.hist(bins=125)
 
 sample_scaler = standard_scaler_sample.fit(train_set[sample_col].values)
 sample = sample_scaler.transform(train_set[sample_col].values)
@@ -37,29 +38,29 @@ for feature in feature_col:
 
 
 
-len(mveh_df.loc[mveh_df['vel']>5])/len(mveh_df)
-
-mveh_df.loc[mveh_df['vel']>15]['act_long'].plot.hist(bins=125)
-['act_long'].max()
-mveh_df.loc[(mveh_df['vel']>5) & (mveh_df['act_long']>15)]
-['act_long'].max()
+mveh_df.loc[mveh_df['vel']>0]['act_long'].max()
 
 test_car = mveh_df.loc[mveh_df['episode_id']=='r2046']
-print()
-plt.plot(test_car['act_long'])
 
-vel = test_car['vel'].values
-N = len(vel)
-acc = []
-for row_i in range(N):
-    if row_i < N-1:
-        acc_c = (vel[row_i+1] - vel[row_i])/0.1
+acc =  (test_car['vel'].iloc[1:].values - test_car['vel'].iloc[:-1].values)/0.1
+test_car.drop(test_car.index[0], inplace=True)
+test_car.loc[1:,['act_long', 'a']] = [2,2]
+test_car.loc[1:,['a','v']] = [2, 2]
 
-    else:
-        acc_c = (vel[row_i-1] - vel[row_i])/0.1
 
-    acc.append(acc_c)
+acc_p =  test_car['vel'].iloc[:-1].values
 
+
+- test_car['vel'].iloc[:-1].values)/0.1
+test_car.loc[['g','w']] = pd.DataFrame(test_car[['vel','act_long']].values)
+
+
+
+test_car[['a','b']] = 0
+plt.plot(test_car['vel'].values)
+plt.plot(test_car['act_long'].values)
+
+plt.plot(acc)
 
 plt.plot(acc)
 plt.plot(test_car['act_long'])
