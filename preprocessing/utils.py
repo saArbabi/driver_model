@@ -90,8 +90,7 @@ def lc_completion(vehicle_df, lc_frm, yveh_id, lane_id):
     completion_frm = vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
                                 (vehicle_df['bb_id'] == yveh_id) &
                                 (vehicle_df['lane_id'] == lane_id) &
-                                ((vehicle_df['pc'].abs() < 1) |
-                                (vehicle_df['v_lat'].abs() < 0.1))]['frm']
+                                (vehicle_df['v_lat'].abs() < 0.1)]['frm']
 
     if not completion_frm.empty:
         return completion_frm.iloc[0]
@@ -111,8 +110,7 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
     initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
                                 (vehicle_df[yveh_name] == yveh_id) &
                                 (vehicle_df['lane_id'] == lane_id) &
-                                ((vehicle_df['pc'].abs() < 0.1) |
-                                (vehicle_df['v_lat'].abs() < 0.1))]
+                                (vehicle_df['v_lat'].abs() < 0.1)]
 
     if not initiation_frms.empty:
         initiation_frm = initiation_frms['frm'].iloc[-1]
