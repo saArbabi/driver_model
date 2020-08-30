@@ -58,6 +58,7 @@ xc_80, yc_80 = road_geometry.get_centerlines('./NGSIM DATA/centerlines80.txt')
 xc_101, yc_101 = road_geometry.get_centerlines('./NGSIM DATA/centerlines101.txt')
 
 os.chdir(cwd)
+df_all['length'].mean()
 # %%
 
 def get_glob_df(case_info):
@@ -209,6 +210,7 @@ for scenario in datasets:
 
 # %%
 case_info
+mveh_df.columns
 feat_df = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
                                     (feature_set['lane_id'] < 7)] # feat_set_scene
 

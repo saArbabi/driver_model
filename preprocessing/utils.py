@@ -187,7 +187,27 @@ def get_veh_feats(mveh_df, yveh_df, gap_size, dx, episode_id):
     return mveh_df, yveh_df
 
 def data_saver(mveh_df, yveh_df):
-    mveh_df.to_csv('./driver_model/datasets/mveh_df.txt',
-                                    header=None, index=None, sep=' ', mode='a')
-    yveh_df.to_csv('./driver_model/datasets/yveh_df.txt',
-                                    header=None, index=None, sep=' ', mode='a')
+    check = episode_checker(mveh_df, yveh_df)
+
+    if check == 1:
+        mveh_df.to_csv('./driver_model/datasets/mveh_df.txt',
+                                        header=None, index=None, sep=' ', mode='a')
+        yveh_df.to_csv('./driver_model/datasets/yveh_df.txt',
+                                        header=None, index=None, sep=' ', mode='a')
+
+def episode_checker(mveh_df, yveh_df):
+    """
+    Exclusion of some cars from training.
+    If return 1, accept the car
+    """
+    mveh_size = len(mveh_glob_pos)
+    yveh_size = len(yveh_glob_pos)
+    vel_min = mveh_df['vel'].min()
+    gap_size = mveh_df['gap_size'].iloc[0]
+
+    if yveh_size != mveh_size or vel_min < 0 or gap_size < 5:
+        check = 0
+    else:
+        check = 1
+
+    return check
