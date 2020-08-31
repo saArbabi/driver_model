@@ -30,7 +30,8 @@ config = {
     "sequence_length": 5,
     "features": ['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p','lc_type'],
     "history_drop": {"percentage":0, "vehicle":['mveh', 'yveh']},
-    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p']},
+    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx',
+                                'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
     "scaler_path": './driver_model/experiments/scaler001'
 },
 "experiment_path": './driver_model/experiments/exp001',
@@ -104,14 +105,14 @@ class PrepData():
             mveh.drop(drop_col, inplace=True, axis=1)
             yveh.drop(drop_col+['act_long','lc_type'], inplace=True, axis=1)
 
-
     def scaler_transform(self, vehicle_df):
         vehicle_col = vehicle_df.columns
         for feature in self.config['scaler']['StandardScaler']:
+
             if feature in vehicle_col:
                 scaler = self.load_scaler(feature)
                 vehicle_df[feature] = scaler.transform(vehicle_df[feature].values.reshape(-1,1))
-
+     
     def sequence(self, episode_arr):
         sequential_data = []
         i_reset = 0
@@ -137,6 +138,7 @@ class PrepData():
         self.scaler_transform(yveh)
         episode_arr = np.concatenate([yveh.values,mveh.values], axis=1)
         sequenced_arr = self.sequence(episode_arr)
+
         self.test = episode_arr
         # return episode_arr
         return sequenced_arr
@@ -154,6 +156,8 @@ prep = PrepData(config)
 
 seq = prep.data_prep()
 seq[0]
+
+# %%
 seq[1]
 prep.test[0]
 len(seq)
