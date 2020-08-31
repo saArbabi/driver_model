@@ -9,7 +9,6 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import os
 import pickle
-random.seed(2020)
 # a = [1,2,3,4,5,6,7]
 # random.shuffle(a)
 
@@ -63,7 +62,8 @@ yveh_df0 = pd.read_csv('./driver_model/datasets/yveh_df0.txt', delimiter=' ',
                         header=None, names=yveh_col)
 # %%
 
-class PrepData():
+class DataObj():
+    random.seed(2020)
 
     def __init__(self, config):
         self.config = config['data_config']
@@ -72,6 +72,10 @@ class PrepData():
         self.sequence_length = self.config["sequence_length"]
         self.step_size = self.config["step_size"]
         self.data_path = './driver_model/dataset'
+        self.x_train = []
+        self.y_train = []
+        self.x_val = []
+        self.y_val = []
 
     def get_scalers(self):
         dirName = self.config['scaler_path']+'/'
@@ -130,15 +134,6 @@ class PrepData():
 
         return sequential_data
 
-    def xy_split(self, xy_array):
-        random.shuffle(xy_array)
-        _x = []
-        _y = []
-        for x, y in xy_array:
-            _x.append(x)
-            _y.append(y)
-        return _x, _y
-
     def history_drop(self, mveh, yveh):
         dropout_percentage = self.config['history_drop']['percentage']
         if  dropout_percentage != 0:
@@ -146,10 +141,8 @@ class PrepData():
             if vehicle_name == 'mveh':
                 index = mveh.sample(int(len(mveh)*dropout_percentage)).index
                 mveh.loc[index, mveh.columns != 'lc_type']=0
-        self.test = mveh
 
-
-    def prep_episode(self, episode_id, setName):
+    def prep_episode(self, episode_id):
         mveh = mveh_df0[mveh_df0['episode_id'] == episode_id].copy()
         yveh = yveh_df0[yveh_df0['episode_id'] == episode_id].copy()
         self.drop_redundants(mveh, yveh)
@@ -158,26 +151,38 @@ class PrepData():
         self.history_drop(mveh, yveh)
         episode_arr = np.concatenate([yveh.values,mveh.values], axis=1)
         sequenced_arr = self.sequence(episode_arr)
-        x_train, y_train = self.xy_split(sequenced_arr)
 
-        # return episode_arr
         return sequenced_arr
+
+    def store_data(self, sequenced_arr, setName):
+        random.shuffle(sequenced_arr)
+
+        if setName == 'train':
+            _x, _y = self.x_train, self.y_train
+        else:
+            _x, _y = self.x_val, self.y_val
+
+        for x, y in sequenced_arr:
+            _x.append(x)
+            _y.append(y)
 
     def data_prep(self):
         self.get_scalers()
         # for episode_id in training_episodes:
         for episode_id in [811]:
-            self.prep_episode(episode_id, 'train')
-        for episode_id in [811]:
-            self.prep_episode(episode_id, 'val')
+            sequenced_arr = self.prep_episode(episode_id)
+            self.store_data(sequenced_arr, 'train')
 
 
-prep = PrepData(config)
+        #
+        # for episode_id in validation_episodes:
+        #     self.prep_episode(episode_id)
 
-seq = prep.data_prep()
-seq[0]
 
+Data = DataObj(config)
+Data.data_prep()
 # %%
+
 prep.config['history_drop']['vehicle']=='mveh'
 seq[1]
 prep.test['pc'].min()
