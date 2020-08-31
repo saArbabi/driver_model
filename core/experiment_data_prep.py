@@ -32,27 +32,14 @@ config = {
     "history_drop": {"percentage":0, "vehicle":['mveh', 'yveh']},
     "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx', 'act_long', 'act_lat']}
 },
-"experiment_path": './driver_model/experiments/exp001'
+"experiment_path": './driver_model/experiments/exp001',
+"experiment_type": {"vehicle_name":'mveh', "model":"controller"}
 }
 
-config['data_config']
-type(mveh_df0['lc_type']) .type
-mveh_df0['lc_type'].dtype == 'int64'
-# %%
-file_name = './driver_model/datasets/'+'training_episodes'+'.txt'
-file = open(file_name, "r")
-[int(item) for item in file.read().split
-()]
-file.read()
-int(file.readline().split()[0])
-.split("\n")
-file.close()
-data
 
-my_list = []
 # %%
 def read_list(name):
-    file_name = './driver_model/datasets/'+name'+'.txt'
+    file_name = './driver_model/datasets/'+name+'.txt'
     file = open(file_name, "r")
     my_list = [int(item) for item in file.read().split()]
     file.close()
@@ -63,8 +50,6 @@ validation_episodes = read_list('validation_episodes')
 
 mveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'pc',
        'gap_size', 'dx', 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']
-
-
 
 
 yveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'act_long_p', 'act_long']
@@ -80,28 +65,59 @@ class PrepData():
     def __init__(self, config):
         self.config = config['data_config']
         self.exp_path = config['experiment_path']
+        self.exp_type = config['experiment_type']
         self.sequence_length = self.config["sequence_length"]
         self.step_size = self.config["step_size"]
         self.data_path = './driver_model/dataset'
 
-    def get_scaler(self):
+    def get_scalers(self):
         dirName = self.exp_path + '/scalers/'
 
-        try:
-            # Create target Directory
+        if not os.path.exists(dirName):
             os.mkdir(dirName)
             print("Directory " , dirName ,  " Created ")
-        except FileExistsError:
+            for feature in self.config['scaler']['StandardScaler']:
+                scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
+                feature_array = mveh_df0[feature].values
+                fit = scaler.fit(feature_array.reshape(-1, 1))
+                file_name = dirName + feature
+                pickle_out = open(file_name, "wb")
+                pickle.dump(fit, pickle_out)
+                pickle_out.close()
+        else:
             print("Directory " , dirName ,  " already exists")
 
-        for feature in self.config['scaler']['StandardScaler']:
-            scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
-            feature_array = mveh_df0[feature].values
-            fit = scaler.fit(feature_array.reshape(-1, 1))
-            file_name = dirName + feature
-            pickle_out = open(file_name, "wb")
-            pickle.dump(fit, pickle_out)
-            pickle_out.close()
+    def drop_redundants(self, mveh, yveh):
+        drop_col = ['id', 'episode_id', 'name', 'frm', 'scenario']
+        if self.exp_type['vehicle_name'] == 'mveh' and self.exp_type['model'] == 'controller':
+            mveh.drop(drop_col, inplace=True, axis=1)
+            yveh.drop(drop_col+['act_long','lc_type'], inplace=True, axis=1)
+
+    def prep_episode(self, episode_id, setName):
+        mveh = mveh_df0[mveh_df0['episode_id'] == episode_id].copy()
+        yveh = yveh_df0[yveh_df0['episode_id'] == episode_id].copy()
+        
+        self.drop_redundants(mveh, yveh)
+
+        episode_arr = np.concatenate([yveh.values,mveh.values], axis=1)
+        print(episode_arr)
+
+    def data_prep(self):
+        self.get_scalers()
+        # for episode_id in training_episodes[0]:
+        for episode_id in [811]:
+
+            self.prep_episode(episode_id, 'train')
+
+
 
 prep = PrepData(config)
-prep.get_scaler()
+# prep.get_scaler()
+
+prep.data_prep()
+
+# %%
+
+test_car = mveh_df0.loc[mveh_df0['episode_id'] == 0].copy()
+test_car.drop(['frm', 'vel'], inplace=True, axis=1)
+test_car
