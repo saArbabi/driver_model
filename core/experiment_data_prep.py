@@ -112,7 +112,7 @@ class PrepData():
             if feature in vehicle_col:
                 scaler = self.load_scaler(feature)
                 vehicle_df[feature] = scaler.transform(vehicle_df[feature].values.reshape(-1,1))
-     
+
     def sequence(self, episode_arr):
         sequential_data = []
         i_reset = 0
@@ -130,6 +130,20 @@ class PrepData():
 
         return sequential_data
 
+    def xy_split(self, xy_array):
+        random.shuffle(xy_array)
+        _x = []
+        _y = []
+        for x, y in xy_array:
+            _x.append(x)
+            _y.append(y)
+        return _x, _y
+
+    def history_drop(self):
+
+        pass
+
+
     def prep_episode(self, episode_id, setName):
         mveh = mveh_df0[mveh_df0['episode_id'] == episode_id].copy()
         yveh = yveh_df0[yveh_df0['episode_id'] == episode_id].copy()
@@ -138,8 +152,9 @@ class PrepData():
         self.scaler_transform(yveh)
         episode_arr = np.concatenate([yveh.values,mveh.values], axis=1)
         sequenced_arr = self.sequence(episode_arr)
+        x_train, y_train = self.xy_split(sequenced_arr)
 
-        self.test = episode_arr
+        self.test = x_train
         # return episode_arr
         return sequenced_arr
 
@@ -155,10 +170,12 @@ class PrepData():
 prep = PrepData(config)
 
 seq = prep.data_prep()
-seq[0]
+seq[0][1]
 
 # %%
 seq[1]
+prep.test[1]
+
 prep.test[0]
 len(seq)
 len(test_car)

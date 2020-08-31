@@ -10,14 +10,10 @@ class Model(object):
     def train_model():
         pass
 
-    def scale_data(self):
-        pass
 
     def xy_split(self, xy_array):
         pass
 
-    def history_drop(self):
-        pass
 
 
 
