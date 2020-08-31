@@ -6,99 +6,102 @@ from collections import deque
 import numpy as np
 import random
 import pandas as pd
-
+from sklearn.preprocessing import StandardScaler
+import os
+import pickle
 random.seed(2020)
 # a = [1,2,3,4,5,6,7]
 # random.shuffle(a)
 
-car_dict = []{'scenario':'101', 'id': 23, 'lc_initiation_frm': 22, 'features': [[1,2,3],[1,2,3]]}
-car_dict
-car_dict['features']
+# car_dict = []{'scenario':'101', 'id': 23, 'lc_initiation_frm': 22, 'features': [[1,2,3],[1,2,3]]}
+# car_dict
+# car_dict['features']
+#
+
+config = {
+ "model_config": {
+    "1": 2,
+    "hi": 2,
+    "1": 2,
+    "n_gmm_components": 4
+},
+"data_config": {
+    "step_size": 3,
+    "sequence_length": 5,
+    "features": ['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p','lc_type'],
+    "history_drop": {"percentage":0, "vehicle":['mveh', 'yveh']},
+    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx', 'act_long', 'act_lat']}
+},
+"experiment_path": './driver_model/experiments/exp001'
+}
+
+config['data_config']
+type(mveh_df0['lc_type']) .type
+mveh_df0['lc_type'].dtype == 'int64'
+# %%
+file_name = './driver_model/datasets/'+'training_episodes'+'.txt'
+file = open(file_name, "r")
+[int(item) for item in file.read().split
+()]
+file.read()
+int(file.readline().split()[0])
+.split("\n")
+file.close()
+data
+
+my_list = []
+# %%
+def read_list(name):
+    file_name = './driver_model/datasets/'+name'+'.txt'
+    file = open(file_name, "r")
+    my_list = [int(item) for item in file.read().split()]
+    file.close()
+    return my_list
+
+training_episodes = read_list('training_episodes')
+validation_episodes = read_list('validation_episodes')
+
+mveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'pc',
+       'gap_size', 'dx', 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']
 
 
 
-class PrepData(self):
 
-    def __init__(self, data_config):
-        self.config = data_config
+yveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'act_long_p', 'act_long']
+
+mveh_df0 = pd.read_csv('./driver_model/datasets/mveh_df0.txt', delimiter=' ',
+                        header=None, names=mveh_col)
+yveh_df0 = pd.read_csv('./driver_model/datasets/yveh_df0.txt', delimiter=' ',
+                        header=None, names=yveh_col)
+# %%
+
+class PrepData():
+
+    def __init__(self, config):
+        self.config = config['data_config']
+        self.exp_path = config['experiment_path']
         self.sequence_length = self.config["sequence_length"]
         self.step_size = self.config["step_size"]
-        self.actions = self.config["actions"]
         self.data_path = './driver_model/dataset'
 
-    def scale_data(self):
-        pass
+    def get_scaler(self):
+        dirName = self.exp_path + '/scalers/'
 
-    def xy_split(self, xy_array):
-        pass
+        try:
+            # Create target Directory
+            os.mkdir(dirName)
+            print("Directory " , dirName ,  " Created ")
+        except FileExistsError:
+            print("Directory " , dirName ,  " already exists")
 
-    def history_drop(self):
-        pass
+        for feature in self.config['scaler']['StandardScaler']:
+            scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
+            feature_array = mveh_df0[feature].values
+            fit = scaler.fit(feature_array.reshape(-1, 1))
+            file_name = dirName + feature
+            pickle_out = open(file_name, "wb")
+            pickle.dump(fit, pickle_out)
+            pickle_out.close()
 
-    def sequence(self, xy_array):
-
-        sequential_data = []
-        i_reset = 0
-        i = 0
-        for chunks in range(self.step_size):
-            prev_states = deque(maxlen=self.sequence_length)
-            while i < len(xy_array):
-                row = xy_array[i]
-                prev_states.append([n for n in row[:len(self.actions)]])
-                if len(prev_states) == self.sequence_length:
-                    sequential_data.append([np.array(prev_states), row[len(self.actions):]])
-                i += self.step_size
-            i_reset += 1
-            i = i_reset
-
-        return sequential_data
-
-    def load_data(self):
-        pickle_in = open(self.data_path + '/val_set',"rb")
-        val_set = pickle.load(pickle_in)
-        pickle_in.close()
-
-        pickle_in = open(self.data_path + '/train_set',"rb")
-        train_set = pickle.load(pickle_in)
-        pickle_in.close()
-
-
-        return train_set[self.config['features']], val_set[self.config['features']]
-
-    def preprocess(self, data):
-
-        xy_set = []
-        for scenario in datasets:
-            df_scen = df.loc[df['scenario'] == scenario]
-            car_ids = df_scen['id'].unique()
-            for id in car_ids:
-                df_id =  df_scen.loc[df_scen['id'] == id].reset_index(drop=True)
-                indx = df_id['frm'].diff()[df_id['frm'].diff() != 1].index.values
-                n_lc = len(indx)  # number of LCs for this car
-
-                if n_lc > 1:
-                    init_index = 0
-                    for n in range(1,n_lc+1):
-                        if n == n_lc:
-                            df_id_sec = df_id.iloc[init_index:]
-                        else:
-                            end_index = indx[n] - 1
-                            df_id_sec = df_id.iloc[init_index:end_index]
-                        init_index = end_index + 1
-                        if len(df_id_sec)>10:
-                            sequential_data = sequence(df_id_sec)
-                            xy_set.append(sequential_data)
-
-                else:
-                    sequential_data = sequence(df_id)
-                    xy_set.append(sequential_data)
-
-        return self.xy_split(xy_array)
-
-    def prep(self):
-        train_set, val_set = self.load_data()
-
-        x_train, y_train = preprocess(train_set)
-        x_val, y_val = preprocess(train_set)
-
-        return x_train, y_train, x_val, y_val
+prep = PrepData(config)
+prep.get_scaler()
