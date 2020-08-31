@@ -29,7 +29,7 @@ config = {
     "step_size": 3,
     "sequence_length": 5,
     "features": ['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p','lc_type'],
-    "history_drop": {"percentage":0, "vehicle":['mveh', 'yveh']},
+    "history_drop": {"percentage":0, "vehicle":'mveh'},
     "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx',
                                 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
     "scaler_path": './driver_model/experiments/scaler001'
@@ -139,9 +139,14 @@ class PrepData():
             _y.append(y)
         return _x, _y
 
-    def history_drop(self):
-
-        pass
+    def history_drop(self, mveh, yveh):
+        dropout_percentage = self.config['history_drop']['percentage']
+        if  dropout_percentage != 0:
+            vehicle_name = self.config['history_drop']['vehicle']
+            if vehicle_name == 'mveh':
+                index = mveh.sample(int(len(mveh)*dropout_percentage)).index
+                mveh.loc[index, mveh.columns != 'lc_type']=0
+        self.test = mveh
 
 
     def prep_episode(self, episode_id, setName):
@@ -150,11 +155,11 @@ class PrepData():
         self.drop_redundants(mveh, yveh)
         self.scaler_transform(mveh)
         self.scaler_transform(yveh)
+        self.history_drop(mveh, yveh)
         episode_arr = np.concatenate([yveh.values,mveh.values], axis=1)
         sequenced_arr = self.sequence(episode_arr)
         x_train, y_train = self.xy_split(sequenced_arr)
 
-        self.test = x_train
         # return episode_arr
         return sequenced_arr
 
@@ -162,21 +167,22 @@ class PrepData():
         self.get_scalers()
         # for episode_id in training_episodes:
         for episode_id in [811]:
-
-            return self.prep_episode(episode_id, 'train')
-
+            self.prep_episode(episode_id, 'train')
+        for episode_id in [811]:
+            self.prep_episode(episode_id, 'val')
 
 
 prep = PrepData(config)
 
 seq = prep.data_prep()
-seq[0][1]
+seq[0]
 
 # %%
+prep.config['history_drop']['vehicle']=='mveh'
 seq[1]
-prep.test[1]
+prep.test['pc'].min()
 
-prep.test[0]
+prep.test
 len(seq)
 len(test_car)
 # %%
@@ -184,3 +190,4 @@ len(test_car)
 test_car = mveh_df0.loc[mveh_df0['episode_id'] == 811].copy()
 test_car.drop(['frm', 'vel'], inplace=True, axis=1)
 test_car
+df = test_car
