@@ -100,6 +100,7 @@ class PrepData():
     def drop_redundants(self, mveh, yveh):
         drop_col = ['id', 'episode_id', 'name', 'frm', 'scenario']
         if self.exp_type['vehicle_name'] == 'mveh' and self.exp_type['model'] == 'controller':
+            self.action_size = 2
             mveh.drop(drop_col, inplace=True, axis=1)
             yveh.drop(drop_col+['act_long','lc_type'], inplace=True, axis=1)
 
@@ -111,6 +112,22 @@ class PrepData():
                 scaler = self.load_scaler(feature)
                 vehicle_df[feature] = scaler.transform(vehicle_df[feature].values.reshape(-1,1))
 
+    def sequence(self, episode_arr):
+        sequential_data = []
+        i_reset = 0
+        i = 0
+        for chunks in range(self.step_size):
+            prev_states = deque(maxlen=self.sequence_length)
+            while i < len(episode_arr):
+                row = episode_arr[i]
+                prev_states.append([n for n in row[:-self.action_size]])
+                if len(prev_states) == self.sequence_length:
+                    sequential_data.append([np.array(prev_states), row[-self.action_size:]])
+                i += self.step_size
+            i_reset += 1
+            i = i_reset
+
+        return sequential_data
 
     def prep_episode(self, episode_id, setName):
         mveh = mveh_df0[mveh_df0['episode_id'] == episode_id].copy()
@@ -118,25 +135,31 @@ class PrepData():
         self.drop_redundants(mveh, yveh)
         self.scaler_transform(mveh)
         self.scaler_transform(yveh)
-
         episode_arr = np.concatenate([yveh.values,mveh.values], axis=1)
-        print(episode_arr)
+        sequenced_arr = self.sequence(episode_arr)
+        self.test = episode_arr
+        # return episode_arr
+        return sequenced_arr
 
     def data_prep(self):
         self.get_scalers()
-        # for episode_id in training_episodes[0]:
+        # for episode_id in training_episodes:
         for episode_id in [811]:
 
-            self.prep_episode(episode_id, 'train')
+            return self.prep_episode(episode_id, 'train')
 
 
 
 prep = PrepData(config)
 
-prep.data_prep()
-
+seq = prep.data_prep()
+seq[0]
+seq[1]
+prep.test[0]
+len(seq)
+len(test_car)
 # %%
 
-test_car = mveh_df0.loc[mveh_df0['episode_id'] == 0].copy()
+test_car = mveh_df0.loc[mveh_df0['episode_id'] == 811].copy()
 test_car.drop(['frm', 'vel'], inplace=True, axis=1)
 test_car

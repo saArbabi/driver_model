@@ -19,23 +19,7 @@ class Model(object):
     def history_drop(self):
         pass
 
-    def sequence(self, xy_array):
 
-        sequential_data = []
-        i_reset = 0
-        i = 0
-        for chunks in range(self.step_size):
-            prev_states = deque(maxlen=self.sequence_length)
-            while i < len(xy_array):
-                row = xy_array[i]
-                prev_states.append([n for n in row[:len(self.actions)]])
-                if len(prev_states) == self.sequence_length:
-                    sequential_data.append([np.array(prev_states), row[len(self.actions):]])
-                i += self.step_size
-            i_reset += 1
-            i = i_reset
-
-        return sequential_data
 
 
     def preprocess(self, data):
