@@ -30,12 +30,14 @@ config = {
     "sequence_length": 5,
     "features": ['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p','lc_type'],
     "history_drop": {"percentage":0, "vehicle":['mveh', 'yveh']},
-    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx', 'act_long', 'act_lat']}
+    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p']},
+    "scaler_path": './driver_model/experiments/scaler001'
 },
 "experiment_path": './driver_model/experiments/exp001',
 "experiment_type": {"vehicle_name":'mveh', "model":"controller"}
 }
 
+config['data_config']['scaler_path']
 
 # %%
 def read_list(name):
@@ -71,10 +73,10 @@ class PrepData():
         self.data_path = './driver_model/dataset'
 
     def get_scalers(self):
-        dirName = self.exp_path + '/scalers/'
-
+        dirName = self.config['scaler_path']+'/'
         if not os.path.exists(dirName):
             os.mkdir(dirName)
+        if len(os.listdir(dirName)) == 0:
             print("Directory " , dirName ,  " Created ")
             for feature in self.config['scaler']['StandardScaler']:
                 scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
@@ -87,17 +89,35 @@ class PrepData():
         else:
             print("Directory " , dirName ,  " already exists")
 
+    def load_scaler(self, feature_name):
+        dirName = self.config['scaler_path'] +'/'+ feature_name
+
+        pickle_in = open(dirName,"rb")
+        scaler = pickle.load(pickle_in)
+        pickle_in.close()
+        return scaler
+
     def drop_redundants(self, mveh, yveh):
         drop_col = ['id', 'episode_id', 'name', 'frm', 'scenario']
         if self.exp_type['vehicle_name'] == 'mveh' and self.exp_type['model'] == 'controller':
             mveh.drop(drop_col, inplace=True, axis=1)
             yveh.drop(drop_col+['act_long','lc_type'], inplace=True, axis=1)
 
+
+    def scaler_transform(self, vehicle_df):
+        vehicle_col = vehicle_df.columns
+        for feature in self.config['scaler']['StandardScaler']:
+            if feature in vehicle_col:
+                scaler = self.load_scaler(feature)
+                vehicle_df[feature] = scaler.transform(vehicle_df[feature].values.reshape(-1,1))
+
+
     def prep_episode(self, episode_id, setName):
         mveh = mveh_df0[mveh_df0['episode_id'] == episode_id].copy()
         yveh = yveh_df0[yveh_df0['episode_id'] == episode_id].copy()
-        
         self.drop_redundants(mveh, yveh)
+        self.scaler_transform(mveh)
+        self.scaler_transform(yveh)
 
         episode_arr = np.concatenate([yveh.values,mveh.values], axis=1)
         print(episode_arr)
@@ -112,7 +132,6 @@ class PrepData():
 
 
 prep = PrepData(config)
-# prep.get_scaler()
 
 prep.data_prep()
 
