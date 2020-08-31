@@ -24,13 +24,7 @@ mveh_df['dx'].max()
 
 feature_col = ['vel', 'act_long', 'act_lat', 'gap_size', 'pc', 'dx']
 
-mveh_df['act_long'].plot.hist(bins=125)
-
-sample_scaler = standard_scaler_sample.fit(train_set[sample_col].values)
-sample = sample_scaler.transform(train_set[sample_col].values)
-scaled_data = pd.DataFrame(sample, columns=sample_col)
-scaled_data = pd.DataFrame(scaled_data, columns=sample_col)
-
+mveh_df['act_lat'].plot.hist(bins=125)
 for feature in feature_col:
     plt.figure()
     mveh_df[feature].plot.hist(bins=125)

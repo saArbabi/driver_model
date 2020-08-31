@@ -1,3 +1,7 @@
+"""
+- Outputs training set and validation set for a particular experiment prior to
+start of training.
+"""
 from collections import deque
 import numpy as np
 import random
@@ -24,7 +28,6 @@ class PrepData(self):
 
     def scale_data(self):
         pass
-
 
     def xy_split(self, xy_array):
         pass
