@@ -1,20 +1,3 @@
-import pandas as pd
-import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
-tfd = tfp.distributions
-import os
-from tensorflow.python.ops import math_ops
-import random
-
-seed_value = 2020
-random.seed(seed_value)
-# 3. Set `numpy` pseudo-random generator at a fixed value
-np.random.seed(seed_value)
-# 4. Set `tensorflow` pseudo-random generator at a fixed value
-tf.set_random_seed(seed_value)
-
-
 config = {
  "model_config": {
     "learning_rate": 1e-2,
