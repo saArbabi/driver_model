@@ -17,27 +17,6 @@ import pickle
 # car_dict['features']
 #
 
-config = {
- "model_config": {
-    "1": 2,
-    "hi": 2,
-    "1": 2,
-    "n_gmm_components": 4
-},
-"data_config": {
-    "step_size": 3,
-    "sequence_length": 5,
-    "features": ['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p','lc_type'],
-    "history_drop": {"percentage":0, "vehicle":'mveh'},
-    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx',
-                                'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
-    "scaler_path": './driver_model/experiments/scaler001'
-},
-"experiment_path": './driver_model/experiments/exp001',
-"experiment_type": {"vehicle_name":'mveh', "model":"controller"}
-}
-
-config['data_config']['scaler_path']
 
 # %%
 def read_list(name):
@@ -62,6 +41,25 @@ yveh_df0 = pd.read_csv('./driver_model/datasets/yveh_df0.txt', delimiter=' ',
                         header=None, names=yveh_col)
 # %%
 
+config = {
+ "model_config": {
+    "1": 2,
+    "hi": 2,
+    "1": 2,
+    "n_gmm_components": 4
+},
+"data_config": {
+    "step_size": 3,
+    "sequence_length": 0,
+    "features": ['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p','lc_type'],
+    "history_drop": {"percentage":0, "vehicle":'mveh'},
+    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx',
+                                'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
+    "scaler_path": './driver_model/experiments/scaler001'
+},
+"experiment_path": './driver_model/experiments/exp001',
+"experiment_type": {"vehicle_name":'mveh', "model":"controller"}
+}
 class DataObj():
     random.seed(2020)
 
@@ -112,25 +110,30 @@ class DataObj():
     def scaler_transform(self, vehicle_df):
         vehicle_col = vehicle_df.columns
         for feature in self.config['scaler']['StandardScaler']:
-
             if feature in vehicle_col:
                 scaler = self.load_scaler(feature)
                 vehicle_df[feature] = scaler.transform(vehicle_df[feature].values.reshape(-1,1))
 
     def sequence(self, episode_arr):
         sequential_data = []
-        i_reset = 0
-        i = 0
-        for chunks in range(self.step_size):
-            prev_states = deque(maxlen=self.sequence_length)
-            while i < len(episode_arr):
+
+        if self.sequence_length != 0:
+            i_reset = 0
+            i = 0
+            for chunks in range(self.step_size):
+                prev_states = deque(maxlen=self.sequence_length)
+                while i < len(episode_arr):
+                    row = episode_arr[i]
+                    prev_states.append(row[:-self.action_size])
+                    if len(prev_states) == self.sequence_length:
+                        sequential_data.append([np.array(prev_states), row[-self.action_size:]])
+                    i += self.step_size
+                i_reset += 1
+                i = i_reset
+        else:
+            for i in range( len(episode_arr)):
                 row = episode_arr[i]
-                prev_states.append([n for n in row[:-self.action_size]])
-                if len(prev_states) == self.sequence_length:
-                    sequential_data.append([np.array(prev_states), row[-self.action_size:]])
-                i += self.step_size
-            i_reset += 1
-            i = i_reset
+                sequential_data.append([np.array(row[:-self.action_size]), row[-self.action_size:]])
 
         return sequential_data
 
@@ -182,6 +185,8 @@ class DataObj():
 Data = DataObj(config)
 Data.data_prep()
 # %%
+Data.x_train[1]
+Data.y_train[1]
 
 prep.config['history_drop']['vehicle']=='mveh'
 seq[1]
