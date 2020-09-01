@@ -39,9 +39,8 @@ reload(utils)
 config = {
  "model_config": {
     "learning_rate": 1e-2,
-    "hi": 2,
-    "1": 2,
-    "n_components": 4
+    "hidden_size": 2,
+    "components_n": 4
 },
 "data_config": {
     "step_size": 3,
@@ -52,23 +51,24 @@ config = {
                                 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
     "scaler_path": './driver_model/experiments/scaler001'
 },
-"experiment_path": './driver_model/experiments/exp001',
+"experiment_name": 'exp001',
 "experiment_type": {"vehicle_name":'mveh', "model":"controller"}
 }
-model = am.FFMDN(4)
+model = am.FFMDN(config)
+# %%
 
 model.compile(loss=utils.nll_loss, optimizer=model.optimizer)
 
-model.fit(x=X_train, y=y_train,epochs=200, validation_data=(X_test, y_test),
+model.fit(x=X_train, y=y_train,epochs=3, validation_data=(X_test, y_test),
                     verbose=1, batch_size=128, callbacks=model.callback)
 
-log_dir = './models/learned_controllers/exp001/trained_model'
-model.save(log_dir)
-model = keras.models.load_model(log_dir, custom_objects={'nll_loss': utils.nll_loss})
+model.save(model.exp_dir+'/trained_model')
+model = keras.models.load_model(model.exp_dir+'/trained_model',
+                                    custom_objects={'nll_loss': utils.nll_loss})
+
 y_pred = model.predict(y_test)
 # %%
 # %%
-'./models/learned_controllers/exp001/'
 y_pred = model.predict(y_test)
 
 alpha_pred, mu_pred, sigma_pred = slice_pvector(y_pred)
