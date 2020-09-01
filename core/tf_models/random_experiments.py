@@ -1,22 +1,17 @@
-config = {
- "model_config": {
-    "learning_rate": 1e-2,
-    "hi": 2,
-    "1": 2,
-    "n_components": 4
-},
-"data_config": {
-    "step_size": 3,
-    "sequence_length": 5,
-    "features": ['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p','lc_type'],
-    "history_drop": {"percentage":0, "vehicle":'mveh'},
-    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx',
-                                'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
-    "scaler_path": './driver_model/experiments/scaler001'
-},
-"experiment_path": './driver_model/experiments/exp001',
-"experiment_type": {"vehicle_name":'mveh', "model":"controller"}
-}
+
+
+def build_toy_dataset(nsample=40000):
+    y_data = np.float32(np.random.uniform(-10.5, 10.5, (1, nsample))).T
+    r_data = np.float32(np.random.normal(size=(nsample,1))) # random noise
+    x_data = np.float32(np.sin(0.75*y_data)*7.0+y_data*0.5+r_data*1.0)
+    return train_test_split(x_data, y_data, random_state=42, train_size=0.1)
+
+# load data
+X_train, X_test, y_train, y_test = build_toy_dataset()
+plt.scatter(X_test, y_test)
+y_train[0]
+plt.scatter(X_train, y_train)
+plt.scatter(x, means)
 
 
 class AbstractModel():
