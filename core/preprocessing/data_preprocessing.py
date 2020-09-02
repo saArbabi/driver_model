@@ -9,14 +9,6 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import os
 import pickle
-# a = [1,2,3,4,5,6,7]
-# random.shuffle(a)
-
-# car_dict = []{'scenario':'101', 'id': 23, 'lc_initiation_frm': 22, 'features': [[1,2,3],[1,2,3]]}
-# car_dict
-# car_dict['features']
-#
-
 
 # %%
 def read_list(name):
@@ -69,7 +61,6 @@ class DataObj():
         self.exp_type = config['experiment_type']
         self.sequence_length = self.config["sequence_length"]
         self.step_size = self.config["step_size"]
-        self.data_path = './driver_model/dataset'
         self.x_train = []
         self.y_train = []
         self.x_val = []
