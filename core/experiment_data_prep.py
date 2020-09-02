@@ -58,7 +58,7 @@ config = {
     "scaler_path": './driver_model/experiments/scaler001'
 },
 "experiment_path": './driver_model/experiments/exp001',
-"experiment_type": {"vehicle_name":'mveh', "model":"controller"}
+"experiment_type": {"target_name":'mveh', "model":"controller"}
 }
 class DataObj():
     random.seed(2020)
@@ -102,7 +102,7 @@ class DataObj():
 
     def drop_redundants(self, mveh, yveh):
         drop_col = ['id', 'episode_id', 'name', 'frm', 'scenario']
-        if self.exp_type['vehicle_name'] == 'mveh' and self.exp_type['model'] == 'controller':
+        if self.exp_type['target_name'] == 'mveh' and self.exp_type['model'] == 'controller':
             self.action_size = 2
             mveh.drop(drop_col, inplace=True, axis=1)
             yveh.drop(drop_col+['act_long','lc_type'], inplace=True, axis=1)
@@ -140,8 +140,8 @@ class DataObj():
     def history_drop(self, mveh, yveh):
         dropout_percentage = self.config['history_drop']['percentage']
         if  dropout_percentage != 0:
-            vehicle_name = self.config['history_drop']['vehicle']
-            if vehicle_name == 'mveh':
+            target_name = self.config['history_drop']['vehicle']
+            if target_name == 'mveh':
                 index = mveh.sample(int(len(mveh)*dropout_percentage)).index
                 mveh.loc[index, mveh.columns != 'lc_type']=0
 

@@ -38,22 +38,23 @@ config = {
                                 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
     "scaler_path": './driver_model/experiments/scaler001'
 },
-"experiment_name": 'exp001',
-"experiment_type": {"vehicle_name":'mveh', "model":"controller"}
+"exp_name": 'exp001',
+"exp_type": {"target_name":'yveh', "model":"controller"}
 }
 model = am.FFMDN(config)
-# %%
 
-model.compile(loss=utils.nll_loss, optimizer=model.optimizer)
+model.compile(loss=utils.nll_loss(config), optimizer=model.optimizer)
 
 model.fit(x=X_train, y=y_train,epochs=3, validation_data=(X_test, y_test),
                     verbose=1, batch_size=128, callbacks=model.callback)
 
 model.save(model.exp_dir+'/trained_model')
 model = keras.models.load_model(model.exp_dir+'/trained_model',
-                                    custom_objects={'nll_loss': utils.nll_loss})
+                                    custom_objects={'loss': utils.nll_loss(config)})
 
-y_pred = model.predict(y_test)
-alpha_pred, mu_pred, sigma_pred = slice_pvector(y_pred)
 
 # %%
+
+
+# %%
+ 
