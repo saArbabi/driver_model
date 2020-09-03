@@ -167,8 +167,6 @@ class DataObj():
             sequenced_arr = self.prep_episode(episode_id)
             self.store_data(sequenced_arr, 'train')
 
-
-        #
         # for episode_id in validation_episodes:
         #     self.prep_episode(episode_id)
 
