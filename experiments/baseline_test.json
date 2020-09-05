@@ -4,7 +4,7 @@
      "neurons_n": 50,
      "layers_n": 2,
      "epochs_n": 3,
-     "batch_n": 1024,
+     "batch_n": 64,
      "components_n": 4
 },
 

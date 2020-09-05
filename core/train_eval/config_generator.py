@@ -10,10 +10,10 @@ def genConfig(config):
     dirName = './models/experiments/'+config['exp_id']
     if not os.path.exists(dirName):
         os.mkdir(dirName)
-        if not 'config.json' in os.listdir(dirName):
-            with open(dirName+'/config.json','w') as f:
-                json.dump(config, f, sort_keys=True,
-                                indent=4, separators=(',', ': '))
+    if not 'config.json' in os.listdir(dirName):
+        with open(dirName+'/config.json','w') as f:
+            json.dump(config, f, sort_keys=True,
+                            indent=4, separators=(',', ': '))
 
 def genExpID(last_exp_id):
     id = "{0:0=3d}".format(int(last_exp_id[3:])+1)

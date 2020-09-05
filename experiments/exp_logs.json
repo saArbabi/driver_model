@@ -1,0 +1,9 @@
+{
+    "exp001": {
+        "exp_state": "complete",
+        "model": "NA",
+        "target_name": "NA",
+        "train_loss": 2.916790246963501,
+        "val_loss": 2.8840320110321045
+    }
+}

@@ -1,4 +1,5 @@
 import json
+import os
 explogs_path = './models/experiments/exp_logs.json'
 
 def loadConfigBase(file_name):
@@ -31,6 +32,17 @@ def updateExpstate(explogs, exp_id, exp_state):
     explogs[exp_id]['exp_state'] = exp_state
     dumpExplogs(explogs_path, explogs)
     if exp_state == 'complete':
-        print('Experiment 0 ', exp_id, ' has been complete')
+        print('Experiment ', exp_id, ' has been complete')
     elif exp_state == 'in progress':
-        print('Experiment 0 ', exp_id, 'is in progress')
+        print('Experiment ', exp_id, 'is in progress')
+
+def delete_experiment(exp_id):
+    dirName = './models/experiments/'+exp_id
+    explogs = loadExplogs()
+    if exp_id in explogs:
+        explogs.pop(exp_id)
+
+    dumpExplogs(explogs_path, explogs)
+    if exp_id in os.listdir('./models/experiments'):
+        if 'config.json' in os.listdir(dirName):
+            os.remove(dirName+'/config.json')
