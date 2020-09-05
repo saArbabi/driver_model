@@ -15,8 +15,14 @@ class AbstractModel(tf.keras.Model):
         super(AbstractModel, self).__init__(name="AbstractModel")
         self.config = config['model_config']
         self.exp_dir = './models/experiments/'+config['exp_id']
-        self.optimizer = tf.optimizers.Adam()
+        self.learning_rate = self.config['learning_rate']
+        self.neurons_n = self.config['neurons_n']
+        self.layers_n = self.config['layers_n']
+        self.epochs_n = self.config['epochs_n']
+        self.batch_n = self.config['batch_n']
         self.components_n = self.config['components_n'] # number of Mixtures
+        self.optimizer = tf.optimizers.Adam(self.learning_rate)
+
         self.callback = self.callback_def()
 
     def architecture_def(self, X):
@@ -32,15 +38,13 @@ class AbstractModel(tf.keras.Model):
 class FFMDN(AbstractModel):
     def __init__(self, config):
         super(FFMDN, self).__init__(config)
-        self.hidden_size = 20
-        self.n_hidden_layers = 2
         self.architecture_def(config)
 
     def architecture_def(self, config):
         """pi, mu, sigma = NN(x; theta)"""
-        # for n in range(self.n_hidden_layers):
-        self.h1 = Dense(self.hidden_size, activation='relu', name="h1")
-        self.h2 = Dense(self.hidden_size, activation='relu', name="h2")
+        # for n in range(self.layers_n):
+        self.h1 = Dense(self.neurons_n, activation='relu', name="h1")
+        self.h2 = Dense(self.neurons_n, activation='relu', name="h2")
         self.alphas = Dense(self.components_n, activation=K.softmax, name="pi_long")
         self.mus_long = Dense(self.components_n, name="mus_long")
         self.sigmas_long = Dense(self.components_n, activation=K.exp, name="sigmas_long")
