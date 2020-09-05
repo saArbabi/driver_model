@@ -41,7 +41,7 @@ config = {
                                 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
     "scaler_path": '/experiments/scaler001'
 },
-"exp_name": 'exp001',
+"exp_id": 'exp001',
 "exp_type": {"target_name":'yveh', "model":"controller"}
 }
 

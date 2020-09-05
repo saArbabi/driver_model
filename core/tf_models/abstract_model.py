@@ -14,7 +14,7 @@ class AbstractModel(tf.keras.Model):
     def __init__(self, config):
         super(AbstractModel, self).__init__(name="AbstractModel")
         self.config = config['model_config']
-        self.exp_dir = './models/experiments/'+config['exp_name']
+        self.exp_dir = './models/experiments/'+config['exp_id']
         self.optimizer = tf.optimizers.Adam()
         self.components_n = self.config['components_n'] # number of Mixtures
         self.callback = self.callback_def()
