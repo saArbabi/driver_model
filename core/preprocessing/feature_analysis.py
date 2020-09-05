@@ -7,9 +7,9 @@ mveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'pc'
 
 yveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'act_long_p', 'act_long']
 
-mveh_df = pd.read_csv('./driver_model/datasets/mveh_df.txt', delimiter=' ',
+mveh_df = pd.read_csv('/datasets/mveh_df.txt', delimiter=' ',
                         header=None, names=mveh_col)
-yveh_df = pd.read_csv('./driver_model/datasets/yveh_df.txt', delimiter=' ',
+yveh_df = pd.read_csv('/datasets/yveh_df.txt', delimiter=' ',
                         header=None, names=yveh_col)
 
 len(mveh_df)

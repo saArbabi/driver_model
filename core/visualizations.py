@@ -6,7 +6,7 @@ col = ['id', 'frm', 'scenario', 'pc', 'lc_bool', 'vel', 'act_long', 'act_lat',
        'ff_id', 'ff_vel', 'ff_long', 'ff_v', 'ff_bb_v', 'bb_id',
        'bb_vel', 'bb_long', 'bb_v']
 
-data = pd.read_csv('./driver_model/dataset/interaction_episodes.txt', delimiter=' ',header=None, names=col)
+data = pd.read_csv('/dataset/interaction_episodes.txt', delimiter=' ',header=None, names=col)
 datasets = {
                 "i101_1": "trajdata_i101_trajectories-0750am-0805am.txt",
                 "i101_2": "trajdata_i101_trajectories-0805am-0820am.txt",

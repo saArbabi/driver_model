@@ -12,7 +12,7 @@ import pickle
 
 # %%
 def read_list(name):
-    file_name = './driver_model/datasets/'+name+'.txt'
+    file_name = '/datasets/'+name+'.txt'
     file = open(file_name, "r")
     my_list = [int(item) for item in file.read().split()]
     file.close()
@@ -27,9 +27,9 @@ mveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'pc'
 
 yveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'act_long_p', 'act_long']
 
-mveh_df0 = pd.read_csv('./driver_model/datasets/mveh_df0.txt', delimiter=' ',
+mveh_df0 = pd.read_csv('/datasets/mveh_df0.txt', delimiter=' ',
                         header=None, names=mveh_col)
-yveh_df0 = pd.read_csv('./driver_model/datasets/yveh_df0.txt', delimiter=' ',
+yveh_df0 = pd.read_csv('/datasets/yveh_df0.txt', delimiter=' ',
                         header=None, names=yveh_col)
 # %%
 
@@ -47,9 +47,9 @@ config = {
     "history_drop": {"percentage":0, "vehicle":'mveh'},
     "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx',
                                 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
-    "scaler_path": './driver_model/experiments/scaler001'
+    "scaler_path": '/experiments/scaler001'
 },
-"experiment_path": './driver_model/experiments/exp001',
+"experiment_path": '/experiments/exp001',
 "experiment_type": {"target_name":'mveh', "model":"controller"}
 }
 class DataObj():

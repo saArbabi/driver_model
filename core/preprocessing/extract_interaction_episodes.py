@@ -44,10 +44,10 @@ col_df_all = ['id','frm','scenario','lane_id','length','x_front','y_front','clas
 
 # %%
 
-feature_set = pd.read_csv('./driver_model/datasets/feature_set.txt', delimiter=' ',
+feature_set = pd.read_csv('/datasets/feature_set.txt', delimiter=' ',
                         header=None, names=col).drop(col_drop,axis=1)
 
-df_all = pd.read_csv('./driver_model/datasets/df_all.txt', delimiter=' ',
+df_all = pd.read_csv('/datasets/df_all.txt', delimiter=' ',
                                                             header=None, names=col_df_all)
 
 os.chdir('../NGSIM_data_and_visualisations')

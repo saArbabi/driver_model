@@ -14,25 +14,13 @@ class AbstractModel(tf.keras.Model):
     def __init__(self, config):
         super(AbstractModel, self).__init__(name="AbstractModel")
         self.config = config['model_config']
-        self.exp_dir = self.get_expDir(config)
+        self.exp_dir = './models/experiments/'+config['exp_name']
         self.optimizer = tf.optimizers.Adam()
         self.components_n = self.config['components_n'] # number of Mixtures
         self.callback = self.callback_def()
 
     def architecture_def(self, X):
         raise NotImplementedError()
-
-    def get_expDir(self, config):
-        exp_dir = './models/'
-        if config['exp_type']['model'] == 'controller':
-            exp_dir += 'controller/'
-
-        elif config['exp_type']['model'] == 'driver_model':
-            exp_dir += 'driver_model/'
-        else:
-            raise Exception("Unknown experiment type")
-
-        return exp_dir + config['exp_name']
 
     def callback_def(self):
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
