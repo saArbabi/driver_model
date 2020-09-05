@@ -4,7 +4,6 @@ from tensorflow.python.ops import math_ops
 from keras import backend as K
 from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
 from tensorflow.keras.callbacks import TensorBoard
-
 from datetime import datetime
 
 # %%

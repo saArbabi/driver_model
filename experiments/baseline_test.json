@@ -1,8 +1,11 @@
 {
  "model_config": {
-    "learning_rate": 1e-2,
-    "hidden_size": 5,
-    "components_n": 4
+     "learning_rate": 1e-2,
+     "neurons_n": 50,
+     "layers_n": 2,
+     "epochs_n": 3,
+     "batch_n": 1024,
+     "components_n": 4
 },
 
 "data_config": {},

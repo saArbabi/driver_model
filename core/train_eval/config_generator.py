@@ -4,8 +4,8 @@ from models.core.train_eval import utils
 
 explogs_path = './models/experiments/exp_logs.json'
 explog = {'exp_state':'NA', 'target_name':'NA', 'model':'NA',
-            'loss':'NA'}
-            
+            'train_loss':'NA', 'val_loss':'NA'}
+
 def genConfig(config):
     dirName = './models/experiments/'+config['exp_id']
     if not os.path.exists(dirName):
@@ -33,7 +33,7 @@ def genExpSeires(config, test_variables=None):
     if os.path.getsize(explogs_path) == 0:
         explogs = {}
     else:
-        explogs = utils.loadExplogs(explogs_path)
+        explogs = utils.loadExplogs()
 
     if test_variables:
         for param in test_variables['param_values']:

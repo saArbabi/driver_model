@@ -1,5 +1,7 @@
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
+import warnings
+warnings.filterwarnings("always")
 
 def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
@@ -56,3 +58,7 @@ def nll_loss(config):
         log_likelihood = mvn.log_prob(tf.transpose(y)) # Evaluate log-probability of y
         return -tf.reduce_mean(log_likelihood, axis=-1)
     return loss
+
+def get_predictionMean(parameter_vector, config):
+    mvn = get_pdf(tf.convert_to_tensor(parameter_vector), config)
+    return mvn.mean()

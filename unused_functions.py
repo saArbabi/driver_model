@@ -11,6 +11,8 @@ def get_expDir(config):
 
     return exp_dir + config['exp_id']
 
+    model = keras.models.load_model(model.exp_dir+'/trained_model',
+                                        custom_objects={'loss': nll_loss(config)})
 
 
 # %%
