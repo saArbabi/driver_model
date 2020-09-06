@@ -31,8 +31,24 @@ class AbstractModel(tf.keras.Model):
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
 
         log_dir = self.exp_dir+'/logs/'+current_time
-        print("logs saved at "+log_dir)
-        return TensorBoard(log_dir=log_dir)
+        return TensorBoard(log_dir=log_dir, write_graph=True)
+
+    @tf.function
+    def tracemodel(self, x):
+        """Trace model execution - use for writing model graph
+        :param: A sample input
+        """
+        return self(x)
+
+    def saveGraph(self, x):
+        writer = tf.summary.create_file_writer(self.exp_dir+'/graph')
+        tf.summary.trace_on(graph=True, profiler=True)
+        # Forward pass
+        z = self.tracemodel(x.reshape(-1,1))
+        with writer.as_default():
+            tf.summary.trace_export(name='model_trace',
+                                step=0, profiler_outdir=self.exp_dir+'/graph')
+        writer.close()
 
 class FFMDN(AbstractModel):
     def __init__(self, config):
@@ -56,7 +72,6 @@ class FFMDN(AbstractModel):
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-
         x = self.h1(inputs)
         x = self.h2(x)
         alpha_v = self.alphas(x)
@@ -64,6 +79,7 @@ class FFMDN(AbstractModel):
         sigma_v = self.sigmas_long(x)
 
         return self.pvector([alpha_v, mu_v, sigma_v])
+
 
 class GRUMDN(AbstractModel):
     pass

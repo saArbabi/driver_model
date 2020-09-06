@@ -27,7 +27,7 @@ def modelTrain(config, explogs):
     validation_data=(X_test, y_test)
     history = model.fit(x=X_train, y=y_train, epochs=model.epochs_n, validation_data=validation_data,
                         verbose=0, batch_size=model.batch_n, callbacks=model.callback)
-
+    model.saveGraph(y_test[0])
     modelEvaluate(model, validation_data, config)
     explogs[exp_id]['train_loss'] = round(history.history['loss'][-1], 1)
     explogs[exp_id]['val_loss'] = round(history.history['val_loss'][-1], 1)

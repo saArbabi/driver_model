@@ -23,18 +23,24 @@ def dumpExplogs(explogs_path, explogs):
 
 def get_undoneExpIDs(explogs):
     undone_exp = []
-    for key, value in explogs.items():  # for name, age in dictionary.iteritems():  (for Python 2.x)
+    for key, value in explogs.items():
         if value['exp_state'] == 'NA':
             undone_exp.append(key)
     return undone_exp
 
 def updateExpstate(explogs, exp_id, exp_state):
+    for key, value in explogs.items():
+        # first remove failed experiments
+        if value['exp_state'] == 'in progress':
+            explogs[key]['exp_state'] = 'failed'
+
     explogs[exp_id]['exp_state'] = exp_state
-    dumpExplogs(explogs_path, explogs)
     if exp_state == 'complete':
         print('Experiment ', exp_id, ' has been complete')
     elif exp_state == 'in progress':
         print('Experiment ', exp_id, 'is in progress')
+    dumpExplogs(explogs_path, explogs)
+
 
 def delete_experiment(exp_id):
     dirName = './models/experiments/'+exp_id

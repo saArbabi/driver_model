@@ -3,63 +3,21 @@
         "exp_state": "complete",
         "model": "NA",
         "target_name": "NA",
-        "train_loss": 2.916790246963501,
-        "val_loss": 2.8840320110321045
+        "train_loss": 2.0,
+        "val_loss": 1.9
     },
     "exp002": {
-        "exp_state": "complete",
+        "exp_state": "failed",
         "model": "NA",
         "target_name": "NA",
-        "train_loss": 2.6,
-        "val_loss": 2.5
+        "train_loss": "NA",
+        "val_loss": "NA"
     },
     "exp003": {
         "exp_state": "complete",
         "model": "NA",
         "target_name": "NA",
-        "train_loss": 1.6,
-        "val_loss": 1.7
-    },
-    "exp004": {
-        "exp_state": "complete",
-        "model": "NA",
-        "target_name": "NA",
-        "train_loss": 1.4,
-        "val_loss": 1.3
-    },
-    "exp005": {
-        "exp_state": "in progress",
-        "model": "NA",
-        "target_name": "NA",
-        "train_loss": "NA",
-        "val_loss": "NA"
-    },
-    "exp006": {
-        "exp_state": "in progress",
-        "model": "NA",
-        "target_name": "NA",
-        "train_loss": "NA",
-        "val_loss": "NA"
-    },
-    "exp007": {
-        "exp_state": "in progress",
-        "model": "NA",
-        "target_name": "NA",
-        "train_loss": "NA",
-        "val_loss": "NA"
-    },
-    "exp008": {
-        "exp_state": "in progress",
-        "model": "NA",
-        "target_name": "NA",
-        "train_loss": "NA",
-        "val_loss": "NA"
-    },
-    "exp009": {
-        "exp_state": "complete",
-        "model": "NA",
-        "target_name": "NA",
-        "train_loss": 1.4,
-        "val_loss": 1.4
+        "train_loss": 1.7,
+        "val_loss": 1.6
     }
 }

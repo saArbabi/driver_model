@@ -1,10 +1,8 @@
 import models.core.tf_models.abstract_model as am
 from models.core.train_eval import utils
-from models.core.train_eval import config_generator
 
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-import pandas as pd
 import numpy as np
 from importlib import reload
 from tensorflow import keras
@@ -31,9 +29,6 @@ X_train, X_test, y_train, y_test = build_toy_dataset()
 
 
 config_base = utils.loadConfigBase('baseline_test.json')
-config_generator.genExpSeires(config_base, test_variables=None)
-
-X_train, X_test, y_train, y_test = build_toy_dataset()
 
 model = am.FFMDN(config_base)
 
@@ -62,3 +57,24 @@ len(sampled_values[0])
 plt.scatter(X_test, y_test)
 plt.scatter(X_test[0:500], mean_values[0:500])
 plt.scatter(X_test[0:500], sampled_values[0][0:500])
+
+
+
+######################
+model.predict(y_test[0])
+import tensorflow as tf
+
+@tf.function
+def tracemodel(x):
+    """Trace model execution - use for writing model graph
+    :param: A sample input
+    """
+    return model(x)
+log='./models/experiments/log1/%s' # stamp
+writer = tf.summary.create_file_writer(log)
+tf.summary.trace_on(graph=True, profiler=True)
+# Forward pass
+z = tracemodel(y_test[0].reshape(-1,1))
+with writer.as_default():
+    tf.summary.trace_export(name="model_trace", step=0, profiler_outdir=log)
+writer.close()
