@@ -20,7 +20,7 @@ def modelEvaluate(model, validation_data, config):
 
     predictions = model.predict(y_test)
     eval_metrics = {}
-    eval_metrics['prediction_mean'] = get_predictionMean(predictions, config)
+    eval_metrics['prediction_mean'] = get_predictionMean(predictions, config).numpy()
     eval_metrics['x_test'] = x_test
     eval_metrics['y_test'] = y_test
     dumpEvalmetrics(model.exp_dir, eval_metrics)

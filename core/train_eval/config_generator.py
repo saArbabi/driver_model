@@ -25,11 +25,13 @@ def get_lastExpID(explogs):
     else:
         return list(explogs.keys())[-1]
 
-def genExpSeires(config, test_variables=None):
+def genExpSeires(config_base, test_variables=None):
     """
     Function for generating series of folders for storing experiment reasults.
     :input: config_series defines the experiment series
     """
+    config = utils.loadConfigBase(config_base)
+
     if os.path.getsize(explogs_path) == 0:
         explogs = {}
     else:

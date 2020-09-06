@@ -1,4 +1,3 @@
-
 import models.core.tf_models.abstract_model as am
 from models.core.train_eval import utils
 from models.core.train_eval import config_generator
@@ -13,13 +12,10 @@ from tensorflow import keras
 import random
 import json
 
-from models.core.train_eval import  model_evaluation
-reload(model_evaluation)
-
-seed_value = 2020
-np.random.seed(seed_value)
-
-random.seed(seed_value)
+# seed_value = 2020
+# np.random.seed(seed_value)
+# 
+# random.seed(seed_value)
 # 3. Set `numpy` pseudo-random generator at a fixed value
 # 4. Set `tensorflow` pseudo-random generator at a fixed value
 # tf.set_random_seed(seed_value)
@@ -70,7 +66,6 @@ reload(config_generator)
 
 # %%
 
-config_base = utils.loadConfigBase('baseline_test.json')
-config_generator.genExpSeires(config_base, test_variables=None)
-utils.delete_experiment('exp002')
+config_generator.genExpSeires(config_base='baseline_test.json', test_variables=None)
+utils.delete_experiment('exp003')
 run_trainingSeries()
