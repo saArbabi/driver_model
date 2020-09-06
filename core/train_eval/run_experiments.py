@@ -14,7 +14,7 @@ import json
 
 # seed_value = 2020
 # np.random.seed(seed_value)
-# 
+#
 # random.seed(seed_value)
 # 3. Set `numpy` pseudo-random generator at a fixed value
 # 4. Set `tensorflow` pseudo-random generator at a fixed value
@@ -67,5 +67,5 @@ reload(config_generator)
 # %%
 
 config_generator.genExpSeires(config_base='baseline_test.json', test_variables=None)
-utils.delete_experiment('exp003')
+# utils.delete_experiment('exp003')
 run_trainingSeries()

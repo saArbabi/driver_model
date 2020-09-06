@@ -3,9 +3,9 @@
      "learning_rate": 1e-2,
      "neurons_n": 50,
      "layers_n": 2,
-     "epochs_n": 30,
-     "batch_n": 64,
-     "components_n": 4
+     "epochs_n": 50,
+     "batch_n": 128,
+     "components_n": 20
 },
 
 "data_config": {},

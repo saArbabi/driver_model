@@ -14,11 +14,11 @@ def get_evalMetrics(exp_ids):
 
     return eval_metrics
 
-exp_ids = ['exp001']
+
+# %%
+exp_ids = ['exp001','exp003','exp004']
 eval_metrics = get_evalMetrics(exp_ids)
 
-eval_metrics['exp001'].keys()
-# %%
 def vis(exp_ids, eval_metrics):
 
     for exp_id in exp_ids:

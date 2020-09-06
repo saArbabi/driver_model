@@ -55,6 +55,8 @@ class FFMDN(AbstractModel):
         self.pvector = Concatenate(name="output") # parameter vector
 
     def call(self, inputs):
+        # Defines the computation from inputs to outputs
+
         x = self.h1(inputs)
         x = self.h2(x)
         alpha_v = self.alphas(x)

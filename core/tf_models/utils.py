@@ -62,3 +62,7 @@ def nll_loss(config):
 def get_predictionMean(parameter_vector, config):
     mvn = get_pdf(tf.convert_to_tensor(parameter_vector), config)
     return mvn.mean()
+
+def get_predictionSamples(samples_n, parameter_vector, config):
+    mvn = get_pdf(tf.convert_to_tensor(parameter_vector), config)
+    return mvn.mean()

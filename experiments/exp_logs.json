@@ -12,5 +12,19 @@
         "target_name": "NA",
         "train_loss": 2.6,
         "val_loss": 2.5
+    },
+    "exp003": {
+        "exp_state": "complete",
+        "model": "NA",
+        "target_name": "NA",
+        "train_loss": 1.6,
+        "val_loss": 1.7
+    },
+    "exp004": {
+        "exp_state": "complete",
+        "model": "NA",
+        "target_name": "NA",
+        "train_loss": 1.4,
+        "val_loss": 1.3
     }
 }
