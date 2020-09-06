@@ -26,5 +26,40 @@
         "target_name": "NA",
         "train_loss": 1.4,
         "val_loss": 1.3
+    },
+    "exp005": {
+        "exp_state": "in progress",
+        "model": "NA",
+        "target_name": "NA",
+        "train_loss": "NA",
+        "val_loss": "NA"
+    },
+    "exp006": {
+        "exp_state": "in progress",
+        "model": "NA",
+        "target_name": "NA",
+        "train_loss": "NA",
+        "val_loss": "NA"
+    },
+    "exp007": {
+        "exp_state": "in progress",
+        "model": "NA",
+        "target_name": "NA",
+        "train_loss": "NA",
+        "val_loss": "NA"
+    },
+    "exp008": {
+        "exp_state": "in progress",
+        "model": "NA",
+        "target_name": "NA",
+        "train_loss": "NA",
+        "val_loss": "NA"
+    },
+    "exp009": {
+        "exp_state": "complete",
+        "model": "NA",
+        "target_name": "NA",
+        "train_loss": 1.4,
+        "val_loss": 1.4
     }
 }

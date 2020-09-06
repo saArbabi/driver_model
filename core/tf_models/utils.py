@@ -65,4 +65,4 @@ def get_predictionMean(parameter_vector, config):
 
 def get_predictionSamples(samples_n, parameter_vector, config):
     mvn = get_pdf(tf.convert_to_tensor(parameter_vector), config)
-    return mvn.mean()
+    return mvn.sample(samples_n)

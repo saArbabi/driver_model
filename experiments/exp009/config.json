@@ -1,0 +1,17 @@
+{
+    "Note": "NA",
+    "data_config": {},
+    "exp_id": "exp009",
+    "exp_type": {
+        "model": "controller",
+        "target_name": "yveh"
+    },
+    "model_config": {
+        "batch_n": 128,
+        "components_n": 20,
+        "epochs_n": 50,
+        "layers_n": 2,
+        "learning_rate": 0.01,
+        "neurons_n": 50
+    }
+}
