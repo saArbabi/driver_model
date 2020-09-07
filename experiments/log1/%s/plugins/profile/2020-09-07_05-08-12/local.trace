@@ -1,0 +1,49 @@
+
+UõP
+	/host:CPUõôË
+
+tf_ComputeôËĞ³
+
+tf_ComputeĞ³ÌÏÌÏ
+
+/device:GPU:0"WõÌÏ
+tracemodelHÀÆ´½P ÃíÎ˜Z
+tracing_count1Z!
+tf_function_calltraced-nonXla"õÌÏtf.constantH Âº²P€¡Ñ"+õÌÏTFE_DeleteTensorHandleHÀÜå”çP€Ğ†" õÌÏtf.constantH ğ„‚èPÀ˜¹".õÌÏTFE_Py_ExecuteCancelableHàçÖ´èPà—§·6"?õÌÏ)EagerExecute: __inference_tracemodel_1567H€¤ÇÄèPÀ³ó¥6"DõÌÏ.EagerLocalExecute: __inference_tracemodel_1567H Ğ–ÅèPÀß‘¥6"4õÌÏEagerCopyToDeviceAndAddCacheKeyH€ÌŠÆèPà  
+"AõÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyH€œ‘ÉèP€µ"AõÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyH€¥‹ÊèPÀÏ$"=õÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyH€ùìÊè"AõÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyHàôàËèPà§"AõÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyH€¡°ÌèPà§"AõÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyH ÍÿÌèPà§"=õÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyH ¡áÍè"=õÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyH õÂÎè"=õÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyHÀ¡’Ïè"=õÌÏ-TensorHandle::GetResourceHandleInfo WaitReadyH€Å˜Ğè"2õÌÏValidateInputTypeAndPlacementHàšÈÊ˜P€¨Ã"GõÌÏEagerKernelExecuteHÀ¾ÿÌ˜PÀÀœœZ
+	step_name0Z
+group_id0"LõÌÏFunctionRunHà’’Ï˜PÀ‚­¿Z
+id-3909307529142451226Z
+group_id0"+õÌÏTFE_DeleteTensorHandleHÀ¸ÿPÀ÷ç"!õÌÏtf.constantHà¸á«ÖPàô“ÿ"*õÌÏTFE_DeleteTensorHandleHà¹·¥ØP€Ôa"-õÌÏTFE_Py_FastPathExecute_CH ˜îÇØPàª“)"&õÌÏTFE_DeleteTensorHandleH ˆ‚ÑØ"&õÌÏTFE_DeleteTensorHandleHÀ´ÑÑØ"-õÌÏEagerExecute: LogicalAndH€ğÒØP ±£"2õÌÏEagerLocalExecute: LogicalAndH „§ÓØP€ºì"2õÌÏValidateInputTypeAndPlacementH€‰•ÕØPàÏÕ"ƒõÌÏo_Send input 0 from /job:localhost/replica:0/task:0/device:CPU:0 to /job:localhost/replica:0/task:0/device:GPU:0HÀ¬›ÖØPàÜ*"õÌÏo_Send input 1 from /job:localhost/replica:0/task:0/device:CPU:0 to /job:localhost/replica:0/task:0/device:GPU:0H€±ØÖØ"6õÌÏEagerKernelExecuteHÀ€ıÖØP îñZ
+group_id0"aõÌÏ
+LogicalAndH€ÕÀÚØPà¼ÒZ"
+	long_nameLogicalAnd:LogicalAndZ
+group_id0Z
+is_eager1"-õÌÏTFE_Py_FastPathExecute_CHÀ¶ ÚP€¡"+õÌÏEagerExecute: IdentityH úÅ¨ÚPà¨Ö"0õÌÏEagerLocalExecute: IdentityHàş‚©ÚP ¤™"1õÌÏValidateInputTypeAndPlacementH ×¡ªÚPÀÏ$"6õÌÏEagerKernelExecuteH «ƒ«ÚP€›îZ
+group_id0"ZõÌÏIdentityH ®¬ÚPÀ„=Z
+	long_nameIdentity:IdentityZ
+group_id0Z
+is_eager1"-õÌÏTFE_Py_FastPathExecute_CHà–Ú³ÚPà„î" õÌÏtf.constantH Å—ÙÚPàĞ™" õÌÏtf.constantH€“šèÚP€ğ“	"*õÌÏTFE_DeleteTensorHandleHà·•ğÚPÀÏ$" õÌÏtf.constantHàÿå÷ÚP ¤™"*õÌÏTFE_DeleteTensorHandleH ¨‹üÚPà§".õÌÏTFE_Py_ExecuteCancelableHÀğŒ…ÛPà‚Ù¡"0õÌÏEagerExecute: WriteSummaryH ñŸ‰ÛP ©öš"5õÌÏEagerLocalExecute: WriteSummaryHÀèÖ‰ÛP Š­š"1õÌÏValidateInputTypeAndPlacementHÀñĞŠÛPà§"7õÌÏEagerKernelExecuteH€ÁõŠÛP ­Ñ˜Z
+group_id0"hõÌÏWriteSummaryHà¼é‹ÛP æÄ–Z&
+	long_nameWriteSummary:WriteSummaryZ
+group_id0Z
+is_eager1"+õÌÏTFE_DeleteTensorHandleHÀÇø¨ÜP Ë˜"*õÌÏTFE_DeleteTensorHandleHÀï»ªÜPÀÏ$"&õÌÏTFE_DeleteTensorHandleHàæòªÜ" õÌÏtf.constantH€äŒ´ÜPÀ›Ğ"*õÌÏTFE_DeleteTensorHandleH ¬½ÜPÀ„="+õÌÏTFE_DeleteTensorHandleH €ğ½ÜPÀÔÃ"+õÌÏTFE_DeleteTensorHandleH É„ËÜPÀ£†"*õÌÏTFE_DeleteTensorHandleHà¡£ÌÜPà§"eõĞ³ExecutorState::ProcessH€ˆšÅœPÀ®§VZ
+id-3909307529142451226Z
+iter_num0Z
+group_id0"TõĞ³ExecutorDoneCallbackHà­ø›P …ĞZ
+id-3909307529142451226Z
+group_id0"eõôËExecutorState::ProcessHàºğ¾›PàºÿZ
+id-3909307529142451226Z
+iter_num0Z
+group_id0"eõôËExecutorState::ProcessH€öÑá›PÀğß<Z
+id-3909307529142451226Z
+iter_num0Z
+group_id0"{õôË_SendH •Ìã›P€ıÒ8Z	
+fromxZ
+toAbstractModel/h1/MatMulZ
+	long_name
+x/_1:_SendZ
+group_id0Z
+is_eager0"SõôËExecutorDoneCallbackHàİèœPàûsZ
+id-3909307529142451226Z
+group_id0

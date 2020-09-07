@@ -36,6 +36,8 @@ model.compile(loss=nll_loss(config_base), optimizer=model.optimizer)
 
 history = model.fit(x=X_train, y=y_train,epochs=3, validation_data=(X_test, y_test),
                     verbose=2, batch_size=1280, callbacks=model.callback)
+
+
 print(history.history.keys())
 print(history.history['loss'])
 
