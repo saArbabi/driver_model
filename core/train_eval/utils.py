@@ -28,6 +28,13 @@ def get_undoneExpIDs(explogs):
             undone_exp.append(key)
     return undone_exp
 
+def get_completedExpIDs(explogs):
+    undone_exp = []
+    for key, value in explogs.items():
+        if value['exp_state'] == 'complete':
+            undone_exp.append(key)
+    return undone_exp
+
 def updateExpstate(explogs, exp_id, exp_state):
     for key, value in explogs.items():
         # first remove failed experiments

@@ -7,15 +7,6 @@ from models.core.tf_models.utils import nll_loss
 from tensorflow import keras
 import random
 
-# seed_value = 2020
-# np.random.seed(seed_value)
-#
-# random.seed(seed_value)
-# 3. Set `numpy` pseudo-random generator at a fixed value
-# 4. Set `tensorflow` pseudo-random generator at a fixed value
-# tf.set_random_seed(seed_value)
-
-
 
 def modelTrain(config, explogs):
     X_train, X_test, y_train, y_test = build_toy_dataset()

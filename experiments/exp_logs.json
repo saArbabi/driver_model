@@ -3,21 +3,21 @@
         "exp_state": "complete",
         "model": "NA",
         "target_name": "NA",
-        "train_loss": 2.0,
-        "val_loss": 1.9
+        "train_loss": 1.6,
+        "val_loss": 1.6
     },
     "exp002": {
-        "exp_state": "failed",
+        "exp_state": "complete",
         "model": "NA",
         "target_name": "NA",
-        "train_loss": "NA",
-        "val_loss": "NA"
+        "train_loss": 1.4,
+        "val_loss": 1.4
     },
     "exp003": {
         "exp_state": "complete",
         "model": "NA",
         "target_name": "NA",
-        "train_loss": 1.7,
-        "val_loss": 1.6
+        "train_loss": 1.4,
+        "val_loss": 1.4
     }
 }

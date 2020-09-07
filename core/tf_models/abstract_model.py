@@ -1,10 +1,16 @@
+from numpy.random import seed # keep this at top
+seed(2020)
 import tensorflow as tf
+tf.random.set_seed(2020)
+
 import os
 from tensorflow.python.ops import math_ops
 from keras import backend as K
 from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
 from tensorflow.keras.callbacks import TensorBoard
 from datetime import datetime
+
+
 
 # %%
 
@@ -47,8 +53,9 @@ class FFMDN(AbstractModel):
     def architecture_def(self, config):
         """pi, mu, sigma = NN(x; theta)"""
         # for n in range(self.layers_n):
-        self.h1 = Dense(self.neurons_n, activation='relu', name="h1")
-        self.h2 = Dense(self.neurons_n, activation='relu', name="h2")
+
+        self.hidden_layers =  [Dense(self.neurons_n, activation='relu') for _
+                                                in range(self.config['layers_n'])]
         self.alphas = Dense(self.components_n, activation=K.softmax, name="pi_long")
         self.mus_long = Dense(self.components_n, name="mus_long")
         self.sigmas_long = Dense(self.components_n, activation=K.exp, name="sigmas_long")
@@ -61,10 +68,10 @@ class FFMDN(AbstractModel):
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-        # layers = [tf.keras.layers.Dense(hidden_size, activation=tf.nn.sigmoid) for _ in range(n)]
-
-        x = self.h1(inputs)
-        x = self.h2(x)
+        # layers =
+        x = self.hidden_layers[0](inputs)
+        for layer in self.hidden_layers[1:]:
+            x = layer(x)
         alpha_v = self.alphas(x)
         mu_v = self.mus_long(x)
         sigma_v = self.sigmas_long(x)
