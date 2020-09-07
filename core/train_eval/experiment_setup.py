@@ -1,6 +1,8 @@
 import models.core.tf_models.abstract_model as am
 from models.core.train_eval import utils
 from models.core.train_eval.model_evaluation import modelEvaluate
+from models.core.preprocessing.preprep import DataObj
+
 import numpy as np
 from models.core.tf_models.utils import nll_loss
 from tensorflow import keras
@@ -8,14 +10,16 @@ import random
 
 
 def modelTrain(config, explogs):
-    X_train, X_test, y_train, y_test = build_toy_dataset()
     model = am.FFMDN(config)
+    my_data = DataObj(conf)
+
     exp_id = config['exp_id']
+    x_train, y_train, x_val ,y_val = my_data.data_prep()
     model.compile(loss=nll_loss(config), optimizer=model.optimizer)
 
     utils.updateExpstate(explogs, exp_id, 'in progress')
-    validation_data=(X_test, y_test)
-    history = model.fit(x=X_train, y=y_train, epochs=model.epochs_n, validation_data=validation_data,
+    validation_data=(x_val, y_val)
+    history = model.fit(x=x_train, y=y_train, epochs=model.epochs_n, validation_data=validation_data,
                         verbose=0, batch_size=model.batch_n, callbacks=model.callback)
     modelEvaluate(model, validation_data, config)
     explogs[exp_id]['train_loss'] = round(history.history['loss'][-1], 1)

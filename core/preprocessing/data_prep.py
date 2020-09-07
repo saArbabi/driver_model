@@ -32,29 +32,6 @@ mveh_df0 = pd.read_csv('./datasets/mveh_df0.txt', delimiter=' ',
 yveh_df0 = pd.read_csv('./datasets/yveh_df0.txt', delimiter=' ',
                         header=None, names=yveh_col)
 # %%
-config = {
- "model_config": {
-     "learning_rate": 1e-2,
-     "neurons_n": 50,
-     "layers_n": 2,
-     "epochs_n": 5,
-     "batch_n": 128,
-     "components_n": 5
-},
-
-"data_config": {
-    "step_size": 3,
-    "sequence_n": 1,
-    "veh_states":{"mveh":["lc_type", "vel", "pc","gap_size", "dx", "act_long_p", "act_lat_p"],
-                    "yveh":["vel", "act_long_p"]} ,
-},
-"exp_id": "NA",
-"model_type": "merge_controller",
-"Note": "NA"
-}
-
-
-
 class DataObj():
     random.seed(2020)
 
