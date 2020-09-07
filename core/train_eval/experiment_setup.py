@@ -1,7 +1,6 @@
 import models.core.tf_models.abstract_model as am
 from models.core.train_eval import utils
 from models.core.train_eval.model_evaluation import modelEvaluate
-from sklearn.model_selection import train_test_split
 import numpy as np
 from models.core.tf_models.utils import nll_loss
 from tensorflow import keras
@@ -32,9 +31,3 @@ def runSeries():
     for exp_id in undone_exp:
         config = utils.loadConfig(exp_id)
         history = modelTrain(config, explogs)
-
-def build_toy_dataset(nsample=10000):
-    y_data = np.float32(np.random.uniform(-10.5, 10.5, (1, nsample))).T
-    r_data = np.float32(np.random.normal(size=(nsample,1))) # random noise
-    x_data = np.float32(np.sin(0.75*y_data)*7.0+y_data*0.5+r_data*1.0)
-    return train_test_split(x_data, y_data, random_state=42, train_size=0.8)

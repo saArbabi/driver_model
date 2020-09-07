@@ -9,10 +9,10 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import os
 import pickle
-
+import time
 # %%
 def read_list(name):
-    file_name = '/datasets/'+name+'.txt'
+    file_name = './datasets/'+name+'.txt'
     file = open(file_name, "r")
     my_list = [int(item) for item in file.read().split()]
     file.close()
@@ -27,96 +27,98 @@ mveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'pc'
 
 yveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'act_long_p', 'act_long']
 
-mveh_df0 = pd.read_csv('/datasets/mveh_df0.txt', delimiter=' ',
+mveh_df0 = pd.read_csv('./datasets/mveh_df0.txt', delimiter=' ',
                         header=None, names=mveh_col)
-yveh_df0 = pd.read_csv('/datasets/yveh_df0.txt', delimiter=' ',
+yveh_df0 = pd.read_csv('./datasets/yveh_df0.txt', delimiter=' ',
                         header=None, names=yveh_col)
 # %%
-
 config = {
  "model_config": {
-    "1": 2,
-    "hi": 2,
-    "1": 2,
-    "n_gmm_components": 4
+     "learning_rate": 1e-2,
+     "neurons_n": 50,
+     "layers_n": 2,
+     "epochs_n": 5,
+     "batch_n": 128,
+     "components_n": 5
 },
+
 "data_config": {
     "step_size": 3,
-    "sequence_length": 0,
-    "features": ['vel', 'pc','gap_size', 'dx', 'act_long_p', 'act_lat_p','lc_type'],
-    "history_drop": {"percentage":0, "vehicle":'mveh'},
-    "scaler":{"StandardScaler":['vel', 'pc','gap_size', 'dx',
-                                'act_long_p', 'act_lat_p', 'act_long', 'act_lat']},
-    "scaler_path": '/experiments/scaler001'
+    "sequence_n": 1,
+    "veh_states":{"mveh":["lc_type", "vel", "pc","gap_size", "dx", "act_long_p", "act_lat_p"],
+                    "yveh":["vel", "act_long_p"]} ,
 },
-"experiment_path": '/experiments/exp001',
-"experiment_type": {"target_name":'mveh', "model":"controller"}
+"exp_id": "NA",
+"model_type": "merge_controller",
+"Note": "NA"
 }
+
+
+
 class DataObj():
     random.seed(2020)
 
     def __init__(self, config):
         self.config = config['data_config']
-        self.exp_path = config['experiment_path']
-        self.exp_type = config['experiment_type']
-        self.sequence_length = self.config["sequence_length"]
+        self.model_type = config['model_type']
+        self.sequence_n = self.config["sequence_n"]
         self.step_size = self.config["step_size"]
+        self.veh_states = self.config["veh_states"]
         self.x_train = []
         self.y_train = []
         self.x_val = []
         self.y_val = []
+        self.scalers = {}
 
-    def get_scalers(self):
-        dirName = self.config['scaler_path']+'/'
-        if not os.path.exists(dirName):
-            os.mkdir(dirName)
-        if len(os.listdir(dirName)) == 0:
-            print("Directory " , dirName ,  " Created ")
-            for feature in self.config['scaler']['StandardScaler']:
+    def getScalers(self):
+        if not self.scalers:
+            target_values = ['act_long', 'act_lat']
+            scale_col = set(self.veh_states['mveh'] + self.veh_states['yveh'])
+            scale_col.remove('lc_type')
+            for veh_state in scale_col:
                 scaler = StandardScaler(copy=True, with_mean=True, with_std=True)
-                feature_array = mveh_df0[feature].values
-                fit = scaler.fit(feature_array.reshape(-1, 1))
-                file_name = dirName + feature
-                pickle_out = open(file_name, "wb")
-                pickle.dump(fit, pickle_out)
-                pickle_out.close()
-        else:
-            print("Directory " , dirName ,  " already exists")
+                if veh_state in self.veh_states['mveh']:
+                    veh_state_array = mveh_df0[veh_state].values
+                else:
+                    veh_state_array = yveh_df0[veh_state].values
 
-    def load_scaler(self, feature_name):
-        dirName = self.config['scaler_path'] +'/'+ feature_name
+                scaler_fit = scaler.fit(veh_state_array.reshape(-1, 1))
+                self.scalers[veh_state] = scaler_fit
 
-        pickle_in = open(dirName,"rb")
-        scaler = pickle.load(pickle_in)
-        pickle_in.close()
-        return scaler
+            for veh_state in target_values:
+                veh_state_array = mveh_df0[veh_state].values
+                scaler_fit = scaler.fit(veh_state_array.reshape(-1, 1))
+                self.scalers[veh_state] = scaler_fit
 
     def drop_redundants(self, mveh, yveh):
         drop_col = ['id', 'episode_id', 'name', 'frm', 'scenario']
-        if self.exp_type['target_name'] == 'mveh' and self.exp_type['model'] == 'controller':
+        if self.model_type == 'merge_controller':
             self.action_size = 2
             mveh.drop(drop_col, inplace=True, axis=1)
             yveh.drop(drop_col+['act_long','lc_type'], inplace=True, axis=1)
 
-    def scaler_transform(self, vehicle_df):
-        vehicle_col = vehicle_df.columns
-        for feature in self.config['scaler']['StandardScaler']:
-            if feature in vehicle_col:
-                scaler = self.load_scaler(feature)
-                vehicle_df[feature] = scaler.transform(vehicle_df[feature].values.reshape(-1,1))
+    def stateScaler(self, mveh, yveh):
+        mveh_col = mveh.columns
+        yveh_col = yveh.columns
+
+        for veh_state in self.scalers.keys():
+            if veh_state in mveh_col:
+                mveh[veh_state] = self.scalers[veh_state].transform(mveh[veh_state].values.reshape(-1,1))
+            if veh_state in yveh_col:
+                yveh[veh_state] = self.scalers[veh_state].transform(yveh[veh_state].values.reshape(-1,1))
 
     def sequence(self, episode_arr):
         sequential_data = []
 
-        if self.sequence_length != 0:
+        if self.sequence_n != 0:
             i_reset = 0
             i = 0
             for chunks in range(self.step_size):
-                prev_states = deque(maxlen=self.sequence_length)
+                prev_states = deque(maxlen=self.sequence_n)
                 while i < len(episode_arr):
                     row = episode_arr[i]
                     prev_states.append(row[:-self.action_size])
-                    if len(prev_states) == self.sequence_length:
+                    if len(prev_states) == self.sequence_n:
                         sequential_data.append([np.array(prev_states), row[-self.action_size:]])
                     i += self.step_size
                 i_reset += 1
@@ -125,25 +127,25 @@ class DataObj():
             for i in range( len(episode_arr)):
                 row = episode_arr[i]
                 sequential_data.append([np.array(row[:-self.action_size]), row[-self.action_size:]])
-
         return sequential_data
 
     def history_drop(self, mveh, yveh):
-        dropout_percentage = self.config['history_drop']['percentage']
-        if  dropout_percentage != 0:
-            target_name = self.config['history_drop']['vehicle']
-            if target_name == 'mveh':
-                index = mveh.sample(int(len(mveh)*dropout_percentage)).index
-                mveh.loc[index, mveh.columns != 'lc_type']=0
+        pass
+        # dropout_percentage = self.config['history_drop']['percentage']
+        # if  dropout_percentage != 0:
+        #     target_name = self.config['history_drop']['vehicle']
+        #     if target_name == 'mveh':
+        #         index = mveh.sample(int(len(mveh)*dropout_percentage)).index
+        #         mveh.loc[index, mveh.columns != 'lc_type']=0
 
     def prep_episode(self, episode_id):
         mveh = mveh_df0[mveh_df0['episode_id'] == episode_id].copy()
         yveh = yveh_df0[yveh_df0['episode_id'] == episode_id].copy()
         self.drop_redundants(mveh, yveh)
-        self.scaler_transform(mveh)
-        self.scaler_transform(yveh)
+        self.getScalers()
+        self.stateScaler(mveh, yveh)
         self.history_drop(mveh, yveh)
-        episode_arr = np.concatenate([yveh.values,mveh.values], axis=1)
+        episode_arr = np.concatenate([mveh.values, yveh.values], axis=1)
         sequenced_arr = self.sequence(episode_arr)
 
         return sequenced_arr
@@ -161,32 +163,41 @@ class DataObj():
             _y.append(y)
 
     def data_prep(self):
-        self.get_scalers()
         # for episode_id in training_episodes:
-        for episode_id in [811]:
+        for episode_id in training_episodes:
             sequenced_arr = self.prep_episode(episode_id)
             self.store_data(sequenced_arr, 'train')
 
-        # for episode_id in validation_episodes:
-        #     self.prep_episode(episode_id)
+        for episode_id in validation_episodes:
+            sequenced_arr = self.prep_episode(episode_id)
+            self.store_data(sequenced_arr, 'val')
 
+        return self.x_train, self.y_train, self.x_val ,self.y_val
 
-Data = DataObj(config)
-Data.data_prep()
 # %%
-Data.x_train[1]
-Data.y_train[1]
-
-prep.config['history_drop']['vehicle']=='mveh'
-seq[1]
-prep.test['pc'].min()
-
-prep.test
-len(seq)
-len(test_car)
-# %%
-
-test_car = mveh_df0.loc[mveh_df0['episode_id'] == 811].copy()
-test_car.drop(['frm', 'vel'], inplace=True, axis=1)
-test_car
-df = test_car
+# Data = DataObj(conf)
+# x_train, y_train, x_val ,y_val = Data.data_prep()
+# len(Data.x_train[0][0])
+# len(Data.x_train)
+# x_train[0]
+# x_train[1]
+# import matplotlib.pyplot as plt
+# x_val0 = np.array([x[0] for x in x_val])
+# len(training_episodes)
+# len(x_train[0][0])
+# def vis_beforeAfterScale(x_val):
+#     i = 0
+#     for feature in Data.veh_states['mveh']:
+#         fig = plt.figure()
+#         ax1 = fig.add_subplot(1,2,1)
+#         ax2 = fig.add_subplot(1,2,2)
+#
+#         ax1.hist(mveh_df0[feature].iloc[0:], bins=125)
+#         ax2.hist(x_val[:,i], bins=125)
+#         i += 1
+#         ax1.set_title(feature + ' before')
+#         ax2.set_title(feature + ' after')
+#         plt.title(feature)
+# # %%
+#
+# vis_beforeAfterScale(x_val0)

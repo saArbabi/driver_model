@@ -4,7 +4,6 @@ from models.core.train_eval import utils
 
 explogs_path = './models/experiments/exp_logs.json'
 explog = {'exp_state':'NA',
-        'target_name':'NA',
         'model':'NA',
         'train_loss':'NA',
         'val_loss':'NA'}

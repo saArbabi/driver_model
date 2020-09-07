@@ -1,16 +1,12 @@
 import models.core.tf_models.abstract_model as am
 from models.core.train_eval import utils
-
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
 import numpy as np
 from importlib import reload
 from tensorflow import keras
 import random
 import json
 from keras.callbacks import History
-import warnings
-warnings.filterwarnings("always")
 from models.core.tf_models.utils import nll_loss, get_predictionMean, get_predictionSamples
 reload(utils)
 
