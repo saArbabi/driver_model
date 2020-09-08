@@ -7,33 +7,30 @@ from tensorflow import keras
 import random
 import json
 from keras.callbacks import History
-from models.core.tf_models.utils import nll_loss, get_predictionMean, get_predictionSamples
+from models.core.tf_models.utils import nll_loss
+from models.core.preprocessing.data_prep import DataObj
+
 reload(utils)
 
 # %%
-def build_toy_dataset(nsample=10000):
-    y_data = np.float32(np.random.uniform(-10.5, 10.5, (1, nsample))).T
-    r_data = np.float32(np.random.normal(size=(nsample,1))) # random noise
-    x_data = np.float32(np.sin(0.75*y_data)*7.0+y_data*0.5+r_data*1.0)
-    return train_test_split(x_data, y_data, random_state=42, train_size=0.8)
-X_train, X_test, y_train, y_test = build_toy_dataset()
 
 # %%
 # load data
 # plt.scatter(X_test, y_test)
 # plt.scatter(X_train, y_train)
-
-
-config_base = utils.loadConfigBase('baseline_test.json')
-
+config_base = utils.loadConfigBase('baseline_run.json')
 model = am.FFMDN(config_base)
+my_data = DataObj(config_base)
+x_train, y_train, x_val ,y_val = my_data.data_prep()
 
 model.compile(loss=nll_loss(config_base), optimizer=model.optimizer)
 
-history = model.fit(x=X_train, y=y_train,epochs=3, validation_data=(X_test, y_test),
+
+history = model.fit(x=x_train, y=y_train,epochs=3, validation_data=(x_val, y_val),
                     verbose=2, batch_size=1280, callbacks=model.callback)
 
-
+len(x_val[0][0])
+len(y_val[0])
 print(history.history.keys())
 print(history.history['loss'])
 

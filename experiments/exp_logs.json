@@ -1,23 +1,8 @@
 {
     "exp001": {
-        "exp_state": "complete",
+        "exp_state": "in progress",
         "model": "NA",
-        "target_name": "NA",
-        "train_loss": 1.6,
-        "val_loss": 1.6
-    },
-    "exp002": {
-        "exp_state": "complete",
-        "model": "NA",
-        "target_name": "NA",
-        "train_loss": 1.4,
-        "val_loss": 1.4
-    },
-    "exp003": {
-        "exp_state": "complete",
-        "model": "NA",
-        "target_name": "NA",
-        "train_loss": 1.4,
-        "val_loss": 1.4
+        "train_loss": "NA",
+        "val_loss": "NA"
     }
 }

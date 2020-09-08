@@ -11,5 +11,5 @@
 "data_config": {},
 "exp_id": "NA",
 "exp_type": {"target_name":"yveh", "model":"controller"},
-"Note": "NA"
+"Note": ["vel", "act_long_p"]
 }

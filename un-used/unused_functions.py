@@ -1,10 +1,10 @@
 
 def get_expDir(config):
     exp_dir = './models/'
-    if config['exp_type']['model'] == 'controller':
+    if config['model_type']['model'] == 'controller':
         exp_dir += 'controller/'
 
-    elif config['exp_type']['model'] == 'driver_model':
+    elif config['model_type']['model'] == 'driver_model':
         exp_dir += 'driver_model/'
     else:
         raise Exception("Unknown experiment type")
@@ -40,3 +40,5 @@ def build_toy_dataset(nsample=10000):
     r_data = np.float32(np.random.normal(size=(nsample,1))) # random noise
     x_data = np.float32(np.sin(0.75*y_data)*7.0+y_data*0.5+r_data*1.0)
     return train_test_split(x_data, y_data, random_state=42, train_size=0.8)
+
+ 

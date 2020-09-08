@@ -15,7 +15,7 @@ def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
 
 def get_pdf(parameter_vector, config):
 
-    if config['exp_type']['target_name'] == 'yveh':
+    if config['model_type']['target_name'] == 'yveh':
         alpha, mus, sigmas = slice_pvector(parameter_vector, config) # Unpack parameter vectors
         mvn = tfd.MixtureSameFamily(
             mixture_distribution=tfd.Categorical(probs=alpha),
@@ -23,7 +23,7 @@ def get_pdf(parameter_vector, config):
                 loc=mus,
                 scale=sigmas))
 
-    elif config['exp_type']['target_name'] == 'mveh':
+    elif config['model_type']['target_name'] == 'mveh':
         rhos, alphas, mus_long, sigmas_long, mus_lat, sigmas_lat = slice_pvector(
                                                             parameter_vector, config)
         cov = get_CovMatrix(rhos, sigmas_long, sigmas_lat)
@@ -39,7 +39,7 @@ def get_pdf(parameter_vector, config):
 def slice_pvector(parameter_vector, config):
     """ Returns an unpacked list of paramter vectors.
     """
-    if config['exp_type']['target_name'] == 'yveh':
+    if config['model_type']['target_name'] == 'yveh':
         n_params = 3 # number of parameters being learned
     else:
         n_params = 6

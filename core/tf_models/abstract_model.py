@@ -59,7 +59,7 @@ class FFMDN(AbstractModel):
         self.alphas = Dense(self.components_n, activation=K.softmax, name="pi_long")
         self.mus_long = Dense(self.components_n, name="mus_long")
         self.sigmas_long = Dense(self.components_n, activation=K.exp, name="sigmas_long")
-        if config['exp_type']['model'] == 'driver_model':
+        if config['model_type'] == 'merge_controller':
             self.mus_lat = Dense(self.components_n, name="mus_lat")
             self.sigmas_lat = Dense(self.components_n, activation=K.exp, name="sigmas_lat")
             self.rhos = Dense(self.components_n, activation=K.exp, name="rhos")
