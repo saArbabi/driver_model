@@ -1,8 +1,8 @@
 {
     "exp001": {
-        "exp_state": "in progress",
+        "exp_state": "complete",
         "model": "NA",
-        "train_loss": "NA",
-        "val_loss": "NA"
+        "train_loss": 2.0,
+        "val_loss": 2.4
     }
 }

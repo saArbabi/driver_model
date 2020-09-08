@@ -156,12 +156,12 @@ class DataObj():
             sequenced_arr = self.prep_episode(episode_id, mveh_df,  yveh_df)
             self.store_data(sequenced_arr, 'val')
 
-        return self.x_train, self.y_train, self.x_val ,self.y_val
+        return np.array(self.x_train), np.array(self.y_train), np.array(self.x_val), np.array(self.y_val)
 
-Data = DataObj(config)
-x_train, y_train, x_val ,y_val = Data.data_prep()
 
 # %%
+# Data = DataObj(config)
+# x_train, y_train, x_val ,y_val = Data.data_prep()
 
 #
 # config = {

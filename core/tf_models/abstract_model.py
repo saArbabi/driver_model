@@ -23,6 +23,8 @@ class AbstractModel(tf.keras.Model):
     def __init__(self, config):
         super(AbstractModel, self).__init__(name="AbstractModel")
         self.config = config['model_config']
+        self.model_type = config['model_type']
+
         self.exp_dir = './models/experiments/'+config['exp_id']
         self.learning_rate = self.config['learning_rate']
         self.neurons_n = self.config['neurons_n']
@@ -31,7 +33,6 @@ class AbstractModel(tf.keras.Model):
         self.batch_n = self.config['batch_n']
         self.components_n = self.config['components_n'] # number of Mixtures
         self.optimizer = tf.optimizers.Adam(self.learning_rate)
-
         self.callback = self.callback_def()
 
     def architecture_def(self, X):
@@ -53,30 +54,33 @@ class FFMDN(AbstractModel):
     def architecture_def(self, config):
         """pi, mu, sigma = NN(x; theta)"""
         # for n in range(self.layers_n):
-
         self.hidden_layers =  [Dense(self.neurons_n, activation='relu') for _
                                                 in range(self.config['layers_n'])]
-        self.alphas = Dense(self.components_n, activation=K.softmax, name="pi_long")
+        self.alphas = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long = Dense(self.components_n, name="mus_long")
         self.sigmas_long = Dense(self.components_n, activation=K.exp, name="sigmas_long")
-        if config['model_type'] == 'merge_controller':
+        if self.model_type == 'merge_controller':
             self.mus_lat = Dense(self.components_n, name="mus_lat")
             self.sigmas_lat = Dense(self.components_n, activation=K.exp, name="sigmas_lat")
-            self.rhos = Dense(self.components_n, activation=K.exp, name="rhos")
+            self.rhos = Dense(self.components_n, activation=K.tanh, name="rhos")
 
         self.pvector = Concatenate(name="output") # parameter vector
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-        # layers =
         x = self.hidden_layers[0](inputs)
         for layer in self.hidden_layers[1:]:
             x = layer(x)
-        alpha_v = self.alphas(x)
-        mu_v = self.mus_long(x)
-        sigma_v = self.sigmas_long(x)
 
-        return self.pvector([alpha_v, mu_v, sigma_v])
+        alphas = self.alphas(x)
+        mus_long = self.mus_long(x)
+        sigmas_long = self.sigmas_long(x)
+        if self.model_type == 'merge_controller':
+            mus_lat = self.mus_lat(x)
+            sigmas_lat = self.sigmas_lat(x)
+            rhos = self.rhos(x)
+            return self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
+        return self.pvector([alphas, mus_long, sigmas_long])
 
 
 class GRUMDN(AbstractModel):
