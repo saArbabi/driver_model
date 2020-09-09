@@ -88,25 +88,14 @@ class DataObj():
         #         index = mveh.sample(int(len(mveh)*dropout_percentage)).index
         #         mveh.loc[:, index, mveh.columns != 'lc_type']=0
 
-    def get_xy_arr(self, mveh, yveh):
-        """
-        :Return: model input and target arrays
-        """
-        if 'mveh' in self.action_space.keys():
-            y_arr = mveh.loc[:, self.action_space['mveh']].values
-
-        x_arr = pd.concat([mveh[self.veh_states['mveh']], yveh[self.veh_states['yveh']]], axis=1).values
-        return x_arr, y_arr
 
     def episode_prep(self, episode_id):
         """
         :Return: x, y arrays for model training.
         """
-        mveh, yveh = self.get_episode_df(episode_id)
-        x_arr, y_arr = self.get_xy_arr(mveh, yveh)
+        x_arr, y_arr = self.get_xy_arr(episode_id)
         # self.mask_history(x_df)
         return self.sequence(x_arr, y_arr)
-
 
     def store_data(self, x_seq, y_seq, setName):
         self.shuffArr(x_seq)
@@ -120,58 +109,57 @@ class DataObj():
             self.y_val.append(y_seq)
 
 
-    def get_relevant_cols(self):
+    def get_relevant_dfCols(self):
         """
         Gets the relevant df columns for this particular experiment.
         """
         mveh_keep = ['episode_id']+self.veh_states['mveh']
-        yveh_keep = ['episode_id']+self.veh_states['yveh']
+        yveh_keep = self.veh_states['yveh']
+        mveh_df = mveh_df0[mveh_keep].copy()
+        yveh_df = pd.DataFrame(yveh_df0[yveh_keep].values) # to avoid overlapping names
+        state_df = pd.concat([mveh_df, yveh_df], axis=1)
 
         if self.model_type == 'merge_controller':
-            mveh_keep += ['act_long','act_lat']
-            self.action_space = {'mveh':['act_long','act_lat']}
+            target_df = mveh_df0[['episode_id','act_long','act_lat']].copy()
 
-        return mveh_keep, yveh_keep
+        return state_df, target_df
 
     def _scale_dfs(self):
-        mveh_keep, yveh_keep = self.get_relevant_cols()
-        mveh_df = mveh_df0[mveh_keep].copy()
-        yveh_df = yveh_df0[yveh_keep].copy()
-        mveh_keep = [item for item in mveh_keep if item not in ['episode_id','lc_type']]
-        yveh_keep.remove('episode_id')
+        state_df, target_df = self.get_relevant_dfCols()
+        state_col = state_df.columns[~state_df.columns.isin(['episode_id','lc_type'])]
+        target_col = target_df.columns[~target_df.columns.isin(['episode_id'])]
 
-        mveh_arr = mveh_df[mveh_keep].values
-        yveh_arr = yveh_df[yveh_keep].values
+        state_arr = state_df.loc[:, state_col].values
+        target_arr = target_df.loc[:, target_col].values
 
         scaler = StandardScaler()
-        mveh_fit = scaler.fit(mveh_arr)
+        self.state_scaler = scaler.fit(state_arr)
         scaler = StandardScaler()
-        yveh_fit = scaler.fit(yveh_arr)
+        self.target_scaler = scaler.fit(target_arr)
 
-        mveh_df.loc[:, mveh_keep] = mveh_fit.transform(mveh_arr)
-        yveh_df.loc[:, yveh_keep] = yveh_fit.transform(yveh_arr)
+        state_df.loc[:, state_col] = self.state_scaler.transform(state_arr)
+        target_df.loc[:, target_col] = self.target_scaler.transform(target_arr)
 
-        self.mveh_df = mveh_df
-        self.yveh_df = yveh_df
-
+        self.state_df = state_df # these are scaled
+        self.target_df = target_df
 
     def flattenDataList(self):
         self.x_train = [row for item in self.x_train for row in item]
         self.y_train = [row for item in self.y_train for row in item]
         self.x_val = [row for item in self.x_val for row in item]
         self.y_val = [row for item in self.y_val for row in item]
+        return np.array(self.x_train), np.array(self.y_train), np.array(self.x_val), np.array(self.y_val)
+        # return self.x_train, self.y_train, self.x_val, self.y_val
 
-        return self.x_train, self.y_train, self.x_val, self.y_val
+    def get_xy_arr(self, episode_id):
+        state_df_id = self.state_df[self.state_df['episode_id'] == episode_id]
+        target_df_id = self.target_df[self.target_df['episode_id'] == episode_id]
+        del state_df_id['episode_id']
+        del target_df_id['episode_id']
 
-
-    def get_episode_df(self, episode_id):
-        mveh = self.mveh_df[self.mveh_df['episode_id'] == episode_id]
-        yveh = self.yveh_df[self.yveh_df['episode_id'] == episode_id]
-
-        return mveh, yveh
+        return state_df_id.values, target_df_id.values
 
     def data_prep(self):
-
         for episode_id in episode_ids['training_episodes']:
             x_seq, y_seq  = self.episode_prep(episode_id)
             self.store_data(x_seq, y_seq, 'train')
@@ -182,14 +170,10 @@ class DataObj():
 
         return self.flattenDataList()
 
-        # return np.array(self.x_train), np.array(self.y_train), np.array(self.x_val), np.array(self.y_val)
-
 # Data = DataObj(config)
 # x_train, y_train, x_val ,y_val = Data.data_prep()
-
-# %%
-# Data = DataObj(config)
-# x_train, y_train, x_val ,y_val = Data.data_prep()
+#
+# # %%
 #
 #
 # config = {
@@ -211,23 +195,28 @@ class DataObj():
 # "Note": "NA"
 # }
 #
-# x_train
-# y_train
+# x_train[0]
+# y_train[0]
 # import matplotlib.pyplot as plt
 # len(training_episodes)
-# len(x_train)
+# len(x_train[0])
+# np.array(x_val)
 # # %%
 # def vis_beforeAfterScale(x, features):
 #     i = 0
+#     x = Data.state_scaler.inverse_transform(x[:,1:])
+#     features.remove('lc_type')
 #     for feature in features:
 #         fig = plt.figure()
 #         ax1 = fig.add_subplot(1,2,1)
 #         ax2 = fig.add_subplot(1,2,2)
 #
 #         ax1.hist(mveh_df0[feature], bins=125)
+#         # ax2.hist(x[:,i], bins=125)
 #         ax2.hist(x[:,i], bins=125)
+#
 #         i += 1
 #         ax1.set_title(feature + ' before')
 #         ax2.set_title(feature + ' after')
 #
-# vis_beforeAfterScale(np.array(x_val), Data.veh_states['mveh'])
+# vis_beforeAfterScale(x_val, Data.veh_states['mveh'])

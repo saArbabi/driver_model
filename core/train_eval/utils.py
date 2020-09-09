@@ -1,14 +1,6 @@
 import json
 import os
-from models.core.tf_models.utils import nll_loss
 explogs_path = './models/experiments/exp_logs.json'
-
-def loadModel(config):
-    dirName = './models/experiments/'+config['exp_id'] +'/trained_model'
-    model = keras.models.load_model(dirName,
-                                        custom_objects={'loss': nll_loss(config)})
-
-    return model
 
 def loadConfigBase(file_name):
     dirName = './models/experiments/'+file_name

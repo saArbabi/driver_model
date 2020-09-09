@@ -61,6 +61,8 @@ def nll_loss(config):
         return -tf.reduce_mean(log_likelihood)
     return loss
 
+def
+
 def get_predictionMean(parameter_vector, config):
     mvn = get_pdf(tf.convert_to_tensor(parameter_vector), config)
     return mvn.mean()
