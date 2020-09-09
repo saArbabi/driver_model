@@ -50,9 +50,12 @@ class DataObj():
         self.y_train = []
         self.x_val = []
         self.y_val = []
+        self._scale_dfs() # will scale the dataframes
 
     def sequence(self, x_arr, y_arr):
-        sequential_data = []
+        x_seq = [] # sequenced x array
+        y_seq = []
+
         if self.sequence_n != 1:
             i_reset = 0
             i = 0
@@ -61,14 +64,20 @@ class DataObj():
                 while i < len(x_arr):
                     prev_states.append(x_arr[i])
                     if len(prev_states) == self.sequence_n:
-                        sequential_data.append([np.array(prev_states), y_arr[i]])
+                        x_seq.append(np.array(prev_states))
+                        y_seq.append(y_arr[i])
                     i += self.step_size
                 i_reset += 1
                 i = i_reset
         else:
             for i in range(len(x_arr)):
-                sequential_data.append([np.array(x_arr[i]), y_arr[i]])
-        return sequential_data
+                x_seq.append(x_arr[i])
+                y_seq.append(y_arr[i])
+
+        return x_seq, y_seq
+
+    def shuffArr(self, arr):
+        random.Random(2020).shuffle(arr)
 
     def mask_history(self, x_arr):
         pass
@@ -79,37 +88,37 @@ class DataObj():
         #         index = mveh.sample(int(len(mveh)*dropout_percentage)).index
         #         mveh.loc[:, index, mveh.columns != 'lc_type']=0
 
-    def get_xy_arr(self, episode_id, mveh_df, yveh_df):
+    def get_xy_arr(self, mveh, yveh):
         """
         :Return: model input and target arrays
         """
-        mveh = mveh_df[mveh_df['episode_id'] == episode_id]
-        yveh = yveh_df[yveh_df['episode_id'] == episode_id]
-
         if 'mveh' in self.action_space.keys():
             y_arr = mveh.loc[:, self.action_space['mveh']].values
 
-        x_arr = pd.concat([mveh[self.veh_states['mveh']],yveh[self.veh_states['yveh']]], axis=1).values
+        x_arr = pd.concat([mveh[self.veh_states['mveh']], yveh[self.veh_states['yveh']]], axis=1).values
         return x_arr, y_arr
 
-    def prep_episode(self, episode_id, mveh_df, yveh_df):
-        x_arr, y_arr = self.get_xy_arr(episode_id, mveh_df, yveh_df)
+    def episode_prep(self, episode_id):
+        """
+        :Return: x, y arrays for model training.
+        """
+        mveh, yveh = self.get_episode_df(episode_id)
+        x_arr, y_arr = self.get_xy_arr(mveh, yveh)
         # self.mask_history(x_df)
-        sequenced_arr = self.sequence(x_arr, y_arr)
+        return self.sequence(x_arr, y_arr)
 
-        return sequenced_arr
 
-    def store_data(self, sequenced_arr, setName):
-        random.shuffle(sequenced_arr)
+    def store_data(self, x_seq, y_seq, setName):
+        self.shuffArr(x_seq)
+        self.shuffArr(y_seq)
 
         if setName == 'train':
-            _x, _y = self.x_train, self.y_train
+            self.x_train.append(x_seq)
+            self.y_train.append(y_seq)
         else:
-            _x, _y = self.x_val, self.y_val
+            self.x_val.append(x_seq)
+            self.y_val.append(y_seq)
 
-        for x, y in sequenced_arr:
-            _x.append(x)
-            _y.append(y)
 
     def get_relevant_cols(self):
         """
@@ -124,10 +133,10 @@ class DataObj():
 
         return mveh_keep, yveh_keep
 
-    def scale_dfs(self, mveh_df, yveh_df):
+    def _scale_dfs(self):
         mveh_keep, yveh_keep = self.get_relevant_cols()
-        mveh_df.loc[:, :] = mveh_df[mveh_keep]
-        yveh_df.loc[:, :] = yveh_df[yveh_keep]
+        mveh_df = mveh_df0[mveh_keep].copy()
+        yveh_df = yveh_df0[yveh_keep].copy()
         mveh_keep = [item for item in mveh_keep if item not in ['episode_id','lc_type']]
         yveh_keep.remove('episode_id')
 
@@ -142,27 +151,46 @@ class DataObj():
         mveh_df.loc[:, mveh_keep] = mveh_fit.transform(mveh_arr)
         yveh_df.loc[:, yveh_keep] = yveh_fit.transform(yveh_arr)
 
-        return mveh_df, yveh_df
+        self.mveh_df = mveh_df
+        self.yveh_df = yveh_df
+
+
+    def flattenDataList(self):
+        self.x_train = [row for item in self.x_train for row in item]
+        self.y_train = [row for item in self.y_train for row in item]
+        self.x_val = [row for item in self.x_val for row in item]
+        self.y_val = [row for item in self.y_val for row in item]
+
+        return self.x_train, self.y_train, self.x_val, self.y_val
+
+
+    def get_episode_df(self, episode_id):
+        mveh = self.mveh_df[self.mveh_df['episode_id'] == episode_id]
+        yveh = self.yveh_df[self.yveh_df['episode_id'] == episode_id]
+
+        return mveh, yveh
 
     def data_prep(self):
-        # for episode_id in training_episodes:
-        mveh_df,  yveh_df = self.scale_dfs(mveh_df0.copy(),  yveh_df0.copy())
 
         for episode_id in episode_ids['training_episodes']:
-            sequenced_arr = self.prep_episode(episode_id, mveh_df,  yveh_df)
-            self.store_data(sequenced_arr, 'train')
+            x_seq, y_seq  = self.episode_prep(episode_id)
+            self.store_data(x_seq, y_seq, 'train')
 
         for episode_id in episode_ids['validation_episodes']:
-            sequenced_arr = self.prep_episode(episode_id, mveh_df,  yveh_df)
-            self.store_data(sequenced_arr, 'val')
+            x_seq, y_seq = self.episode_prep(episode_id)
+            self.store_data(x_seq, y_seq, 'val')
 
-        return np.array(self.x_train), np.array(self.y_train), np.array(self.x_val), np.array(self.y_val)
+        return self.flattenDataList()
 
+        # return np.array(self.x_train), np.array(self.y_train), np.array(self.x_val), np.array(self.y_val)
+
+# Data = DataObj(config)
+# x_train, y_train, x_val ,y_val = Data.data_prep()
 
 # %%
 # Data = DataObj(config)
 # x_train, y_train, x_val ,y_val = Data.data_prep()
-
+#
 #
 # config = {
 #  "model_config": {
@@ -175,7 +203,7 @@ class DataObj():
 # },
 # "data_config": {    "step_size": 3,
 #     "sequence_n": 1,
-#     "veh_states":{"mveh":["lc_type", "vel", "pc", "gap_size", "dx"],
+#     "veh_states":{"mveh":["lc_type", "vel", "pc", "gap_size", "dx",'act_long_p'],
 #                     "yveh":["vel"]}
 # },
 # "exp_id": "NA",
