@@ -59,7 +59,7 @@ class FFMDN(AbstractModel):
         self.alphas = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long = Dense(self.components_n, name="mus_long")
         self.sigmas_long = Dense(self.components_n, activation=K.exp, name="sigmas_long")
-        if self.model_type == 'merge_controller':
+        if self.model_type == 'merge_policy':
             self.mus_lat = Dense(self.components_n, name="mus_lat")
             self.sigmas_lat = Dense(self.components_n, activation=K.exp, name="sigmas_lat")
             self.rhos = Dense(self.components_n, activation=K.tanh, name="rhos")
@@ -75,7 +75,7 @@ class FFMDN(AbstractModel):
         alphas = self.alphas(x)
         mus_long = self.mus_long(x)
         sigmas_long = self.sigmas_long(x)
-        if self.model_type == 'merge_controller':
+        if self.model_type == 'merge_policy':
             mus_lat = self.mus_lat(x)
             sigmas_lat = self.sigmas_lat(x)
             rhos = self.rhos(x)
