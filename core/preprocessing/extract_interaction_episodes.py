@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 import os
-from driver_model.preprocessing import utils
+from models.core.preprocessing import utils
 from math import hypot
 from importlib import reload
 
@@ -44,10 +44,10 @@ col_df_all = ['id','frm','scenario','lane_id','length','x_front','y_front','clas
 
 # %%
 
-feature_set = pd.read_csv('/datasets/feature_set.txt', delimiter=' ',
+feature_set = pd.read_csv('./datasets/feature_set.txt', delimiter=' ',
                         header=None, names=col).drop(col_drop,axis=1)
 
-df_all = pd.read_csv('/datasets/df_all.txt', delimiter=' ',
+df_all = pd.read_csv('./datasets/df_all.txt', delimiter=' ',
                                                             header=None, names=col_df_all)
 
 os.chdir('../NGSIM_data_and_visualisations')
@@ -86,13 +86,11 @@ reload(utils)
 
 counter = 0
 for scenario in datasets:
-
     feat_df = feature_set.loc[(feature_set['scenario'] == scenario) &
                                         (feature_set['lane_id'] < 7)] # feat_set_scene
     ids = feat_df['id'].unique().astype('int')
 
-
-    for id in ids:
+    for id in ids[0:60]:
 
         veh_df = feat_df.loc[(feat_df['id'] == id)].reset_index(drop = True)
         lc_frms = utils.lc_entrance(veh_df)
@@ -104,7 +102,7 @@ for scenario in datasets:
             veh_class = veh_df['e_class'].iloc[0]
 
             if yveh_id and yveh_class == veh_class == 2:
-                completion_frm = utils.lc_completion(veh_df, lc_frm, yveh_id, lane_id)
+                completion_frm = utils.lc_completion(veh_df, lc_frm, yveh_id, 'right', lane_id)
                 initiation_frm = utils.lc_initation(veh_df, lc_frm-1, yveh_id, 'right', lane_id)
 
                 mveh_df = veh_df.loc[(veh_df['frm'] >= initiation_frm) &
@@ -127,30 +125,28 @@ for scenario in datasets:
                     'completion_frm':completion_frm,
                     'episode_id': counter,
                     'lc_type': -1
-
                     }
 
                     if all(mveh_df['frm'].diff().dropna() != 1):
                         raise ValueError("There are missing frames", case_info)
 
-                    yveh_df = yveh_df[['scenario','frm','id','v_long']].rename(columns={'v_long':'vel'})
+                    yveh_df = yveh_df[['frm','id','v_long']].rename(columns={'v_long':'vel'})
 
                     glob_pos = get_glob_df(case_info)
                     mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
                     yveh_glob_pos = utils.get_vehglob_pos(glob_pos, yveh_id)
 
                     dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
-                    gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
+                    gap_sizes = utils.get_gap_sizes(mveh_df, case_info, glob_pos, lane_cor)
 
-                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info)
+                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_sizes, dx, case_info)
 
                     counter += 1
-                    case_info['gap_size'] = gap_size
+                    case_info['gap_sizes'] = gap_sizes
                     print(counter, ' ### lane change extracted ###')
 
-                    # draw_traj(mveh_df, yveh_df, case_info)
-                    utils.data_saver(mveh_df, yveh_df)
-
+                    draw_traj(mveh_df, yveh_df, case_info)
+                    # utils.data_saver(mveh_df, yveh_df)
 
         for lc_frm, lane_id in lc_frms['left']:
 
@@ -159,7 +155,7 @@ for scenario in datasets:
             veh_class = veh_df['e_class'].iloc[0]
 
             if yveh_id and yveh_class == veh_class == 2:
-                completion_frm = utils.lc_completion(veh_df, lc_frm, yveh_id, lane_id)
+                completion_frm = utils.lc_completion(veh_df, lc_frm, yveh_id, 'left', lane_id)
                 initiation_frm = utils.lc_initation(veh_df, lc_frm-1, yveh_id, 'left', lane_id)
 
                 mveh_df = veh_df.loc[(veh_df['frm'] >= initiation_frm) &
@@ -194,18 +190,27 @@ for scenario in datasets:
                     yveh_glob_pos = utils.get_vehglob_pos(glob_pos, yveh_id)
 
                     dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
-                    gap_size = utils.get_gap_size(mveh_df, case_info, glob_pos, lane_cor)
+                    gap_sizes = utils.get_gap_sizes(mveh_df, case_info, glob_pos, lane_cor)
 
-                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info)
+                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_sizes, dx, case_info)
 
                     counter += 1
-                    case_info['gap_size'] = gap_size
+                    case_info['gap_sizes'] = gap_sizes
                     print(counter, ' ### lane change extracted ###')
 
-                    # draw_traj(mveh_df, yveh_df, case_info)
-                    utils.data_saver(mveh_df, yveh_df)
+                    draw_traj(mveh_df, yveh_df, case_info)
+                    # utils.data_saver(mveh_df, yveh_df)
 
 # %%
+plt.plot(mveh_df['frm'], mveh_df['v_lat'])
+vehicle_df= mveh_df
+initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
+                            (vehicle_df['br_id'] == yveh_id) &
+                            (vehicle_df['lane_id'] == lane_id-1)]
+initiation_frms
+plt.plot(mveh_df['frm'], mveh_df['pc'])
+
+
 case_info
 yveh_df.columns
 
@@ -261,7 +266,7 @@ def draw_traj(mveh_df, yveh_df, case_info):
     # plt.plot(yveh_df[item])
     indx = mveh_df.loc[mveh_df['frm'] == case_info['lc_frm']].index[0]
     plt.scatter(indx, mveh_df[item].iloc[indx])
-    plt.title([case_info['id'], case_info['lc_frm'],  case_info['gap_size']])
+    plt.title([case_info['id'], case_info['lc_frm'], case_info['scenario'], case_info['gap_sizes']])
     plt.grid()
     plt.legend(['merge vehicle','yield vehicle'])
 

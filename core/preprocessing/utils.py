@@ -82,11 +82,10 @@ def get_fveh(vehicle_df, lc_frm):
 
     return fveh_id.iloc[0]
 
-def lc_completion(vehicle_df, lc_frm, yveh_id, lane_id):
+def lc_completion(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
     """
     :return: lane change completion frame
     """
-
     completion_frm = vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
                                 (vehicle_df['bb_id'] == yveh_id) &
                                 (vehicle_df['lane_id'] == lane_id) &
@@ -95,6 +94,19 @@ def lc_completion(vehicle_df, lc_frm, yveh_id, lane_id):
     if not completion_frm.empty:
         return completion_frm.iloc[0]
     else:
+        if lc_direction == 'right':
+            completion_frm = vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
+                                        (vehicle_df['bb_id'] == yveh_id) &
+                                        (vehicle_df['lane_id'] == lane_id) &
+                                        (vehicle_df['pc'] > 0)]['frm']
+        else:
+            completion_frm = vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
+                                        (vehicle_df['bb_id'] == yveh_id) &
+                                        (vehicle_df['lane_id'] == lane_id) &
+                                        (vehicle_df['pc'] < 0)]['frm']
+
+        if not completion_frm.empty:
+            return completion_frm.iloc[-1]
         return 0
 
 
@@ -117,7 +129,24 @@ def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
         if not initiation_frms.loc[initiation_frms['frm'] < initiation_frm - 20].empty:
             initiation_frm -= 20
         return initiation_frm
+
     else:
+        # a car doing multiple lane changes such that vehicle_df['v_lat'].abs() < 0.1)
+        # does not exist.
+        if lc_direction == 'right':
+            initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
+                                        (vehicle_df[yveh_name] == yveh_id) &
+                                        (vehicle_df['lane_id'] == lane_id) &
+                                        (vehicle_df['pc'] < 0)]
+
+        else:
+            initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
+                                        (vehicle_df[yveh_name] == yveh_id) &
+                                        (vehicle_df['lane_id'] == lane_id) &
+                                        (vehicle_df['pc'] > 0)]
+
+        if not initiation_frms.empty:
+            return initiation_frms['frm'].iloc[0]
         return 0
 
 def get_vehglob_pos(glob_pos, vehicle_id):
@@ -147,12 +176,13 @@ def get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor):
 
     return dx
 
-def get_gap_size(vehicle_df, case_info, glob_pos, lane_cor):
-    fveh_id = get_fveh(vehicle_df, case_info['lc_frm'])
+def get_gap_sizes(vehicle_df, case_info, glob_pos, lane_cor):
+    front_adjacent_vehid = get_fveh(vehicle_df, case_info['lc_frm'])
+    front_vehid = get_fveh(vehicle_df, case_info['lc_frm']-1)
 
-    if fveh_id != 0:
+    if front_adjacent_vehid != 0:
         glob_pos = glob_pos.loc[(glob_pos['frm'] == case_info['lc_frm'])]
-        fveh_glob_pos = get_vehglob_pos(glob_pos, fveh_id)
+        fveh_glob_pos = get_vehglob_pos(glob_pos, front_adjacent_vehid)
         yveh_glob_pos = get_vehglob_pos(glob_pos, case_info['yveh_id'])
         yveh_c_x = yveh_glob_pos[0][0]
         yveh_c_y = yveh_glob_pos[0][1]
@@ -163,19 +193,38 @@ def get_gap_size(vehicle_df, case_info, glob_pos, lane_cor):
         fveh_p = get_p([fveh_c_x,fveh_c_y], lane_cor[0], lane_cor[1] )
         yveh_p = get_p([yveh_c_x,yveh_c_y], lane_cor[0], lane_cor[1] )
 
-        return np.hypot(fveh_p[0]-yveh_p[0],fveh_p[1]-yveh_p[1])-fveh_length
-
+        gap_adj = np.hypot(fveh_p[0]-yveh_p[0],fveh_p[1]-yveh_p[1])-fveh_length
     else:
-        return 70
+        gap_adj = 70
 
-def get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info):
+    if front_vehid != 0:
+        glob_pos = glob_pos.loc[(glob_pos['frm'] == case_info['lc_frm'])]
+        fveh_glob_pos = get_vehglob_pos(glob_pos, front_vehid)
+        mveh_glob_pos = get_vehglob_pos(glob_pos, case_info['id'])
+        mveh_c_x = mveh_glob_pos[0][0]
+        mveh_c_y = mveh_glob_pos[0][1]
+        fveh_c_x = fveh_glob_pos[0][0]
+        fveh_c_y = fveh_glob_pos[0][1]
+        fveh_length = fveh_glob_pos[0][2]
+
+        fveh_p = get_p([fveh_c_x,fveh_c_y], lane_cor[0], lane_cor[1] )
+        mveh_p = get_p([mveh_c_x,mveh_c_y], lane_cor[0], lane_cor[1] )
+
+        gap_front = np.hypot(fveh_p[0]-mveh_p[0],fveh_p[1]-mveh_p[1])-fveh_length
+    else:
+        gap_front = 70
+
+    return (gap_front, gap_adj)
+
+def get_veh_feats(mveh_df, yveh_df, gap_sizes, dx, case_info):
     mveh_df = mveh_df[['id', 'frm', 'scenario', 'v_long',
                                 'v_lat','pc']]
 
     mveh_df = mveh_df.rename(columns={'v_lat':'act_lat', 'v_long':'vel'})
-    mveh_df.insert(loc=6, column='gap_size', value=gap_size)
+    mveh_df.insert(loc=6, column='gap_front', value=gap_sizes[0])
+    mveh_df.insert(loc=7, column='gap_adj', value=gap_sizes[1])
+
     mveh_df.insert(loc=1, column='episode_id', value=case_info['episode_id'])
-    mveh_df.insert(loc=2, column='name', value='mveh')
     mveh_df.insert(loc=3, column='lc_type', value=case_info['lc_type'])
 
     mveh_df.loc[:,'dx'] = pd.Series(dx)
@@ -185,12 +234,10 @@ def get_veh_feats(mveh_df, yveh_df, gap_size, dx, case_info):
     get_act_long(yveh_df)
     get_past_action(yveh_df, 'yveh')
     yveh_df.insert(loc=1, column='episode_id', value=case_info['episode_id'])
-    yveh_df.insert(loc=2, column='name', value='yveh')
-    yveh_df.insert(loc=3, column='lc_type', value=case_info['lc_type'])
 
-    yveh_df = yveh_df[['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'act_long_p', 'act_long']]
-    mveh_df = mveh_df[['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'pc',
-           'gap_size', 'dx', 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']]
+    yveh_df = yveh_df[['id', 'episode_id', 'frm', 'vel', 'act_long_p', 'act_long']]
+    mveh_df = mveh_df[['id', 'episode_id', 'frm', 'scenario', 'lc_type', 'vel', 'pc',
+        'gap_front', 'gap_adj','dx', 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']]
 
     return mveh_df, yveh_df
 
