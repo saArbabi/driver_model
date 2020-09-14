@@ -32,256 +32,236 @@ def get_p(car_glob_pos, xc, yc):
     p = A + g*U # shaddow point on centreline/current
     return p
 
-def correct_glitch(vehicle_df, indexes):
+def correct_glitch(veh_df, indexes):
     if len(indexes) > 1:
         for i in range(len(indexes)-1):
             lc_i = indexes[i]
             lc_ii = indexes[i+1]
-            min_pc = vehicle_df['pc'].iloc[lc_i:lc_ii].abs().min()
+            min_pc = veh_df['pc'].iloc[lc_i:lc_ii].abs().min()
             if min_pc > 1.25 or lc_ii-lc_i < 20:
                 # not really a lane change!
                 keep_fixed = ['ff_id', 'bb_id', 'bl_id', 'br_id', 'lane_id']
 
-                vehicle_df.loc[lc_i:lc_ii, keep_fixed] = \
-                                    vehicle_df.iloc[lc_i - 1][keep_fixed].values
+                veh_df.loc[lc_i:lc_ii, keep_fixed] = \
+                                    veh_df.iloc[lc_i - 1][keep_fixed].values
 
                 for indx in range(lc_i,lc_ii):
-                    vehicle_df.at[indx, 'pc'] = vehicle_df['pc'].iloc[indx-1] + \
-                                                            0.1*vehicle_df['v_lat'].iloc[indx-1]
+                    veh_df.at[indx, 'pc'] = veh_df['pc'].iloc[indx-1] + \
+                                                            0.1*veh_df['act_lat'].iloc[indx-1]
 
-def detect_glitch(vehicle_df):
+def detect_glitch(veh_df):
     """
     Detects some glitch in lane_id and pc values. Glitch cause not investigated.
     """
-    indexes = vehicle_df[vehicle_df['lane_id'].diff().abs() == 1].index
-    correct_glitch(vehicle_df, indexes)
+    indexes = veh_df[veh_df['lane_id'].diff().abs() == 1].index
+    correct_glitch(veh_df, indexes)
 
-def lc_entrance(vehicle_df):
+def lc_entrance(veh_df):
     """
     :return: lane change frames for a given car
     """
-    detect_glitch(vehicle_df)
-
+    detect_glitch(veh_df)
     lc_frms = {}
-    lc_frms['left'] = vehicle_df[vehicle_df['lane_id'].diff() == -1
+    lc_frms['left'] = veh_df[veh_df['lane_id'].diff() == -1
                                             ][['frm', 'lane_id']].values.tolist()
-    lc_frms['right'] = vehicle_df[vehicle_df['lane_id'].diff() == 1
+    lc_frms['right'] = veh_df[veh_df['lane_id'].diff() == 1
                                             ][['frm', 'lane_id']].values.tolist()
 
     return lc_frms
 
-def get_yveh(vehicle_df, lc_frm):
-    yveh_id = vehicle_df.loc[vehicle_df['frm'] == lc_frm
-                                                ][['bb_id', 'e_class']]
+def get_vehInfo(veh_df, lc_frm, veh_type):
+    veh_id = veh_df.loc[veh_df['frm'] == lc_frm][[veh_type, 'e_class']]
+    return veh_id.iloc[0].tolist()
 
-    return yveh_id.iloc[0].tolist()
-
-def get_fveh(vehicle_df, lc_frm):
-    fveh_id = vehicle_df.loc[vehicle_df['frm'] == lc_frm
-                                                ]['ff_id']
-
-    return fveh_id.iloc[0]
-
-def lc_completion(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
+def lc_completion(veh_df, lc_frm, y_id, lc_direction, lane_id):
     """
     :return: lane change completion frame
     """
-    completion_frm = vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
-                                (vehicle_df['bb_id'] == yveh_id) &
-                                (vehicle_df['lane_id'] == lane_id) &
-                                (vehicle_df['v_lat'].abs() < 0.1)]['frm']
+    end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
+                                (veh_df['bb_id'] == y_id) &
+                                (veh_df['lane_id'] == lane_id) &
+                                (veh_df['act_lat'].abs() < 0.1)]['frm']
 
-    if not completion_frm.empty:
-        return completion_frm.iloc[0]
+    if not end_frm.empty:
+        return end_frm.iloc[0]
     else:
         if lc_direction == 'right':
-            completion_frm = vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
-                                        (vehicle_df['bb_id'] == yveh_id) &
-                                        (vehicle_df['lane_id'] == lane_id) &
-                                        (vehicle_df['pc'] > 0)]['frm']
+            end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
+                                        (veh_df['bb_id'] == y_id) &
+                                        (veh_df['lane_id'] == lane_id) &
+                                        (veh_df['pc'] > 0)]['frm']
         else:
-            completion_frm = vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
-                                        (vehicle_df['bb_id'] == yveh_id) &
-                                        (vehicle_df['lane_id'] == lane_id) &
-                                        (vehicle_df['pc'] < 0)]['frm']
+            end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
+                                        (veh_df['bb_id'] == y_id) &
+                                        (veh_df['lane_id'] == lane_id) &
+                                        (veh_df['pc'] < 0)]['frm']
 
-        if not completion_frm.empty:
-            return completion_frm.iloc[-1]
+        if not end_frm.empty:
+            return end_frm.iloc[-1]
         return 0
 
 
-def lc_initation(vehicle_df, lc_frm, yveh_id, lc_direction, lane_id):
+def lc_initation(veh_df, lc_frm, y_id, lc_direction, lane_id):
     if lc_direction == 'right':
-        yveh_name = 'br_id'
+        y_name = 'br_id'
         lane_id -= 1
 
     else:
-        yveh_name = 'bl_id'
+        y_name = 'bl_id'
         lane_id += 1
 
-    initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
-                                (vehicle_df[yveh_name] == yveh_id) &
-                                (vehicle_df['lane_id'] == lane_id) &
-                                (vehicle_df['v_lat'].abs() < 0.1)]
+    start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
+                                (veh_df[y_name] == y_id) &
+                                (veh_df['lane_id'] == lane_id) &
+                                (veh_df['act_lat'].abs() < 0.1)]
 
-    if not initiation_frms.empty:
-        initiation_frm = initiation_frms['frm'].iloc[-1]
-        if not initiation_frms.loc[initiation_frms['frm'] < initiation_frm - 20].empty:
-            initiation_frm -= 20
-        return initiation_frm
+    if not start_frms.empty:
+        start_frm = start_frms['frm'].iloc[-1]
+        if not start_frms.loc[start_frms['frm'] < start_frm - 20].empty:
+            start_frm -= 20
+        return start_frm
 
     else:
-        # a car doing multiple lane changes such that vehicle_df['v_lat'].abs() < 0.1)
+        # a car doing multiple lane changes such that veh_df['act_lat'].abs() < 0.1)
         # does not exist.
         if lc_direction == 'right':
-            initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
-                                        (vehicle_df[yveh_name] == yveh_id) &
-                                        (vehicle_df['lane_id'] == lane_id) &
-                                        (vehicle_df['pc'] < 0)]
+            start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
+                                        (veh_df[y_name] == y_id) &
+                                        (veh_df['lane_id'] == lane_id) &
+                                        (veh_df['pc'] < 0)]
 
         else:
-            initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
-                                        (vehicle_df[yveh_name] == yveh_id) &
-                                        (vehicle_df['lane_id'] == lane_id) &
-                                        (vehicle_df['pc'] > 0)]
+            start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
+                                        (veh_df[y_name] == y_id) &
+                                        (veh_df['lane_id'] == lane_id) &
+                                        (veh_df['pc'] > 0)]
 
-        if not initiation_frms.empty:
-            return initiation_frms['frm'].iloc[0]
+        if not start_frms.empty:
+            return start_frms['frm'].iloc[0]
         return 0
 
-def get_vehglob_pos(glob_pos, vehicle_id):
-    return glob_pos.loc[glob_pos['id'] == vehicle_id].drop(['id','frm'],axis=1).values.tolist()
+def get_globPos(glob_pos, vehicle_id):
+    return glob_pos.loc[glob_pos['id'] == vehicle_id].drop(['id'],axis=1).values
 
-def get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor):
+def get_m_features(m_df, case_info):
+    get_act_long(m_df)
+    get_past_action(m_df, 'mveh')
+    m_df.loc[:, ['episode_id', 'lc_type']] = [case_info['episode_id'], case_info['lc_type']]
+    col = ['episode_id', 'id', 'frm', 'scenario', 'vel', 'pc', 'lc_type',
+                                        'act_long_p', 'act_lat_p', 'act_long', 'act_lat']
+    return m_df[col]
+
+def applyCorrections(m_df, o_df, o_name, mveh_size):
+    """All dfs must be the same size.
+    """
+    if len(o_df) != mveh_size:
+        frm_max =  m_df['frm'].iloc[-1]
+        frm_min =  m_df['frm'].iloc[0]
+        o_df = frmTrim(o_df, frm_max, frm_min)
+    return remove_redundants(o_df, o_name)
+
+def remove_redundants(veh_df, o_name):
+    if o_name == 'yveh':
+        return veh_df[['episode_id', 'vel' ,'dv', 'dx', 'act_long_p', 'act_long']]
+    else:
+        return veh_df[['episode_id', 'dv', 'dx', 'act_long_p', 'act_long']]
+
+def get_o_df(o_df, veh_id, episode_id):
+    veh_df = o_df.loc[o_df['id'] == veh_id].reset_index(drop = True)
+    get_act_long(veh_df)
+    get_past_action(veh_df, 'o')
+    veh_df['episode_id'] = episode_id
+    return veh_df
+
+def get_dummyVals(episode_id, df_size):
+    dummy_df = pd.DataFrame(np.repeat([[episode_id, 0, 70, 0, 0]], df_size, axis=0),
+            columns=['episode_id', 'dv', 'dx', 'act_long_p','act_long'])
+
+    return dummy_df
+
+def get_dxdv(glob_pos, m_df, o_df, lane_cor, mveh_orientation):
+    """
+    Finds longitudinal distance between two vehicles.
+    """
     dx = []
-    mveh_size = len(mveh_glob_pos)
-    yveh_size = len(yveh_glob_pos)
+    m_glob_pos = get_globPos(glob_pos, m_df['id'].iloc[0])
+    o_glob_pos = get_globPos(glob_pos, o_df['id'].iloc[0])
 
-    if yveh_size != mveh_size:
-        raise Exception("mveh and yveh have different lengths: {} vs {}".format(
-                                                        mveh_size, yveh_size))
+    if len(m_glob_pos) != len(o_glob_pos) or len(m_df) != len(o_df):
 
-    for i in range(case_info['frm_range']+1):
-        mveh_c_x = mveh_glob_pos[i][0]
-        mveh_c_y = mveh_glob_pos[i][1]
-        yveh_c_x = yveh_glob_pos[i][0]
-        yveh_c_y = yveh_glob_pos[i][1]
-        mveh_length = mveh_glob_pos[i][2]
+        mins = [o_glob_pos[0,0], m_glob_pos[0,0], m_df['frm'].iloc[0],
+                                                            o_df['frm'].iloc[0]]
 
-        mveh_p = get_p([mveh_c_x,mveh_c_y], lane_cor[0], lane_cor[1] )
-        yveh_p = get_p([yveh_c_x,yveh_c_y], lane_cor[0], lane_cor[1] )
+        maxes = [o_glob_pos[-1,0], m_glob_pos[-1,0], m_df['frm'].iloc[-1],
+                                                            o_df['frm'].iloc[-1]]
 
-        yveh_long = np.hypot(mveh_p[0]-yveh_p[0],mveh_p[1]-yveh_p[1])-mveh_length
-        dx.append(yveh_long)
+        frm_max = min(maxes)
+        frm_min = max(mins)
+        o_glob_pos = o_glob_pos[o_glob_pos[:,0] >= frm_min]
+        o_glob_pos = o_glob_pos[o_glob_pos[:,0] <= frm_max]
+        m_glob_pos = m_glob_pos[m_glob_pos[:,0] >= frm_min]
+        m_glob_pos = m_glob_pos[m_glob_pos[:,0] <= frm_max]
 
-    return dx
+        m_df = frmTrim(m_df, frm_max, frm_min)
+        o_df = frmTrim(o_df, frm_max, frm_min)
 
-def get_gap_sizes(vehicle_df, case_info, glob_pos, lane_cor):
-    front_adjacent_vehid = get_fveh(vehicle_df, case_info['lc_frm'])
-    front_vehid = get_fveh(vehicle_df, case_info['lc_frm']-1)
+    vehm_size = len(m_glob_pos)
+    for i in range(vehm_size):
+        vehm_c_x = m_glob_pos[i,1]
+        vehm_c_y = m_glob_pos[i,2]
+        veho_c_x = o_glob_pos[i,1]
+        veho_c_y = o_glob_pos[i,2]
 
-    if front_adjacent_vehid != 0:
-        glob_pos = glob_pos.loc[(glob_pos['frm'] == case_info['lc_frm'])]
-        fveh_glob_pos = get_vehglob_pos(glob_pos, front_adjacent_vehid)
-        yveh_glob_pos = get_vehglob_pos(glob_pos, case_info['yveh_id'])
-        yveh_c_x = yveh_glob_pos[0][0]
-        yveh_c_y = yveh_glob_pos[0][1]
-        fveh_c_x = fveh_glob_pos[0][0]
-        fveh_c_y = fveh_glob_pos[0][1]
-        fveh_length = fveh_glob_pos[0][2]
+        if mveh_orientation == 'front':
+            veh_length = m_glob_pos[i,3]
+        else:
+            veh_length = o_glob_pos[i,3]
 
-        fveh_p = get_p([fveh_c_x,fveh_c_y], lane_cor[0], lane_cor[1] )
-        yveh_p = get_p([yveh_c_x,yveh_c_y], lane_cor[0], lane_cor[1] )
+        vehm_p = get_p([vehm_c_x,vehm_c_y], lane_cor[0], lane_cor[1])
+        veho_p = get_p([veho_c_x,veho_c_y], lane_cor[0], lane_cor[1])
 
-        gap_adj = np.hypot(fveh_p[0]-yveh_p[0],fveh_p[1]-yveh_p[1])-fveh_length
+        dx_i = np.hypot(vehm_p[0]-veho_p[0],vehm_p[1]-veho_p[1])-veh_length
+        dx.append(dx_i)
+
+    o_df.loc[:, 'dx'] = dx
+    o_df['episode_id'] = m_df['episode_id'].values
+
+    if mveh_orientation == 'front':
+        o_df.loc[:, 'dv'] = m_df['vel'] - o_df['vel']
     else:
-        gap_adj = 70
+        o_df.loc[:, 'dv'] = o_df['vel'] - m_df['vel']
 
-    if front_vehid != 0:
-        glob_pos = glob_pos.loc[(glob_pos['frm'] == case_info['lc_frm'])]
-        fveh_glob_pos = get_vehglob_pos(glob_pos, front_vehid)
-        mveh_glob_pos = get_vehglob_pos(glob_pos, case_info['id'])
-        mveh_c_x = mveh_glob_pos[0][0]
-        mveh_c_y = mveh_glob_pos[0][1]
-        fveh_c_x = fveh_glob_pos[0][0]
-        fveh_c_y = fveh_glob_pos[0][1]
-        fveh_length = fveh_glob_pos[0][2]
+    return m_df, o_df
 
-        fveh_p = get_p([fveh_c_x,fveh_c_y], lane_cor[0], lane_cor[1] )
-        mveh_p = get_p([mveh_c_x,mveh_c_y], lane_cor[0], lane_cor[1] )
+def frmTrim(veh_df, frm_max, frm_min):
+    veh_df = veh_df.loc[(veh_df['frm'] >= frm_min) &
+                        (veh_df['frm'] <= frm_max)]
+    return veh_df.reset_index(drop = True)
 
-        gap_front = np.hypot(fveh_p[0]-mveh_p[0],fveh_p[1]-mveh_p[1])-fveh_length
-    else:
-        gap_front = 70
+def get_o_df(o_df, veh_id, episode_id):
+    veh_df = o_df.loc[o_df['id'] == veh_id].reset_index(drop = True)
+    get_act_long(veh_df)
+    get_past_action(veh_df, 'o')
+    veh_df['episode_id'] = episode_id
+    return veh_df
 
-    return (gap_front, gap_adj)
+def data_saver(veh_df, o_name):
+    file_name = './datasets/' + o_name + '.txt'
+    veh_df.to_csv(file_name, header=None, index=None, sep=' ', mode='a')
 
-def get_veh_feats(mveh_df, yveh_df, gap_sizes, dx, case_info):
-    mveh_df = mveh_df[['id', 'frm', 'scenario', 'v_long',
-                                'v_lat','pc']]
+def get_act_long(veh_df):
+    acc = (veh_df['vel'].iloc[1:].values - veh_df['vel'].iloc[:-1].values)/0.1
+    veh_df.drop(veh_df.index[-1],  inplace=True)
+    veh_df.loc[:,'act_long'] = acc
 
-    mveh_df = mveh_df.rename(columns={'v_lat':'act_lat', 'v_long':'vel'})
-    mveh_df.insert(loc=6, column='gap_front', value=gap_sizes[0])
-    mveh_df.insert(loc=7, column='gap_adj', value=gap_sizes[1])
-
-    mveh_df.insert(loc=1, column='episode_id', value=case_info['episode_id'])
-    mveh_df.insert(loc=3, column='lc_type', value=case_info['lc_type'])
-
-    mveh_df.loc[:,'dx'] = pd.Series(dx)
-    mveh_df.loc[:,'act_long'] = pd.Series(dx)
-    get_act_long(mveh_df)
-    get_past_action(mveh_df, 'mveh')
-    get_act_long(yveh_df)
-    get_past_action(yveh_df, 'yveh')
-    yveh_df.insert(loc=1, column='episode_id', value=case_info['episode_id'])
-
-    yveh_df = yveh_df[['id', 'episode_id', 'frm', 'vel', 'act_long_p', 'act_long']]
-    mveh_df = mveh_df[['id', 'episode_id', 'frm', 'scenario', 'lc_type', 'vel', 'pc',
-        'gap_front', 'gap_adj','dx', 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']]
-
-    return mveh_df, yveh_df
-
-def data_saver(mveh_df, yveh_df):
-    check = episode_checker(mveh_df, yveh_df)
-
-    if check == 1:
-        mveh_df.to_csv('/datasets/mveh_df.txt',
-                                        header=None, index=None, sep=' ', mode='a')
-        yveh_df.to_csv('/datasets/yveh_df.txt',
-                                        header=None, index=None, sep=' ', mode='a')
-
-def get_act_long(vehicle_df):
-    acc = (vehicle_df['vel'].iloc[1:].values - vehicle_df['vel'].iloc[:-1].values)/0.1
-    vehicle_df.drop(vehicle_df.index[-1],  inplace=True)
-    vehicle_df.reset_index(drop=True,  inplace=True)
-
-    vehicle_df.loc[:,'act_long'] = acc
-
-def get_past_action(vehicle_df, name):
+def get_past_action(veh_df, name):
     if name ==  'mveh':
         action_names = ['act_long', 'act_lat']
     else:
         action_names = ['act_long']
 
-    action_p = vehicle_df[action_names].iloc[:-1].values
+    action_p = veh_df[action_names].iloc[:-1].values
     action_names_p = [name +'_p' for name in action_names]
-    vehicle_df.drop(vehicle_df.index[0],  inplace=True)
-    vehicle_df.reset_index(drop=True,  inplace=True)
-    vehicle_df[action_names_p] = pd.DataFrame(action_p)
-
-def episode_checker(mveh_df, yveh_df):
-    """
-    Exclusion of some cars from training.
-    If return 1, accept the car
-    """
-    mveh_size = len(mveh_df)
-    yveh_size = len(yveh_df)
-    vel_min = mveh_df['vel'].min()
-    gap_size = mveh_df['gap_size'].iloc[0]
-
-    if yveh_size != mveh_size or vel_min < 0 or gap_size < 5:
-        check = 0
-    else:
-        check = 1
-
-    return check
+    veh_df.drop(veh_df.index[0],  inplace=True)
+    veh_df.reset_index(drop=True,  inplace=True)
+    veh_df[action_names_p] = pd.DataFrame(action_p)

@@ -12,12 +12,12 @@ cwd = os.getcwd()
 
 # %%
 """
-mveh_df - merge_vehicle_df
-yveh_df - yield_vehicle_df
+m_df - merge_veh_df
+y_df - yield_veh_df
 """
 col = ['id','frm','scenario','lane_id',
-                                'bool_r','bool_l','pc','v_long',
-                                'a_long','v_lat','a_lat','e_class',
+                                'bool_r','bool_l','pc','vel',
+                                'a_long','act_lat','a_lat','e_class',
                                 'ff_id','ff_long','ff_lat','ff_v',
                                 'fl_id','fl_long','fl_lat','fl_v',
                                 'bl_id','bl_long','bl_lat','bl_v',
@@ -35,10 +35,6 @@ datasets = {
         "i80_1": "trajdata_i80_trajectories-0400-0415.txt",
         "i80_2": "trajdata_i80_trajectories-0500-0515.txt",
         "i80_3": "trajdata_i80_trajectories-0515-0530.txt"}
-
-all_states = ['id','frm','scenario','lane_id','pc','fr_id','br_id','fl_id','bl_id',
-                                    'fl_long','bl_long','fr_long','br_long',
-                                        'v_long','a_long','v_lat','a_lat']
 
 col_df_all = ['id','frm','scenario','lane_id','length','x_front','y_front','class']
 
@@ -58,18 +54,47 @@ xc_80, yc_80 = road_geometry.get_centerlines('./NGSIM DATA/centerlines80.txt')
 xc_101, yc_101 = road_geometry.get_centerlines('./NGSIM DATA/centerlines101.txt')
 
 os.chdir(cwd)
+
 # %%
+def draw_traj(m_df, y_df, case_info):
+    # for some vis
+    fig = plt.figure()
+    item = 'pc'
+    plt.plot(m_df[item])
+    # plt.plot(y_df[item])
+
+    # plt.plot(y_df[item])
+    indx = m_df.loc[m_df['frm'] == case_info['lc_frm']].index[0]
+    plt.scatter(indx, m_df[item].iloc[indx])
+    plt.title([case_info['id'], case_info['lc_frm'], case_info['scenario']])
+    plt.grid()
+    plt.legend(['merge vehicle','yield vehicle'])
+
+
+    fig = plt.figure()
+    item = 'act_lat'
+    plt.plot(m_df[item])
+
+    # plt.plot(y_df[item])
+    # plt.plot(y_df[item])
+    indx = m_df.loc[m_df['frm'] == case_info['lc_frm']].index[0]
+    plt.scatter(indx, m_df[item].iloc[indx])
+
+    plt.grid()
+    plt.legend(['merge vehicle','yield vehicle'])
 
 def get_glob_df(case_info):
     """
     :return: global pose of interacting cars
+    Note: start_frm and end_frm are not included here. They are dropped later when
+    calculating acceleations.
     """
 
     glob_pos = df_all.loc[(df_all['scenario'] == case_info['scenario']) &
-                            (df_all['frm'] >= case_info['initiation_frm']) &
-                            (df_all['frm'] <=  case_info['completion_frm'])]
+                            (df_all['frm'] > case_info['start_frm']) &
+                            (df_all['frm'] <  case_info['end_frm'])]
 
-    return glob_pos[['id','frm','x_front','y_front','length']]
+    return glob_pos[['id','frm','x_front','y_front', 'length']]
 
 def get_lane_cor(scenario, lane_id):
     if scenario in ['i101_1', 'i101_2', 'i101_3']:
@@ -90,197 +115,98 @@ for scenario in datasets:
                                         (feature_set['lane_id'] < 7)] # feat_set_scene
     ids = feat_df['id'].unique().astype('int')
 
-    for id in ids[0:60]:
+    for id in ids[0:20]:
 
         veh_df = feat_df.loc[(feat_df['id'] == id)].reset_index(drop = True)
         lc_frms = utils.lc_entrance(veh_df)
 
-        for lc_frm, lane_id in lc_frms['right']:
+        for lane_change in lc_frms:
+            if lc_frms[lane_change]:
+                for lc_frm, lane_id in lc_frms[lane_change]:
+                    y_id, y_class = utils.get_vehInfo(veh_df, lc_frm, 'bb_id')
+                    m_class = veh_df['e_class'].iloc[0]
 
-            yveh_id, yveh_class = utils.get_yveh(veh_df, lc_frm)
-            lane_cor = get_lane_cor(scenario, lane_id)
-            veh_class = veh_df['e_class'].iloc[0]
+                    end_frm = utils.lc_completion(veh_df, lc_frm, y_id, lane_change, lane_id)
+                    start_frm = utils.lc_initation(veh_df, lc_frm-1, y_id, lane_change, lane_id)
+                    frms_n = int(end_frm-start_frm)
+                    m_df = utils.frmTrim(veh_df, end_frm, start_frm)
+                    v_min = m_df['vel'].min()
 
-            if yveh_id and yveh_class == veh_class == 2:
-                completion_frm = utils.lc_completion(veh_df, lc_frm, yveh_id, 'right', lane_id)
-                initiation_frm = utils.lc_initation(veh_df, lc_frm-1, yveh_id, 'right', lane_id)
+                    if y_id and y_class == m_class == 2 and frms_n > 20 and \
+                                        start_frm != 0 and end_frm != 0 and v_min > 0:
 
-                mveh_df = veh_df.loc[(veh_df['frm'] >= initiation_frm) &
-                            (veh_df['frm'] <= completion_frm)].reset_index(drop = True)
+                        case_info = {
+                                    'scenario':scenario,
+                                    'id':id,
+                                    'frms_n':frms_n,
+                                    'y_id':y_id,
+                                    'lc_frm':lc_frm,
+                                    'start_frm':start_frm,
+                                    'end_frm':end_frm,
+                                    'episode_id': counter,
+                                    'lc_type': -1
+                                    }
 
-                yveh_df = feat_df.loc[(feat_df['id'] == yveh_id) &
-                            (feat_df['frm'] >= initiation_frm) &
-                            (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
+                        fadj_id, _ = utils.get_vehInfo(veh_df, lc_frm, 'ff_id')
+                        f_id, _ = utils.get_vehInfo(veh_df, lc_frm-1, 'ff_id')
+                        lane_cor = get_lane_cor(scenario, lane_id)
 
-                frm_range = int(completion_frm-initiation_frm)
-                if frm_range > 20 and initiation_frm != 0 and completion_frm != 0:
+                        m_df = utils.get_m_features(m_df, case_info)
+                        o_df = utils.frmTrim(feat_df, end_frm, start_frm) # other vehicles' df
 
-                    case_info = {
-                    'scenario':scenario,
-                    'id':id,
-                    'frm_range':frm_range,
-                    'yveh_id':yveh_id,
-                    'lc_frm':lc_frm,
-                    'initiation_frm':initiation_frm,
-                    'completion_frm':completion_frm,
-                    'episode_id': counter,
-                    'lc_type': -1
-                    }
+                        glob_pos = get_glob_df(case_info)
 
-                    if all(mveh_df['frm'].diff().dropna() != 1):
-                        raise ValueError("There are missing frames", case_info)
+                        y_df = utils.get_o_df(o_df, y_id, case_info['episode_id'])
+                        m_df, y_df = utils.get_dxdv(glob_pos, m_df, y_df, lane_cor, 'front')
 
-                    yveh_df = yveh_df[['frm','id','v_long']].rename(columns={'v_long':'vel'})
+                        if fadj_id:
+                            fadj_df = utils.get_o_df(o_df, fadj_id, case_info['episode_id'])
+                            m_df, fadj_df = utils.get_dxdv(glob_pos, m_df, fadj_df, lane_cor, 'behind')
 
-                    glob_pos = get_glob_df(case_info)
-                    mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
-                    yveh_glob_pos = utils.get_vehglob_pos(glob_pos, yveh_id)
+                        if f_id:
+                            f_df = utils.get_o_df(o_df, f_id, case_info['episode_id'])
+                            m_df, f_df = utils.get_dxdv(glob_pos, m_df, f_df, lane_cor, 'behind')
 
-                    dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
-                    gap_sizes = utils.get_gap_sizes(mveh_df, case_info, glob_pos, lane_cor)
+                        mveh_size = len(m_df)
 
-                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_sizes, dx, case_info)
+                        if not fadj_id:
+                            fadj_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
+                        else:
+                            fadj_df = utils.applyCorrections(m_df, fadj_df, 'na', mveh_size)
 
-                    counter += 1
-                    case_info['gap_sizes'] = gap_sizes
-                    print(counter, ' ### lane change extracted ###')
+                        if not f_id:
+                            f_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
+                        else:
+                            f_df = utils.applyCorrections(m_df, f_df, 'na', mveh_size)
 
-                    draw_traj(mveh_df, yveh_df, case_info)
-                    # utils.data_saver(mveh_df, yveh_df)
+                        y_df = utils.applyCorrections(m_df, y_df, 'yveh', mveh_size)
 
-        for lc_frm, lane_id in lc_frms['left']:
+                        utils.data_saver(m_df, 'm_df')
+                        utils.data_saver(y_df, 'y_df')
+                        utils.data_saver(f_df, 'f_df')
+                        utils.data_saver(fadj_df, 'fadj_df')
 
-            yveh_id, yveh_class = utils.get_yveh(veh_df, lc_frm)
-            lane_cor = get_lane_cor(scenario, lane_id)
-            veh_class = veh_df['e_class'].iloc[0]
+                        counter += 1
+                        print(counter, ' ### lane change extracted ###')
+                        draw_traj(m_df, y_df, case_info)
 
-            if yveh_id and yveh_class == veh_class == 2:
-                completion_frm = utils.lc_completion(veh_df, lc_frm, yveh_id, 'left', lane_id)
-                initiation_frm = utils.lc_initation(veh_df, lc_frm-1, yveh_id, 'left', lane_id)
-
-                mveh_df = veh_df.loc[(veh_df['frm'] >= initiation_frm) &
-                            (veh_df['frm'] <= completion_frm)].reset_index(drop = True)
-
-                yveh_df = feat_df.loc[(feat_df['id'] == yveh_id) &
-                            (feat_df['frm'] >= initiation_frm) &
-                    (feat_df['frm'] <= completion_frm)].reset_index(drop = True)
-
-                frm_range = int(completion_frm-initiation_frm)
-                if frm_range > 20 and initiation_frm != 0 and completion_frm != 0:
-
-                    case_info = {
-                    'scenario':scenario,
-                    'id':id,
-                    'frm_range':frm_range,
-                    'yveh_id':yveh_id,
-                    'lc_frm':lc_frm,
-                    'initiation_frm':initiation_frm,
-                    'completion_frm':completion_frm,
-                    'episode_id': counter,
-                    'lc_type': 1
-                    }
-
-                    if all(mveh_df['frm'].diff().dropna() != 1):
-                        raise ValueError("There are missing frames", case_info)
-
-                    yveh_df = yveh_df[['scenario','frm','id','v_long']].rename(columns={'v_long':'vel'})
-
-                    glob_pos = get_glob_df(case_info)
-                    mveh_glob_pos = utils.get_vehglob_pos(glob_pos, id)
-                    yveh_glob_pos = utils.get_vehglob_pos(glob_pos, yveh_id)
-
-                    dx = utils.get_dx(mveh_glob_pos, yveh_glob_pos, case_info, lane_cor)
-                    gap_sizes = utils.get_gap_sizes(mveh_df, case_info, glob_pos, lane_cor)
-
-                    mveh_df, yveh_df = utils.get_veh_feats(mveh_df, yveh_df, gap_sizes, dx, case_info)
-
-                    counter += 1
-                    case_info['gap_sizes'] = gap_sizes
-                    print(counter, ' ### lane change extracted ###')
-
-                    draw_traj(mveh_df, yveh_df, case_info)
-                    # utils.data_saver(mveh_df, yveh_df)
 
 # %%
-plt.plot(mveh_df['frm'], mveh_df['v_lat'])
-vehicle_df= mveh_df
-initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
-                            (vehicle_df['br_id'] == yveh_id) &
-                            (vehicle_df['lane_id'] == lane_id-1)]
-initiation_frms
-plt.plot(mveh_df['frm'], mveh_df['pc'])
-
-
-case_info
-yveh_df.columns
-
-mveh_df.columns
-feat_df = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
+m_df = feature_set.loc[(feature_set['scenario'] == 'i80_1') &
+                                    (feature_set['id'] == 103) &
+                                    (feature_set['frm'] >= 1077) &
+                                    (feature_set['frm'] <= 1162) &
                                     (feature_set['lane_id'] < 7)] # feat_set_scene
 
-car_df = feat_df.loc[(feat_df['id'] == 695)].reset_index(drop = True)
+plt.plot(m_df['pc'])
+plt.plot(m_df['bl_id'])
+plt.plot(y_df['dx'])
 
-plt.plot(mveh_df['v_lat'])
-car_df
-car_df
-plt.plot(car_df['pc'])
-plt.plot(veh_df['bb_id'].iloc[25:])
+# %%
 
-vehicle_df = veh_df
 
-vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
-                            # (vehicle_df['bb_id'] == 699) &
-                            (vehicle_df['lane_id'] == lane_id) &
-                            ((vehicle_df['pc'].abs() < 1) |
-                            (vehicle_df['v_lat'].abs() < 0.1))]['frm']
-plt.plot(veh_df['lane_id'].iloc[25:])
 
 case_info
+y_df.columns
 
-vehicle_df = veh_df
-
-initiation_frms = vehicle_df.loc[(vehicle_df['frm'] < lc_frm) &
-                            # (vehicle_df['bl_id'] == yveh_id) &
-                            (vehicle_df['lane_id'] == 3) &
-                            (vehicle_df['v_lat'].abs() < 0.1)]
-
-completion_frm
-vehicle_df.loc[(vehicle_df['frm'] > lc_frm) &
-                            (vehicle_df['bb_id'] == yveh_id) &
-                            (vehicle_df['lane_id'] == lane_id) &
-                            ((vehicle_df['pc'].abs() < 1) |
-                            (vehicle_df['v_lat'].abs() < 0.1))]['frm'].min()
-mveh_df.columns
-
-
-
-
-# %%
-def draw_traj(mveh_df, yveh_df, case_info):
-    # for some vis
-    fig = plt.figure()
-    item = 'pc'
-    plt.plot(mveh_df[item])
-    # plt.plot(yveh_df[item])
-
-    # plt.plot(yveh_df[item])
-    indx = mveh_df.loc[mveh_df['frm'] == case_info['lc_frm']].index[0]
-    plt.scatter(indx, mveh_df[item].iloc[indx])
-    plt.title([case_info['id'], case_info['lc_frm'], case_info['scenario'], case_info['gap_sizes']])
-    plt.grid()
-    plt.legend(['merge vehicle','yield vehicle'])
-
-
-    fig = plt.figure()
-    item = 'act_lat'
-    plt.plot(mveh_df[item])
-
-    # plt.plot(yveh_df[item])
-    # plt.plot(yveh_df[item])
-    indx = mveh_df.loc[mveh_df['frm'] == case_info['lc_frm']].index[0]
-    plt.scatter(indx, mveh_df[item].iloc[indx])
-
-    plt.grid()
-    plt.legend(['merge vehicle','yield vehicle'])
-
-# %%
+m_df.columns
