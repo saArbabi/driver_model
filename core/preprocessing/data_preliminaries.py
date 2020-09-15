@@ -32,16 +32,17 @@ spec.loc[spec['episode_id']==1]
 spec.loc[spec['frm_n']>300]
 
 plt.plot(y_df.loc[y_df['episode_id']==2]['vel'])
-plt.plot(m_df.loc[m_df['episode_id']==1272]['act_lat'])
+plt.plot(m_df.loc[m_df['episode_id']==2930]['act_lat'])
+plt.grid()
 
-plt.plot(m_df.loc[m_df['episode_id']==1272]['pc'])
+plt.plot(m_df.loc[m_df['episode_id']==2930]['pc'])
 
 f_df['dx'].min()
 f_df['dx'].min()
 y_df.loc[y_df['episode_id']==1]['vel']
 m_df.loc[m_df['episode_id']==22]
 f_df.loc[f_df['episode_id']==4]
-spec['frm_n'].plot.hist(bins=125)
+f_df['dv'].plot.hist(bins=125)
 
 # %%
 # def trimFeatureVals(veh_df)

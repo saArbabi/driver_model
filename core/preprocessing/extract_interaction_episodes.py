@@ -10,6 +10,7 @@ import json
 reload(utils)
 cwd = os.getcwd()
 
+
 # %%
 """
 m_df - merge_mveh_df
@@ -54,18 +55,18 @@ xc_80, yc_80 = road_geometry.get_centerlines('./NGSIM DATA/centerlines80.txt')
 xc_101, yc_101 = road_geometry.get_centerlines('./NGSIM DATA/centerlines101.txt')
 
 os.chdir(cwd)
-
 # %%
 def draw_traj(m_df, y_df, case_info):
     # for some vis
     fig = plt.figure()
     item = 'pc'
-    plt.plot(m_df[item])
+    plt.plot(m_df['frm'], m_df[item])
     # plt.plot(y_df[item])
 
     # plt.plot(y_df[item])
     indx = m_df.loc[m_df['frm'] == case_info['lc_frm']].index[0]
-    plt.scatter(indx, m_df[item].iloc[indx])
+
+    plt.scatter(case_info['lc_frm'], m_df[item].iloc[indx])
     plt.title([case_info['id'], case_info['lc_frm'], case_info['scenario']])
     plt.grid()
     plt.legend(['merge vehicle','yield vehicle'])
@@ -73,12 +74,11 @@ def draw_traj(m_df, y_df, case_info):
 
     fig = plt.figure()
     item = 'act_lat'
-    plt.plot(m_df[item])
+    plt.plot(m_df['frm'], m_df[item])
 
     # plt.plot(y_df[item])
     # plt.plot(y_df[item])
-    indx = m_df.loc[m_df['frm'] == case_info['lc_frm']].index[0]
-    plt.scatter(indx, m_df[item].iloc[indx])
+    plt.scatter(case_info['lc_frm'], m_df[item].iloc[indx])
 
     plt.grid()
     plt.legend(['merge vehicle','yield vehicle'])
@@ -132,8 +132,8 @@ for scenario in datasets:
                     y_id, y_class = utils.get_vehInfo(mveh_df, lc_frm, 'bb_id')
                     m_class = mveh_df['e_class'].iloc[0]
 
-                    end_frm = utils.lc_completion(mveh_df, lc_frm, y_id, lane_change, lane_id)
-                    start_frm = utils.lc_initation(mveh_df, lc_frm-1, y_id, lane_change, lane_id)
+                    end_frm = utils.lc_completion(mveh_df, lc_frm, lane_change, lane_id)
+                    start_frm = utils.lc_initation(mveh_df, lc_frm-1, lane_change, lane_id)
                     frms_n = int(end_frm-start_frm)
                     m_df = utils.frmTrim(mveh_df, end_frm, start_frm)
                     v_min = m_df['vel'].min()
@@ -188,10 +188,10 @@ for scenario in datasets:
                             y_df = utils.applyCorrections(m_df, y_df, 'yveh', mveh_size)
 
                         except:
-                            print('This episode has a vehicle with missing frame \
-                                    - episode is ignored')
+                            print('This episode has a vehicle with missing frame - episode is ignored')
                             continue
 
+                        # draw_traj(m_df, y_df, case_info)
                         utils.data_saver(m_df, 'm_df')
                         utils.data_saver(y_df, 'y_df')
                         utils.data_saver(f_df, 'f_df')
@@ -202,23 +202,26 @@ for scenario in datasets:
 
                         counter += 1
                         print(counter, ' ### lane change extracted ###')
-                        # draw_traj(m_df, y_df, case_info)
 
 pd.DataFrame.from_dict(episode_spec, orient='index').to_csv('./datasets/episode_spec.txt',
                                 header=None, index=None, sep=' ', mode='a')
 # %%
+m_df
 
+y_df
 # %%
 episode_spec[2]
-frms = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
-                                    (feature_set['id'] == 1110)]['frm']
+case_info
+test = feature_set.loc[(feature_set['scenario'] == case_info['scenario']) &
+                        (feature_set['frm'] >= case_info['start_frm']) &
+                        (feature_set['frm'] <= case_info['end_frm']) &
+                        (feature_set['lane_id'] < 7) & # feat_set_scene
+                                    (feature_set['id'] == 2174)]
+plt.plot(test['br_id'])
 
-
-
+# %%
 plt.plot(frms)
-                                    (feature_set['frm'] >= 1077) &
-                                    (feature_set['frm'] <= 1162) &
-                                    (feature_set['lane_id'] < 7)] # feat_set_scene
+
 
 plt.plot(m_df['pc'])
 plt.plot(m_df['bl_id'])

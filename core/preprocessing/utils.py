@@ -73,12 +73,11 @@ def get_vehInfo(veh_df, lc_frm, veh_type):
     veh_id = veh_df.loc[veh_df['frm'] == lc_frm][[veh_type, 'e_class']]
     return veh_id.iloc[0].tolist()
 
-def lc_completion(veh_df, lc_frm, y_id, lc_direction, lane_id):
+def lc_completion(veh_df, lc_frm, lc_direction, lane_id):
     """
     :return: lane change completion frame
     """
     end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
-                                (veh_df['bb_id'] == y_id) &
                                 (veh_df['lane_id'] == lane_id) &
                                 (veh_df['act_lat'].abs() < 0.1)]['frm']
 
@@ -87,12 +86,10 @@ def lc_completion(veh_df, lc_frm, y_id, lc_direction, lane_id):
     else:
         if lc_direction == 'right':
             end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
-                                        (veh_df['bb_id'] == y_id) &
                                         (veh_df['lane_id'] == lane_id) &
                                         (veh_df['pc'] > 0)]['frm']
         else:
             end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
-                                        (veh_df['bb_id'] == y_id) &
                                         (veh_df['lane_id'] == lane_id) &
                                         (veh_df['pc'] < 0)]['frm']
 
@@ -101,17 +98,13 @@ def lc_completion(veh_df, lc_frm, y_id, lc_direction, lane_id):
         return 0
 
 
-def lc_initation(veh_df, lc_frm, y_id, lc_direction, lane_id):
+def lc_initation(veh_df, lc_frm, lc_direction, lane_id):
     if lc_direction == 'right':
-        y_name = 'br_id'
         lane_id -= 1
-
     else:
-        y_name = 'bl_id'
         lane_id += 1
 
     start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
-                                (veh_df[y_name] == y_id) &
                                 (veh_df['lane_id'] == lane_id) &
                                 (veh_df['act_lat'].abs() < 0.1)]
 
@@ -126,13 +119,11 @@ def lc_initation(veh_df, lc_frm, y_id, lc_direction, lane_id):
         # does not exist.
         if lc_direction == 'right':
             start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
-                                        (veh_df[y_name] == y_id) &
                                         (veh_df['lane_id'] == lane_id) &
                                         (veh_df['pc'] < 0)]
 
         else:
             start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
-                                        (veh_df[y_name] == y_id) &
                                         (veh_df['lane_id'] == lane_id) &
                                         (veh_df['pc'] > 0)]
 
@@ -166,15 +157,15 @@ def remove_redundants(veh_df, o_name):
     else:
         return veh_df[['episode_id','frm','dv', 'dx', 'da', 'a_ratio', 'act_long_p']]
 
-def get_veh_df(veh_df, veh_id, episode_id):
-    veh_df = veh_df.loc[veh_df['id'] == veh_id].reset_index(drop = True)
+def get_o_df(o_df, veh_id, episode_id):
+    veh_df = o_df.loc[o_df['id'] == veh_id].reset_index(drop = True)
     get_act_long(veh_df)
     get_past_action(veh_df, 'o')
     veh_df['episode_id'] = episode_id
     return veh_df
 
 def get_dummyVals(episode_id, df_size):
-    dummy_df = pd.DataFrame(np.repeat([[episode_id, 0, 0, 70, 0, 1, 0]], df_size, axis=0),
+    dummy_df = pd.DataFrame(np.repeat([[episode_id, 0, 0, 70, 0, 0, 0]], df_size, axis=0),
             columns=['episode_id','frm','dv', 'dx', 'da', 'a_ratio','act_long_p'])
 
     return dummy_df
