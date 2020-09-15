@@ -147,53 +147,53 @@ def get_m_features(m_df, case_info):
     get_act_long(m_df)
     get_past_action(m_df, 'mveh')
     m_df.loc[:, ['episode_id', 'lc_type']] = [case_info['episode_id'], case_info['lc_type']]
-    col = ['episode_id', 'id', 'frm', 'scenario', 'vel', 'pc', 'lc_type',
+    col = ['episode_id', 'id', 'frm', 'vel', 'pc', 'lc_type',
                                         'act_long_p', 'act_lat_p', 'act_long', 'act_lat']
     return m_df[col]
 
-def applyCorrections(m_df, o_df, o_name, mveh_size):
+def applyCorrections(m_df, veh_df, o_name, mveh_size):
     """All dfs must be the same size.
     """
-    if len(o_df) != mveh_size:
+    if len(veh_df) != mveh_size:
         frm_max =  m_df['frm'].iloc[-1]
         frm_min =  m_df['frm'].iloc[0]
-        o_df = frmTrim(o_df, frm_max, frm_min)
-    return remove_redundants(o_df, o_name)
+        veh_df = frmTrim(veh_df, frm_max, frm_min)
+    return remove_redundants(veh_df, o_name)
 
 def remove_redundants(veh_df, o_name):
     if o_name == 'yveh':
-        return veh_df[['episode_id', 'vel' ,'dv', 'dx', 'act_long_p', 'act_long']]
+        return veh_df[['episode_id','frm', 'vel' ,'dv', 'dx', 'da', 'a_ratio', 'act_long_p', 'act_long']]
     else:
-        return veh_df[['episode_id', 'dv', 'dx', 'act_long_p', 'act_long']]
+        return veh_df[['episode_id','frm','dv', 'dx', 'da', 'a_ratio', 'act_long_p']]
 
-def get_o_df(o_df, veh_id, episode_id):
-    veh_df = o_df.loc[o_df['id'] == veh_id].reset_index(drop = True)
+def get_veh_df(veh_df, veh_id, episode_id):
+    veh_df = veh_df.loc[veh_df['id'] == veh_id].reset_index(drop = True)
     get_act_long(veh_df)
     get_past_action(veh_df, 'o')
     veh_df['episode_id'] = episode_id
     return veh_df
 
 def get_dummyVals(episode_id, df_size):
-    dummy_df = pd.DataFrame(np.repeat([[episode_id, 0, 70, 0, 0]], df_size, axis=0),
-            columns=['episode_id', 'dv', 'dx', 'act_long_p','act_long'])
+    dummy_df = pd.DataFrame(np.repeat([[episode_id, 0, 0, 70, 0, 1, 0]], df_size, axis=0),
+            columns=['episode_id','frm','dv', 'dx', 'da', 'a_ratio','act_long_p'])
 
     return dummy_df
 
-def get_dxdv(glob_pos, m_df, o_df, lane_cor, mveh_orientation):
+def get_dxdv(glob_pos, m_df, veh_df, lane_cor, mveh_orientation):
     """
     Finds longitudinal distance between two vehicles.
     """
     dx = []
     m_glob_pos = get_globPos(glob_pos, m_df['id'].iloc[0])
-    o_glob_pos = get_globPos(glob_pos, o_df['id'].iloc[0])
+    o_glob_pos = get_globPos(glob_pos, veh_df['id'].iloc[0])
 
-    if len(m_glob_pos) != len(o_glob_pos) or len(m_df) != len(o_df):
+    if not (len(m_glob_pos) == len(o_glob_pos) == len(m_df) == len(veh_df)):
 
         mins = [o_glob_pos[0,0], m_glob_pos[0,0], m_df['frm'].iloc[0],
-                                                            o_df['frm'].iloc[0]]
+                                                            veh_df['frm'].iloc[0]]
 
         maxes = [o_glob_pos[-1,0], m_glob_pos[-1,0], m_df['frm'].iloc[-1],
-                                                            o_df['frm'].iloc[-1]]
+                                                            veh_df['frm'].iloc[-1]]
 
         frm_max = min(maxes)
         frm_min = max(mins)
@@ -203,7 +203,7 @@ def get_dxdv(glob_pos, m_df, o_df, lane_cor, mveh_orientation):
         m_glob_pos = m_glob_pos[m_glob_pos[:,0] <= frm_max]
 
         m_df = frmTrim(m_df, frm_max, frm_min)
-        o_df = frmTrim(o_df, frm_max, frm_min)
+        veh_df = frmTrim(veh_df, frm_max, frm_min)
 
     vehm_size = len(m_glob_pos)
     for i in range(vehm_size):
@@ -223,23 +223,27 @@ def get_dxdv(glob_pos, m_df, o_df, lane_cor, mveh_orientation):
         dx_i = np.hypot(vehm_p[0]-veho_p[0],vehm_p[1]-veho_p[1])-veh_length
         dx.append(dx_i)
 
-    o_df.loc[:, 'dx'] = dx
-    o_df['episode_id'] = m_df['episode_id'].values
+    veh_df.loc[:, 'dx'] = dx
+    veh_df['episode_id'] = m_df['episode_id'].values
 
     if mveh_orientation == 'front':
-        o_df.loc[:, 'dv'] = m_df['vel'] - o_df['vel']
+        veh_df.loc[:, 'dv'] = m_df['vel'] - veh_df['vel']
+        veh_df.loc[:, 'da'] = m_df['act_long_p'] - veh_df['act_long_p']
     else:
-        o_df.loc[:, 'dv'] = o_df['vel'] - m_df['vel']
+        veh_df.loc[:, 'dv'] = veh_df['vel'] - m_df['vel']
+        veh_df.loc[:, 'da'] = veh_df['act_long_p'] - m_df['act_long_p']
+    # veh_df.loc[:, 'a_ratio'] = (m_df['act_long_p'].abs()+0.1)/(veh_df['act_long_p'].abs()+0.1)
+    veh_df.loc[:, 'a_ratio'] = np.log((m_df['act_long_p'].abs()/veh_df['act_long_p'].abs()))
 
-    return m_df, o_df
+    return m_df, veh_df
 
 def frmTrim(veh_df, frm_max, frm_min):
     veh_df = veh_df.loc[(veh_df['frm'] >= frm_min) &
                         (veh_df['frm'] <= frm_max)]
     return veh_df.reset_index(drop = True)
 
-def get_o_df(o_df, veh_id, episode_id):
-    veh_df = o_df.loc[o_df['id'] == veh_id].reset_index(drop = True)
+def get_veh_df(veh_df, veh_id, episode_id):
+    veh_df = veh_df.loc[veh_df['id'] == veh_id].reset_index(drop = True)
     get_act_long(veh_df)
     get_past_action(veh_df, 'o')
     veh_df['episode_id'] = episode_id

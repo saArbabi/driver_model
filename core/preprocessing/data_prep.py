@@ -194,14 +194,9 @@ class DataObj():
         self.bool_pointer = list(self.bool_indx.values())[-1]
         self.retain_pointer = list(self.retain_indx.values())
 
-    def addFeatures(self, m_df, y_df):
-        """Generates any additional features
-        """
-        pass
-
     def get_stateTarget_arr(self, m_df, y_df):
-        """Note: Note all states are used by model for prediction. Some are needed
-            for applying updatates.
+        """Note: Not all states are used by model for prediction. Some are needed
+            for state propagation.
         """
         self.addFeatures(m_df, y_df)
 

@@ -6,14 +6,14 @@ import os
 from models.core.preprocessing import utils
 from math import hypot
 from importlib import reload
-
+import json
 reload(utils)
 cwd = os.getcwd()
 
 # %%
 """
-m_df - merge_veh_df
-y_df - yield_veh_df
+m_df - merge_mveh_df
+y_df - yield_mveh_df
 """
 col = ['id','frm','scenario','lane_id',
                                 'bool_r','bool_l','pc','vel',
@@ -110,28 +110,33 @@ def get_lane_cor(scenario, lane_id):
 reload(utils)
 
 counter = 0
+episode_spec = {}
+
 for scenario in datasets:
     feat_df = feature_set.loc[(feature_set['scenario'] == scenario) &
                                         (feature_set['lane_id'] < 7)] # feat_set_scene
     ids = feat_df['id'].unique().astype('int')
 
-    for id in ids[0:20]:
-
-        veh_df = feat_df.loc[(feat_df['id'] == id)].reset_index(drop = True)
-        lc_frms = utils.lc_entrance(veh_df)
+    for id in ids:
+        mveh_df = feat_df.loc[(feat_df['id'] == id)].reset_index(drop = True)
+        lc_frms = utils.lc_entrance(mveh_df)
 
         for lane_change in lc_frms:
+            if lane_change == 'right':
+                lc_type = -1
+            else:
+                lc_type = 1
+
             if lc_frms[lane_change]:
                 for lc_frm, lane_id in lc_frms[lane_change]:
-                    y_id, y_class = utils.get_vehInfo(veh_df, lc_frm, 'bb_id')
-                    m_class = veh_df['e_class'].iloc[0]
+                    y_id, y_class = utils.get_vehInfo(mveh_df, lc_frm, 'bb_id')
+                    m_class = mveh_df['e_class'].iloc[0]
 
-                    end_frm = utils.lc_completion(veh_df, lc_frm, y_id, lane_change, lane_id)
-                    start_frm = utils.lc_initation(veh_df, lc_frm-1, y_id, lane_change, lane_id)
+                    end_frm = utils.lc_completion(mveh_df, lc_frm, y_id, lane_change, lane_id)
+                    start_frm = utils.lc_initation(mveh_df, lc_frm-1, y_id, lane_change, lane_id)
                     frms_n = int(end_frm-start_frm)
-                    m_df = utils.frmTrim(veh_df, end_frm, start_frm)
+                    m_df = utils.frmTrim(mveh_df, end_frm, start_frm)
                     v_min = m_df['vel'].min()
-
                     if y_id and y_class == m_class == 2 and frms_n > 20 and \
                                         start_frm != 0 and end_frm != 0 and v_min > 0:
 
@@ -144,56 +149,73 @@ for scenario in datasets:
                                     'start_frm':start_frm,
                                     'end_frm':end_frm,
                                     'episode_id': counter,
-                                    'lc_type': -1
+                                    'lc_type': lc_type
                                     }
 
-                        fadj_id, _ = utils.get_vehInfo(veh_df, lc_frm, 'ff_id')
-                        f_id, _ = utils.get_vehInfo(veh_df, lc_frm-1, 'ff_id')
-                        lane_cor = get_lane_cor(scenario, lane_id)
+                        try:
+                            fadj_id, _ = utils.get_vehInfo(mveh_df, lc_frm, 'ff_id')
+                            f_id, _ = utils.get_vehInfo(mveh_df, lc_frm-1, 'ff_id')
+                            lane_cor = get_lane_cor(scenario, lane_id)
 
-                        m_df = utils.get_m_features(m_df, case_info)
-                        o_df = utils.frmTrim(feat_df, end_frm, start_frm) # other vehicles' df
+                            m_df = utils.get_m_features(m_df, case_info)
+                            o_df = utils.frmTrim(feat_df, end_frm, start_frm) # other vehicles' df
 
-                        glob_pos = get_glob_df(case_info)
+                            glob_pos = get_glob_df(case_info)
 
-                        y_df = utils.get_o_df(o_df, y_id, case_info['episode_id'])
-                        m_df, y_df = utils.get_dxdv(glob_pos, m_df, y_df, lane_cor, 'front')
+                            y_df = utils.get_o_df(o_df, y_id, case_info['episode_id'])
+                            m_df, y_df = utils.get_dxdv(glob_pos, m_df, y_df, lane_cor, 'front')
 
-                        if fadj_id:
-                            fadj_df = utils.get_o_df(o_df, fadj_id, case_info['episode_id'])
-                            m_df, fadj_df = utils.get_dxdv(glob_pos, m_df, fadj_df, lane_cor, 'behind')
+                            if fadj_id:
+                                fadj_df = utils.get_o_df(o_df, fadj_id, case_info['episode_id'])
+                                m_df, fadj_df = utils.get_dxdv(glob_pos, m_df, fadj_df, lane_cor, 'behind')
 
-                        if f_id:
-                            f_df = utils.get_o_df(o_df, f_id, case_info['episode_id'])
-                            m_df, f_df = utils.get_dxdv(glob_pos, m_df, f_df, lane_cor, 'behind')
+                            if f_id:
+                                f_df = utils.get_o_df(o_df, f_id, case_info['episode_id'])
+                                m_df, f_df = utils.get_dxdv(glob_pos, m_df, f_df, lane_cor, 'behind')
 
-                        mveh_size = len(m_df)
+                            mveh_size = len(m_df)
 
-                        if not fadj_id:
-                            fadj_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
-                        else:
-                            fadj_df = utils.applyCorrections(m_df, fadj_df, 'na', mveh_size)
+                            if not fadj_id:
+                                fadj_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
+                            else:
+                                fadj_df = utils.applyCorrections(m_df, fadj_df, 'na', mveh_size)
 
-                        if not f_id:
-                            f_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
-                        else:
-                            f_df = utils.applyCorrections(m_df, f_df, 'na', mveh_size)
+                            if not f_id:
+                                f_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
+                            else:
+                                f_df = utils.applyCorrections(m_df, f_df, 'na', mveh_size)
 
-                        y_df = utils.applyCorrections(m_df, y_df, 'yveh', mveh_size)
+                            y_df = utils.applyCorrections(m_df, y_df, 'yveh', mveh_size)
+
+                        except:
+                            print('This episode has a vehicle with missing frame \
+                                    - episode is ignored')
+                            continue
 
                         utils.data_saver(m_df, 'm_df')
                         utils.data_saver(y_df, 'y_df')
                         utils.data_saver(f_df, 'f_df')
                         utils.data_saver(fadj_df, 'fadj_df')
+                        episode_spec[counter] = {'episode_id':counter,'scenario':scenario ,
+                                    'lc_frm':lc_frm, 'm_id':int(id), 'y_id':y_id,'fadj_id':fadj_id,
+                                    'f_id':f_id, 'frm_n':mveh_size}
 
                         counter += 1
                         print(counter, ' ### lane change extracted ###')
-                        draw_traj(m_df, y_df, case_info)
+                        # draw_traj(m_df, y_df, case_info)
 
+pd.DataFrame.from_dict(episode_spec, orient='index').to_csv('./datasets/episode_spec.txt',
+                                header=None, index=None, sep=' ', mode='a')
+# %%
 
 # %%
-m_df = feature_set.loc[(feature_set['scenario'] == 'i80_1') &
-                                    (feature_set['id'] == 103) &
+episode_spec[2]
+frms = feature_set.loc[(feature_set['scenario'] == 'i101_1') &
+                                    (feature_set['id'] == 1110)]['frm']
+
+
+
+plt.plot(frms)
                                     (feature_set['frm'] >= 1077) &
                                     (feature_set['frm'] <= 1162) &
                                     (feature_set['lane_id'] < 7)] # feat_set_scene
@@ -204,9 +226,9 @@ plt.plot(y_df['dx'])
 
 # %%
 
-
+f_df
 
 case_info
 y_df.columns
 
-m_df.columns
+f_df.columns

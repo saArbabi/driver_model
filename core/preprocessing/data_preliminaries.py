@@ -7,25 +7,42 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-mveh_col = ['episode_id', 'id', 'frm', 'scenario', 'vel', 'pc', 'lc_type',
-       'act_long_p', 'act_lat_p', 'act_long', 'act_lat']
+m_col = ['episode_id', 'id', 'frm', 'vel', 'pc', 'lc_type', 'act_long_p',
+                                            'act_lat_p', 'act_long', 'act_lat']
 
-yveh_col = ['episode_id', 'dv', 'dx', 'act_long_p', 'act_long']
+y_col = ['episode_id', 'frm','vel', 'dv', 'dx', 'da', 'a_ratio', 'act_long_p', 'act_long']
+o_col = ['episode_id', 'frm','dv', 'dx', 'da', 'a_ratio', 'act_long_p']
+
+spec_col = ['episode_id', 'scenario', 'lc_frm', 'm_id', 'y_id', 'fadj_id', 'f_id',
+       'frm_n']
 
 m_df = pd.read_csv('./datasets/m_df.txt', delimiter=' ',
-                                                        header=None, names=mveh_col)
+                                                        header=None, names=m_col)
 y_df = pd.read_csv('./datasets/y_df.txt', delimiter=' ',
-                                                        header=None, names=yveh_col)
+                                                        header=None, names=y_col)
 f_df = pd.read_csv('./datasets/f_df.txt', delimiter=' ',
-                                                        header=None, names=yveh_col)
+                                                        header=None, names=o_col)
 fadj_df = pd.read_csv('./datasets/fadj_df.txt', delimiter=' ',
-                                                        header=None, names=yveh_col)
+                                                        header=None, names=o_col)
+
+spec = pd.read_csv('./datasets/episode_spec.txt', delimiter=' ',
+                                                        header=None, names=spec_col)
 # %%
+spec.loc[spec['episode_id']==1]
+spec.loc[spec['frm_n']>300]
+
+plt.plot(y_df.loc[y_df['episode_id']==2]['vel'])
+plt.plot(m_df.loc[m_df['episode_id']==1272]['act_lat'])
+
+plt.plot(m_df.loc[m_df['episode_id']==1272]['pc'])
+
 f_df['dx'].min()
 f_df['dx'].min()
-f_df.loc[f_df['dx']<0]
+y_df.loc[y_df['episode_id']==1]['vel']
 m_df.loc[m_df['episode_id']==22]
-70/1416
+f_df.loc[f_df['episode_id']==4]
+spec['frm_n'].plot.hist(bins=125)
+
 # %%
 # def trimFeatureVals(veh_df)
 
@@ -61,15 +78,15 @@ training_episodes = list(np.random.choice(all_episodes, int(0.8*len(all_episodes
 validation_episodes = list(set(all_episodes).symmetric_difference(set(training_episodes)))
 
 # %%
-def draw_traj(all_dfs, features):
+def draw_traj(all_dfs, features, episode_id):
     for item in features:
         fig = plt.figure()
         for df in all_dfs:
             plt.plot(df[item])
         plt.grid()
-        # plt.legend(['m', 'y', 'f', 'fadj'])
+        # plt.legend([ 'y', 'f', 'fadj', 'm'])
         plt.legend(['y', 'f', 'fadj'])
-        plt.title(item)
+        plt.title([item, episode_id])
 
 
 def get_episode_df(veh_df, episode_id):
@@ -79,11 +96,14 @@ def get_episode_df(veh_df, episode_id):
 
 for episode_id in all_episodes[0:5]:
     all_dfs = []
-    # all_dfs.append(get_episode_df(m_df, episode_id))
     all_dfs.append(get_episode_df(y_df, episode_id))
     all_dfs.append(get_episode_df(f_df, episode_id))
     all_dfs.append(get_episode_df(fadj_df, episode_id))
-    draw_traj(all_dfs, ['dx'])
+    # all_dfs.append(get_episode_df(m_df, episode_id))
+
+    # draw_traj(all_dfs, ['act_long_p'], episode_id)
+    draw_traj(all_dfs, ['da', 'dv'], episode_id)
+
 
 # %%
 
@@ -98,7 +118,7 @@ def save_list(my_list, name):
 def data_saver(m_df, y_df):
 
     m_df.to_csv('/datasets/m_df0.txt',
-                                    header=None, index=None, sep=' ', mode='a')
+                                header=None, index=None, sep=' ', mode='a')
     y_df.to_csv('/datasets/y_df0.txt',
                                     header=None, index=None, sep=' ', mode='a')
 
