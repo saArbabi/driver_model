@@ -77,26 +77,27 @@ def lc_completion(veh_df, lc_frm, lc_direction, lane_id):
     """
     :return: lane change completion frame
     """
-    end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
-                                (veh_df['lane_id'] == lane_id) &
-                                (veh_df['act_lat'].abs() < 0.1)]['frm']
-
-    if not end_frm.empty:
-        return end_frm.iloc[0]
-    else:
-        if lc_direction == 'right':
-            end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
-                                        (veh_df['lane_id'] == lane_id) &
-                                        (veh_df['pc'] > 0)]['frm']
-        else:
-            end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
-                                        (veh_df['lane_id'] == lane_id) &
-                                        (veh_df['pc'] < 0)]['frm']
+    if lc_direction == 'right':
+        end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
+                                    (veh_df['lane_id'] == lane_id) &
+                                    ((veh_df['act_lat'].abs() < 0.1) |
+                                    (veh_df['pc'] < 0))]['frm']
 
         if not end_frm.empty:
-            return end_frm.iloc[-1]
-        return 0
+            return end_frm.iloc[0]
+        else:
+            return 0
 
+    else:
+        end_frm = veh_df.loc[(veh_df['frm'] > lc_frm) &
+                                    (veh_df['lane_id'] == lane_id) &
+                                    ((veh_df['act_lat'].abs() < 0.1) |
+                                    (veh_df['pc'] > 0))]['frm']
+
+        if not end_frm.empty:
+            return end_frm.iloc[0]
+        else:
+            return 0
 
 def lc_initation(veh_df, lc_frm, lc_direction, lane_id):
     if lc_direction == 'right':
@@ -104,32 +105,36 @@ def lc_initation(veh_df, lc_frm, lc_direction, lane_id):
     else:
         lane_id += 1
 
-    start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
-                                (veh_df['lane_id'] == lane_id) &
-                                (veh_df['act_lat'].abs() < 0.1)]
+    if lc_direction == 'right':
+        start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
+                                    (veh_df['lane_id'] == lane_id) &
+                                    ((veh_df['act_lat'].abs() < 0.1) |
+                                    ((veh_df['act_lat'].abs() > 0.1) &
+                                    (veh_df['pc'] > 0)))]
 
-    if not start_frms.empty:
-        start_frm = start_frms['frm'].iloc[-1]
-        if not start_frms.loc[start_frms['frm'] < start_frm - 20].empty:
-            start_frm -= 20
-        return start_frm
-
-    else:
-        # a car doing multiple lane changes such that veh_df['act_lat'].abs() < 0.1)
-        # does not exist.
-        if lc_direction == 'right':
-            start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
-                                        (veh_df['lane_id'] == lane_id) &
-                                        (veh_df['pc'] < 0)]
-
-        else:
-            start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
-                                        (veh_df['lane_id'] == lane_id) &
-                                        (veh_df['pc'] > 0)]
 
         if not start_frms.empty:
-            return start_frms['frm'].iloc[0]
-        return 0
+            start_frm = start_frms['frm'].iloc[-1]
+            if not start_frms.loc[start_frms['frm'] < start_frm - 20].empty:
+                start_frm -= 20
+            return start_frm
+        else:
+            return 0
+    else:
+        start_frms = veh_df.loc[(veh_df['frm'] < lc_frm) &
+                                    (veh_df['lane_id'] == lane_id) &
+                                    ((veh_df['act_lat'].abs() < 0.1) |
+                                    ((veh_df['act_lat'].abs() > 0.1) &
+                                    (veh_df['pc'] < 0)))]
+
+
+        if not start_frms.empty:
+            start_frm = start_frms['frm'].iloc[-1]
+            if not start_frms.loc[start_frms['frm'] < start_frm - 20].empty:
+                start_frm -= 20
+            return start_frm
+        else:
+            return 0
 
 def get_globPos(glob_pos, vehicle_id):
     return glob_pos.loc[glob_pos['id'] == vehicle_id].drop(['id'],axis=1).values

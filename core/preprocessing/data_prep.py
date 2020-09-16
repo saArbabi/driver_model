@@ -10,19 +10,21 @@ from sklearn.preprocessing import StandardScaler
 import os
 import pickle
 import time
+import matplotlib.pyplot as plt
+
 # %%
 def read_episode_df():
     global m_df0, y_df0
 
-    mveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'pc',
-           'gap_size', 'dx', 'act_long_p', 'act_lat_p', 'act_long', 'act_lat']
+    m_col = ['episode_id', 'id', 'frm', 'vel', 'pc', 'lc_type', 'act_long_p',
+                                                'act_lat_p', 'act_long', 'act_lat']
 
-    yveh_col = ['id', 'episode_id','lc_type', 'name', 'frm', 'scenario', 'vel', 'act_long_p', 'act_long']
+    y_col = ['episode_id', 'frm','vel', 'dv', 'dx', 'da', 'a_ratio', 'act_long_p', 'act_long']
 
     m_df0 = pd.read_csv('./datasets/m_df0.txt', delimiter=' ',
-                            header=None, names=mveh_col)
+                            header=None, names=m_col)
     y_df0 = pd.read_csv('./datasets/y_df0.txt', delimiter=' ',
-                            header=None, names=yveh_col)
+                            header=None, names=y_col)
 
 def read_episode_ids():
     global episode_ids
@@ -34,53 +36,18 @@ def read_episode_ids():
             my_list = [int(item) for item in file.read().split()]
         episode_ids[name] = my_list
 
+def read_fixed_stateArr():
+    global fixed_state_arr
+    fixed_state_arr = pd.read_csv('./datasets/fixed_df0.txt', delimiter=' ',
+                                                            header=None).values
+    # First two columns are lc_type and episode_id
+    fixed_state_arr[:,2:] = StandardScaler().fit(fixed_state_arr[:,2:]).transform(fixed_state_arr[:,2:])
+
+
 read_episode_df()
 read_episode_ids()
+read_fixed_stateArr()
 
-# %%
-def get_timeStamps(size):
-    ts = np.zeros([size, 1])
-    t = 0.1
-    for i in range(1, size):
-        ts[i] = t
-        t += 0.1
-    return ts
-
-ts = get_timeStamps(5)
-a = np.ones([5, 1])
-np.reshape(ts, [1, 5])
-ts
-ts.shape = (5, 1)
-
-ts
-np.array(ts, shape=[1, 5])
-a
-ts
-
-
-np.linspace(0, 50, endpoint=False, retstep=0.1)
-fix = np.linspace(0, 100, 100, endpoint=False)
-var = np.linspace(0, 100, 100, endpoint=False)
-var.shape = (-1, 1)
-var
-np.round(, decimals=1)
-ts = range()
-40000*30
-0.04*30
-# %%
-episodes = []
-data_size = 0
-for step in range(len(fix)):
-    epis_i = var[step:]
-    epis_size = len(epis_i)
-    ts = get_timeStamps(epis_size)
-    epis_i = np.insert(epis_i, 1, fix[step], axis=1)
-
-    episodes.append(np.concatenate([epis_i, ts], axis=1))
-    data_size += len(epis_i)
-
-
-data_size/len(fix)
 
 # %%
 class DataObj():
@@ -89,11 +56,11 @@ class DataObj():
     def __init__(self, config):
         self.config = config['data_config']
         self.model_type = config['model_type']
-        self.sequence_n = self.config["sequence_n"]
+        self.obsSequence_n = self.config["obsSequence_n"]
         self.step_size = self.config["step_size"]
 
-        self.mveh_s = self.config["mveh_s"]
-        self.yveh_s = self.config["yveh_s"]
+        self.m_s = self.config["m_s"]
+        self.y_s = self.config["y_s"]
 
         self.Xs = []
         self.Ys = []
@@ -101,36 +68,31 @@ class DataObj():
         self.setScalers() # will set the scaler attributes
 
 
-    def sequence(self, x_arr, y_arr):
-        x_seq = [] # sequenced x array
-        y_seq = []
-
-        if self.sequence_n != 1:
+    def obsSequence(self, v_x_arr):
+        x_seq = [] # obsSequenced x array
+        if self.obsSequence_n != 1:
             i_reset = 0
             i = 0
             for chunks in range(self.step_size):
-                prev_states = deque(maxlen=self.sequence_n)
-                while i < len(x_arr):
-                    prev_states.append(x_arr[i])
-                    if len(prev_states) == self.sequence_n:
+                prev_states = deque(maxlen=self.obsSequence_n)
+                while i < len(v_x_arr):
+                    prev_states.append(v_x_arr[i])
+                    if len(prev_states) == self.obsSequence_n:
                         x_seq.append(np.array(prev_states))
-                        y_seq.append(y_arr[i])
                     i += self.step_size
                 i_reset += 1
                 i = i_reset
         else:
-            for i in range(len(x_arr)):
-                x_seq.append(x_arr[i])
-                y_seq.append(y_arr[i])
+            for i in range(len(v_x_arr)):
+                x_seq.append(v_x_arr[i])
 
-        return x_seq, y_seq
+        return x_seq
 
     def shuffArr(self, arr):
         random.Random(2020).shuffle(arr)
         return np.array(arr)
 
-
-    def mask_history(self, x_arr):
+    def mask_history(self, v_x_arr):
         pass
         # dropout_percentage = self.config['mask_history']['percentage']
         # if  dropout_percentage != 0:
@@ -143,14 +105,11 @@ class DataObj():
     def get_episode_df(self, episode_id):
         m_df = m_df0[m_df0['episode_id'] == episode_id]
         y_df = y_df0[y_df0['episode_id'] == episode_id]
-
         return m_df, y_df
 
     def applystateScaler(self, _arr):
         _arr = np.delete(_arr, self.retain_pointer, axis=1)
-        _arr[:, self.bool_pointer:] = self.state_scaler.transform(_arr[:, self.bool_pointer:])
-
-        return _arr
+        return self.state_scaler.transform(_arr)
 
     def applytargetScaler(self, _arr):
         _arr = self.target_scaler.transform(_arr)
@@ -168,38 +127,26 @@ class DataObj():
         self.bool_indx = {}
         self.scalar_indx = {}
 
-
         self.retain_indx['vel_mveh'] = i
         i += 1
         self.retain_indx['vel_yveh'] = i
         i += 1
 
-        for state_key in self.mveh_s['boolean']:
-            self.bool_indx[state_key+'_mveh'] = i
-            i += 1
-
-        for state_key in self.yveh_s['boolean']:
-            self.bool_indx[state_key+'_yveh'] = i
-            i += 1
-
-        for state_key in self.mveh_s['scalar']:
+        for state_key in self.m_s:
             self.scalar_indx[state_key+'_mveh'] = i
             i += 1
 
-        for state_key in self.yveh_s['scalar']:
+        for state_key in self.y_s:
             self.scalar_indx[state_key+'_yveh'] = i
             i += 1
 
         # these are used by the scaler
-        self.bool_pointer = list(self.bool_indx.values())[-1]
         self.retain_pointer = list(self.retain_indx.values())
 
     def get_stateTarget_arr(self, m_df, y_df):
         """Note: Not all states are used by model for prediction. Some are needed
             for state propagation.
         """
-        self.addFeatures(m_df, y_df)
-
         if self.model_type == 'merge_policy':
             target_df = m_df[['act_long','act_lat']]
         state_df = pd.DataFrame()
@@ -208,40 +155,70 @@ class DataObj():
             state_df = pd.concat([state_df, m_df[self.config['retain']]], axis=1)
             state_df = pd.concat([state_df, y_df[self.config['retain']]], axis=1)
 
-        if self.mveh_s['boolean']:
-            state_df = pd.concat([state_df, m_df[self.mveh_s['boolean']]], axis=1)
+        if self.m_s:
+            state_df = pd.concat([state_df, m_df[self.m_s]], axis=1)
 
-        if self.yveh_s['boolean']:
-            state_df = pd.concat([state_df, y_df[self.yveh_s['boolean']]], axis=1)
-
-        if self.mveh_s['scalar']:
-            state_df = pd.concat([state_df, m_df[self.mveh_s['scalar']]], axis=1)
-
-        if self.yveh_s['scalar']:
-            state_df = pd.concat([state_df, y_df[self.yveh_s['scalar']]], axis=1)
+        if self.y_s:
+            state_df = pd.concat([state_df, y_df[self.y_s]], axis=1)
 
         return state_df.values, target_df.values
 
     def setScalers(self):
         state_arr, target_arr = self.get_stateTarget_arr(m_df0, y_df0)
         state_arr = np.delete(state_arr, self.retain_pointer, axis=1)
-        self.state_scaler = StandardScaler().fit(state_arr[:, self.bool_pointer:])
+        self.state_scaler = StandardScaler().fit(state_arr)
         self.target_scaler = StandardScaler().fit(target_arr)
+
+    def get_fixedSate(self, episode_id):
+        state_arr = fixed_state_arr[fixed_state_arr[:,1]==episode_id]
+        return np.delete(state_arr, 1, axis=1)
+
+    def get_timeStamps(self, size):
+        ts = np.zeros([size, 1])
+        t = 0.1
+        for i in range(1, size):
+            ts[i] = t
+            t += 0.1
+        return ts
+
+    def get_vfArrs(self, v_x_arr, v_y_arr, f_x_arr):
+        """
+        Note: Output will be orders of magnitude larger in size.
+        :Return: state arrays with time stamps and fixed features included
+        """
+        episode_len = len(v_x_arr)
+        mini_episodes_x = []
+        mini_episodes_y = []
+        for step in range(episode_len):
+            epis_i = v_x_arr[step:]
+            target_i = v_y_arr[step:]
+
+            episode_i_len = len(epis_i)
+            ts = self.get_timeStamps(episode_i_len)
+            epis_i = np.insert(epis_i, [0], f_x_arr[step], axis=1)
+            mini_episodes_x.append(np.concatenate([ts, epis_i], axis=1))
+            mini_episodes_y.append(target_i)
+
+        return mini_episodes_x, mini_episodes_y
 
     def episode_prep(self, episode_id):
         """
         :Return: x, y arrays for model training.
         """
         m_df, y_df = self.get_episode_df(episode_id)
-        x_arr, y_arr = self.get_stateTarget_arr(m_df, y_df)
-        x_arr = self.applystateScaler(x_arr)
-        y_arr = self.applytargetScaler(y_arr)
-        x_arr, y_arr = self.sequence(x_arr, y_arr)
+        v_x_arr, v_y_arr = self.get_stateTarget_arr(m_df, y_df)
+        v_x_arr = self.applystateScaler(v_x_arr)
+        v_y_arr = self.applytargetScaler(v_y_arr)
+
+        f_x_arr = self.get_fixedSate(episode_id)
+
+        vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
+        # v_x_arr = self.obsSequence(v_x_arr)
 
         # self.mask_history(x_df)
-        for i in range(len(x_arr)):
-            self.Xs.append(x_arr[i])
-            self.Ys.append(y_arr[i])
+        for i in range(len(vf_x_arr)):
+            self.Xs.extend(vf_x_arr[i])
+            self.Ys.extend(vf_y_arr[i])
 
     def data_prep(self, episode_type=None):
         if not episode_type:
@@ -257,8 +234,24 @@ Data = DataObj(config)
 # x_train, y_train = Data.data_prep('training_episodes')
 x_val, y_val = Data.data_prep('validation_episodes')
 # m_df, y_df = Data.get_episode_df(811)
-# x_arr, y_arr = Data.get_stateTarget_arr(m_df, y_df)
+# v_x_arr, v_y_arr = Data.get_stateTarget_arr(m_df, y_df)
+# %%
+m_df, y_df = Data.get_episode_df(811)
+v_x_arr, v_y_arr = Data.get_stateTarget_arr(m_df, y_df)
+v_x_arr = Data.applystateScaler(v_x_arr)
+v_y_arr = Data.applytargetScaler(v_y_arr)
 
+f_x_arr = Data.get_fixedSate(811)
+
+# v_x_arr = Data.obsSequence(v_x_arr)
+vf_x_arr, vf_y_arr = Data.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
+
+vf_x_arr[0][1]
+x_val[0]
+
+vf_x_arr[0][1]
+vf_x_arr[1][1]
+len(vf_x_arr[10][0])
 # %%
 config = {
  "model_config": {
@@ -270,12 +263,10 @@ config = {
      "components_n": 5
 },
 "data_config": {"step_size": 3,
-                "sequence_n": 1,
-                "mveh_s":{"scalar":["vel", "pc", "gap_size", "dx", "act_long_p"],
-                            "boolean":["lc_type"]},
-                "yveh_s":{"scalar":["vel"],
-                            "boolean":[]},
-                "retain":["vel"]
+                "obsSequence_n": 1,
+                "m_s":["vel", "pc", "act_long_p"],
+                "y_s":["vel", "dv", "dx", "da", "a_ratio"],
+                "retain":["vel"],
 },
 "exp_id": "NA",
 "model_type": "merge_policy",
@@ -283,15 +274,12 @@ config = {
 }
 
 # %%
-x_train[1]
+def vis_dataDistribution(x):
+    for i in range(len(x[0])):
+        fig = plt.figure()
+        plt.hist(x[:,i], bins=125)
 
-x_train[0]
-y_train[0]
-import matplotlib.pyplot as plt
-len(training_episodes)
-len(x_train[0])
-np.array(x_val)
-len()
+vis_dataDistribution(x_val)
 # %%
 def vis_beforeAfterScale(x, features):
     i = 0
@@ -309,4 +297,4 @@ def vis_beforeAfterScale(x, features):
         ax1.set_title(feature + ' before')
         ax2.set_title(feature + ' after')
 
-vis_beforeAfterScale(x_val, Data.veh_states['mveh'])
+vis_beforeAfterScale(x_val, Data._states['mveh'])
