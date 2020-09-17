@@ -1,6 +1,6 @@
 import models.core.tf_models.abstract_model as am
 from models.core.train_eval import utils
-from models.core.train_eval.model_evaluation import modelEvaluate
+# from models.core.train_eval.model_evaluation import modelEvaluate
 from models.core.preprocessing.data_prep import DataObj
 
 import numpy as np
@@ -14,8 +14,9 @@ def modelTrain(config, explogs):
     my_data = DataObj(config)
 
     exp_id = config['exp_id']
-    x_train, y_train, x_val ,y_val = my_data.data_prep()
-    model.compile(loss=nll_loss(config), optimizer=model.optimizer)
+    x_train, y_train = my_data.data_prep('training_episodes')
+    x_val, y_val = my_data.data_prep('validation_episodes')
+    model.compile(loss=nll_loss(config['model_type']), optimizer=model.optimizer)
 
     utils.updateExpstate(explogs, exp_id, 'in progress')
     validation_data=(x_val, y_val)

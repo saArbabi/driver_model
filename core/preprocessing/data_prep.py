@@ -44,9 +44,7 @@ def read_fixed_stateArr():
     fixed_state_arr[:,2:] = StandardScaler().fit(fixed_state_arr[:,2:]).transform(fixed_state_arr[:,2:])
 
 
-read_episode_df()
-read_episode_ids()
-read_fixed_stateArr()
+
 
 
 # %%
@@ -56,7 +54,7 @@ class DataObj():
     def __init__(self, config):
         self.config = config['data_config']
         self.model_type = config['model_type']
-        self.obsSequence_n = self.config["obsSequence_n"]
+        # self.obsSequence_n = self.config["obsSequence_n"]
         self.step_size = self.config["step_size"]
 
         self.m_s = self.config["m_s"]
@@ -175,10 +173,10 @@ class DataObj():
 
     def get_timeStamps(self, size):
         ts = np.zeros([size, 1])
-        t = 0.1
+        t = 0.01
         for i in range(1, size):
             ts[i] = t
-            t += 0.1
+            t += 0.01
         return ts
 
     def get_vfArrs(self, v_x_arr, v_y_arr, f_x_arr):
@@ -221,6 +219,10 @@ class DataObj():
             self.Ys.extend(vf_y_arr[i])
 
     def data_prep(self, episode_type=None):
+        read_episode_df()
+        read_episode_ids()
+        read_fixed_stateArr()
+
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
 
@@ -230,71 +232,65 @@ class DataObj():
         return self.shuffArr(self.Xs), self.shuffArr(self.Ys)
 
 
-Data = DataObj(config)
-# x_train, y_train = Data.data_prep('training_episodes')
-x_val, y_val = Data.data_prep('validation_episodes')
+# Data = DataObj(config)
+# # x_train, y_train = Data.data_prep('training_episodes')
+# x_val, y_val = Data.data_prep('validation_episodes')
+# # m_df, y_df = Data.get_episode_df(811)
+# # v_x_arr, v_y_arr = Data.get_stateTarget_arr(m_df, y_df)
+# # %%
 # m_df, y_df = Data.get_episode_df(811)
 # v_x_arr, v_y_arr = Data.get_stateTarget_arr(m_df, y_df)
-# %%
-m_df, y_df = Data.get_episode_df(811)
-v_x_arr, v_y_arr = Data.get_stateTarget_arr(m_df, y_df)
-v_x_arr = Data.applystateScaler(v_x_arr)
-v_y_arr = Data.applytargetScaler(v_y_arr)
-
-f_x_arr = Data.get_fixedSate(811)
-
-# v_x_arr = Data.obsSequence(v_x_arr)
-vf_x_arr, vf_y_arr = Data.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
-
-vf_x_arr[0][1]
-x_val[0]
-
-vf_x_arr[0][1]
-vf_x_arr[1][1]
-len(vf_x_arr[10][0])
-# %%
-config = {
- "model_config": {
-     "learning_rate": 1e-2,
-     "neurons_n": 50,
-     "layers_n": 2,
-     "epochs_n": 5,
-     "batch_n": 128,
-     "components_n": 5
-},
-"data_config": {"step_size": 3,
-                "obsSequence_n": 1,
-                "m_s":["vel", "pc", "act_long_p"],
-                "y_s":["vel", "dv", "dx", "da", "a_ratio"],
-                "retain":["vel"],
-},
-"exp_id": "NA",
-"model_type": "merge_policy",
-"Note": "NA"
-}
+# v_x_arr = Data.applystateScaler(v_x_arr)
+# v_y_arr = Data.applytargetScaler(v_y_arr)
+#
+# f_x_arr = Data.get_fixedSate(811)
+#
+# # v_x_arr = Data.obsSequence(v_x_arr)
+# vf_x_arr, vf_y_arr = Data.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
+#
 
 # %%
-def vis_dataDistribution(x):
-    for i in range(len(x[0])):
-        fig = plt.figure()
-        plt.hist(x[:,i], bins=125)
-
-vis_dataDistribution(x_val)
+# config = {
+#  "model_config": {
+#      "learning_rate": 1e-2,
+#      "neurons_n": 50,
+#      "layers_n": 2,
+#      "epochs_n": 5,
+#      "batch_n": 128,
+#      "components_n": 5
+# },
+# "data_config": {"step_size": 3,
+#                 "obsSequence_n": 1,
+#                 "m_s":["vel", "pc", "act_long_p"],
+#                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
+#                 "retain":["vel"],
+# },
+# "exp_id": "NA",
+# "model_type": "merge_policy",
+# "Note": "NA"
+# }
 # %%
-def vis_beforeAfterScale(x, features):
-    i = 0
-    # x = Data.state_scaler.inverse_transform(x[:,1:])
-    for feature in features:
-        fig = plt.figure()
-        ax1 = fig.add_subplot(1,2,1)
-        ax2 = fig.add_subplot(1,2,2)
-
-        ax1.hist(m_df0[feature], bins=125)
-        # ax2.hist(x[:,i], bins=125)
-        ax2.hist(x[:,i], bins=125)
-
-        i += 1
-        ax1.set_title(feature + ' before')
-        ax2.set_title(feature + ' after')
-
-vis_beforeAfterScale(x_val, Data._states['mveh'])
+# def vis_dataDistribution(x):
+#     for i in range(len(x[0])):
+#         fig = plt.figure()
+#         plt.hist(x[:,i], bins=125)
+#
+# vis_dataDistribution(x_val)
+# # %%
+# def vis_beforeAfterScale(x, features):
+#     i = 0
+#     # x = Data.state_scaler.inverse_transform(x[:,1:])
+#     for feature in features:
+#         fig = plt.figure()
+#         ax1 = fig.add_subplot(1,2,1)
+#         ax2 = fig.add_subplot(1,2,2)
+#
+#         ax1.hist(m_df0[feature], bins=125)
+#         # ax2.hist(x[:,i], bins=125)
+#         ax2.hist(x[:,i], bins=125)
+#
+#         i += 1
+#         ax1.set_title(feature + ' before')
+#         ax2.set_title(feature + ' after')
+#
+# vis_beforeAfterScale(x_val, Data._states['mveh'])
