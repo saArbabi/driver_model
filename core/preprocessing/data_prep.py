@@ -11,6 +11,8 @@ import os
 import pickle
 import time
 import matplotlib.pyplot as plt
+import json
+from datetime import datetime
 
 # %%
 def read_episode_df():
@@ -43,15 +45,14 @@ def read_fixed_stateArr():
     # First two columns are lc_type and episode_id
     fixed_state_arr[:,2:] = StandardScaler().fit(fixed_state_arr[:,2:]).transform(fixed_state_arr[:,2:])
 
-
-
-
-
+read_episode_df()
+read_episode_ids()
+read_fixed_stateArr()
 # %%
-class DataObj():
+class DataPrep():
     random.seed(2020)
 
-    def __init__(self, config):
+    def __init__(self, config, dirName):
         self.config = config['data_config']
         self.model_type = config['model_type']
         # self.obsSequence_n = self.config["obsSequence_n"]
@@ -60,10 +61,10 @@ class DataObj():
         self.m_s = self.config["m_s"]
         self.y_s = self.config["y_s"]
 
-        self.Xs = []
-        self.Ys = []
         self.setState_indx()
         self.setScalers() # will set the scaler attributes
+        self.dirName = dirName
+        os.mkdir(dirName)
 
 
     def obsSequence(self, v_x_arr):
@@ -218,22 +219,47 @@ class DataObj():
             self.Xs.extend(vf_x_arr[i])
             self.Ys.extend(vf_y_arr[i])
 
-    def data_prep(self, episode_type=None):
-        read_episode_df()
-        read_episode_ids()
-        read_fixed_stateArr()
+    def pickler(self, episode_type):
+        if episode_type == 'validation_episodes':
+            with open(self.dirName+'/x_val', "wb") as f:
+                pickle.dump(self.shuffArr(self.Xs), f)
 
+            with open(self.dirName+'/y_val', "wb") as f:
+                pickle.dump(self.shuffArr(self.Ys), f)
+
+            delattr(self, 'Xs')
+            delattr(self, 'Ys')
+
+
+        elif episode_type == 'training_episodes':
+            with open(self.dirName+'/x_train', "wb") as f:
+                pickle.dump(self.shuffArr(self.Xs), f)
+
+            with open(self.dirName+'/y_train', "wb") as f:
+                pickle.dump(self.shuffArr(self.Ys), f)
+            delattr(self, 'Xs')
+            delattr(self, 'Ys')
+
+            with open(self.dirName+'/attr', "wb") as f:
+                pickle.dump(self, f)
+
+    def data_prep(self, episode_type=None):
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
 
-        for episode_id in episode_ids[episode_type]:
+        self.Xs = []
+        self.Ys = []
+        for episode_id in episode_ids[episode_type][0:3]:
             self.episode_prep(episode_id)
 
-        return self.shuffArr(self.Xs), self.shuffArr(self.Ys)
+        self.pickler(episode_type)
 
 
+
+
+# %%
 # Data = DataObj(config)
-# # x_train, y_train = Data.data_prep('training_episodes')
+# x_train, y_train = Data.data_prep('training_episodes')
 # x_val, y_val = Data.data_prep('validation_episodes')
 # # m_df, y_df = Data.get_episode_df(811)
 # # v_x_arr, v_y_arr = Data.get_stateTarget_arr(m_df, y_df)
@@ -248,9 +274,33 @@ class DataObj():
 # # v_x_arr = Data.obsSequence(v_x_arr)
 # vf_x_arr, vf_y_arr = Data.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
 #
+# %%
+
 
 # %%
-# config = {
+# config1 = {
+#  "model_config": {
+#      "learning_rate": 1e-2,
+#      "neurons_n": 50,
+#      "layers_n": 2,
+#      "epochs_n": 5,
+#      "batch_n": 128,
+#      "components_n": 4
+# },
+# "data_config": {"step_size": 3,
+#                 "obsSequence_n": 2,
+#                 "m_s":["vel", "pc", "act_long_p"],
+#                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
+#                 "retain":["vel"],
+# },
+# "exp_id": "NA",
+# "model_type": "merge_policy",
+# "Note": "NA"
+# }
+#
+#
+#
+# config2 = {
 #  "model_config": {
 #      "learning_rate": 1e-2,
 #      "neurons_n": 50,
@@ -269,6 +319,7 @@ class DataObj():
 # "model_type": "merge_policy",
 # "Note": "NA"
 # }
+# config1==config2
 # %%
 # def vis_dataDistribution(x):
 #     for i in range(len(x[0])):

@@ -1,7 +1,7 @@
 import models.core.tf_models.abstract_model as am
 from models.core.train_eval import utils
 # from models.core.train_eval.model_evaluation import modelEvaluate
-from models.core.preprocessing.data_prep import DataObj
+from models.core.preprocessing.data_obj import DataObj
 
 import numpy as np
 from models.core.tf_models.utils import nll_loss
