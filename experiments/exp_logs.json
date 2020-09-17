@@ -36,9 +36,15 @@
         "val_loss": "NA"
     },
     "exp007": {
-        "exp_state": "in progress",
+        "exp_state": "failed",
         "model": "NA",
         "train_loss": "NA",
         "val_loss": "NA"
+    },
+    "exp008": {
+        "exp_state": "complete",
+        "model": "NA",
+        "train_loss": -0.5,
+        "val_loss": -0.6
     }
 }

@@ -3,10 +3,7 @@ import os
 import json
 from datetime import datetime
 from models.core.preprocessing.data_prep import DataPrep
-
-"""
-model config file will have data id
-"""
+import pickle
 
 # %%
 class DataObj():
@@ -30,20 +27,20 @@ class DataObj():
         return time
 
     def loadPickledObj(self, dataFolderName):
-        obj_names = ['x_train', 'y_train', 'x_val', 'y_val', 'attr']
-        data_objs = {}
+        obj_names = ['x_train', 'y_train', 'x_val', 'y_val']
+        data_objs = []
 
         for item in obj_names:
             with open(self.dirName+dataFolderName+'/'+item, 'rb') as f:
-                data_objs[item] = pickle.load(f)
+                data_objs.append(pickle.load(f))
         return data_objs
 
     def load_dataConfig(self, config_name):
-            with open(self.dirName+config_name, 'r') as f:
+            with open(self.dirName+'config_files/'+config_name, 'r') as f:
                 return json.load(f)
 
     def loadData(self):
-        config_names = os.listdir(self.dirName)
+        config_names = os.listdir(self.dirName+'config_files')
         if not config_names:
             dataFolderName = self.preprocessData()
             return self.loadPickledObj(dataFolderName)

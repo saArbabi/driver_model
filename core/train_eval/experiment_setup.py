@@ -11,11 +11,9 @@ import random
 
 def modelTrain(config, explogs):
     model = am.FFMDN(config)
-    my_data = DataObj(config)
-
+    x_train, y_train, x_val, y_val = DataObj(config).loadData()
     exp_id = config['exp_id']
-    x_train, y_train = my_data.data_prep('training_episodes')
-    x_val, y_val = my_data.data_prep('validation_episodes')
+
     model.compile(loss=nll_loss(config['model_type']), optimizer=model.optimizer)
 
     utils.updateExpstate(explogs, exp_id, 'in progress')
