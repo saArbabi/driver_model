@@ -5,9 +5,8 @@ import sys
 import os
 from models.core.preprocessing import utils
 from math import hypot
-from importlib import reload
 import json
-reload(utils)
+
 cwd = os.getcwd()
 
 

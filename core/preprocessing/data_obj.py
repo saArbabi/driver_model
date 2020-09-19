@@ -4,14 +4,16 @@ import json
 from datetime import datetime
 from models.core.preprocessing.data_prep import DataPrep
 import pickle
+import matplotlib.pyplot as plt
 
 # %%
 class DataObj():
     dirName = './datasets/preprocessed/'
 
     def __init__(self, config):
-        self.config = config['data_config']
-        # self.setAtt(self.config['data_id'])
+        self.config = config
+        self.data_config = self.config['data_config']
+        # self.setAtt(self.data_config['data_id'])
 
     def preprocessData(self):
         """If data file does not already exist, this func creates it.
@@ -19,8 +21,8 @@ class DataObj():
         time = datetime.now().strftime("%Y%m%d-%H%M%S")
 
         with open(self.dirName+'config_files/'+time+'.json', 'w') as f:
-            json.dump(self.config, f, indent=4, separators=(',', ': '))
-        prepper = DataPrep(config,  self.dirName+time)
+            json.dump(self.data_config, f, indent=4, separators=(',', ': '))
+        prepper = DataPrep(self.config,  self.dirName+time)
         prepper.data_prep('training_episodes')
         prepper.data_prep('validation_episodes')
 
@@ -48,7 +50,7 @@ class DataObj():
         else:
             for config_name in config_names:
                 config = self.load_dataConfig(config_name)
-                if config == self.config:
+                if config == self.data_config:
                     #load data
                     return self.loadPickledObj(config_name[:-5])
 

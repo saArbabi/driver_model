@@ -9,10 +9,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import os
 import pickle
-import time
-import matplotlib.pyplot as plt
-import json
-from datetime import datetime
+
 
 # %%
 def read_episode_df():
@@ -55,7 +52,7 @@ class DataPrep():
     def __init__(self, config, dirName):
         self.config = config['data_config']
         self.model_type = config['model_type']
-        # self.obsSequence_n = self.config["obsSequence_n"]
+        self.obsSequence_n = self.config["obsSequence_n"]
         self.step_size = self.config["step_size"]
 
         self.m_s = self.config["m_s"]
@@ -66,40 +63,47 @@ class DataPrep():
         self.dirName = dirName
         os.mkdir(dirName)
 
+    def obsSequence(self, x_arr, y_arr):
+        x_seq = [] # sequenced x array
+        y_seq = []
 
-    def obsSequence(self, v_x_arr):
-        x_seq = [] # obsSequenced x array
         if self.obsSequence_n != 1:
             i_reset = 0
             i = 0
             for chunks in range(self.step_size):
                 prev_states = deque(maxlen=self.obsSequence_n)
-                while i < len(v_x_arr):
-                    prev_states.append(v_x_arr[i])
+                while i < len(x_arr):
+                    prev_states.append(x_arr[i])
                     if len(prev_states) == self.obsSequence_n:
                         x_seq.append(np.array(prev_states))
+                        y_seq.append(y_arr[i])
                     i += self.step_size
                 i_reset += 1
                 i = i_reset
         else:
-            for i in range(len(v_x_arr)):
-                x_seq.append(v_x_arr[i])
+            for i in range(len(x_arr)):
+                x_seq.append(x_arr[i])
+                y_seq.append(y_arr[i])
 
-        return x_seq
-
-    def shuffArr(self, arr):
-        random.Random(2020).shuffle(arr)
-        return np.array(arr)
+        return x_seq, y_seq
 
     def mask_history(self, v_x_arr):
         pass
-        # dropout_percentage = self.config['mask_history']['percentage']
-        # if  dropout_percentage != 0:
-        #     target_name = self.config['mask_history']['vehicle']
-        #     if target_name == 'mveh':
-        #         index = mveh.sample(int(len(mveh)*dropout_percentage)).index
-        #         mveh.loc[:, index, mveh.columns != 'lc_type']=0
-
+        # if self.config['seq_mask_prob'] != 0:
+        #     if random.random() > probability:
+        #         return n
+        #     else:
+        #         return round(np.random.uniform(low=-1, high=1),2)
+        #     dropout_percentage = self.config['mask_history']['percentage']
+        #     if  dropout_percentage != 0:
+        #         target_name = self.config['mask_history']['vehicle']
+        #         if target_name == 'mveh':
+        #             index = mveh.sample(int(len(mveh)*dropout_percentage)).index
+        #             mveh.loc[:, index, mveh.columns != 'lc_type']=0
+        #
+        #         self.scalar_indx[state_key+'_mveh'] = i
+        # else:
+        #     return v_x_arr
 
     def get_episode_df(self, episode_id):
         m_df = m_df0[m_df0['episode_id'] == episode_id]
@@ -208,16 +212,25 @@ class DataPrep():
         v_x_arr, v_y_arr = self.get_stateTarget_arr(m_df, y_df)
         v_x_arr = self.applystateScaler(v_x_arr)
         v_y_arr = self.applytargetScaler(v_y_arr)
-
         f_x_arr = self.get_fixedSate(episode_id)
 
-        vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
-        # v_x_arr = self.obsSequence(v_x_arr)
+        # vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
 
+        v_x_arr = np.insert(v_x_arr, 0, f_x_arr[:,0], axis=1)
+        v_x_arr, v_y_arr = self.obsSequence(v_x_arr, v_y_arr)
         # self.mask_history(x_df)
-        for i in range(len(vf_x_arr)):
-            self.Xs.extend(vf_x_arr[i])
-            self.Ys.extend(vf_y_arr[i])
+
+        # for i in range(len(vf_x_arr)):
+        #     # use when generating ddata with time stamps
+        #     self.Xs.extend(vf_x_arr[i])
+        #     self.Ys.extend(vf_y_arr[i])
+
+        self.Xs.extend(v_x_arr)
+        self.Ys.extend(v_y_arr)
+
+    def shuffArr(self, arr):
+        random.Random(2020).shuffle(arr)
+        return np.array(arr)
 
     def pickler(self, episode_type):
         if episode_type == 'validation_episodes':
