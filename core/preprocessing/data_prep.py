@@ -266,7 +266,7 @@ class DataPrep():
 
         self.Xs = []
         self.Ys = []
-        for episode_id in episode_ids[episode_type][0:3]:
+        for episode_id in episode_ids[episode_type]:
             self.episode_prep(episode_id)
 
         self.pickler(episode_type)

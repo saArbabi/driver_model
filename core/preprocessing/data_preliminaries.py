@@ -28,9 +28,6 @@ fadj_df = pd.read_csv('./datasets/fadj_df.txt', delimiter=' ',
 spec = pd.read_csv('./datasets/episode_spec.txt', delimiter=' ',
                                                         header=None, names=spec_col)
 
-
-
-
 # %%
 
 spec['frm_n'].plot.hist(bins=125)
@@ -38,7 +35,7 @@ m_df.loc[m_df['pc']>-1.8]['pc'].plot.hist(bins=125)
 
 # %%
 # def trimFeatureVals(veh_df)
-def trimStatevals(_df, state_names, training_episodes):
+def trimStatevals(_df, state_names):
     df = _df.copy() #only training set
 
     for state_name in state_names:
@@ -98,32 +95,35 @@ def vis_dataDistribution(_df, state_names):
         _df[state_name].plot.hist(bins=125)
         plt.title(state_name)
 
-def get_Fixedstate_df(f_df, fadj_df, m_df):
+def get_Fixedstate_df(f_df, fadj_df):
     """These remain fixed during state propagation.
     """
     f_df = f_df[['episode_id', 'dv', 'dx', 'da', 'a_ratio']]
     fadj_df = fadj_df[['dv', 'dx', 'da', 'a_ratio']]
-    return pd.concat([m_df['lc_type'] ,f_df, fadj_df], axis=1)
+    return pd.concat([f_df, fadj_df], axis=1)
 
 # %%
 o_trim_col = ['dv', 'dx', 'da', 'a_ratio', 'act_long_p']
 y_trim_col = ['dv', 'dx', 'da', 'a_ratio', 'act_long_p', 'act_long']
 m_trim_col = ['act_long_p', 'act_lat_p', 'act_long', 'act_lat']
 
-_f_df = trimStatevals(f_df, o_trim_col, training_episodes)
-_fadj_df = trimStatevals(fadj_df, o_trim_col, training_episodes)
-_y_df = trimStatevals(y_df, y_trim_col, training_episodes)
-_m_df = trimStatevals(m_df, m_trim_col, training_episodes)
-fixed_df = get_Fixedstate_df(_f_df, _fadj_df, m_df)
+_f_df = trimStatevals(f_df, o_trim_col)
+_fadj_df = trimStatevals(fadj_df, o_trim_col)
+_y_df = trimStatevals(y_df, y_trim_col)
+_m_df = trimStatevals(m_df, m_trim_col)
+fixed_df = get_Fixedstate_df(_f_df, _fadj_df)
 len(_m_df)/len(m_df)
 # %%
 vis_dataDistribution(_f_df, o_trim_col)
 vis_dataDistribution(_fadj_df, o_trim_col)
-
 vis_dataDistribution(_m_df, m_trim_col)
 
 #%%
-validation_episodes = list(np.random.choice(spec.loc[spec['frm_n']>60]['episode_id'].values, 50))
+validation_suitable_episodes = spec.loc[(spec['frm_n']>60) &
+                                (spec['f_id']>0) &
+                                (spec['fadj_id']>0)]['episode_id'].values
+
+validation_episodes = list(np.random.choice(validation_suitable_episodes, 50))
 training_episodes = list(set(spec['episode_id']).symmetric_difference(set(validation_episodes)))
 len(validation_episodes)/len(training_episodes)
 # %%

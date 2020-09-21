@@ -18,7 +18,7 @@ config = {
      "batch_n": 1124,
      "components_n": 5
 },
-"data_config": {"step_size": 3,
+"data_config": {"step_size": 1,
                 "obsSequence_n": 1,
                 "m_s":["vel", "pc"],
                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
@@ -37,17 +37,15 @@ len(x_val[0])
 x_train[0]
 y_train[1]
 # %%
-with open('./datasets/preprocessed/'+'20200921-070747'+'/'+'data_obj', 'rb') as f:
+with open('./datasets/preprocessed/'+'20200921-123920'+'/'+'data_obj', 'rb') as f:
     data_obj = pickle.load(f)
 data_obj.validation_episodes[3]
 
-data_obj.target_scaler
-m_df, y_df = data_obj.get_episode_df(data_obj.val_m_df, data_obj.val_y_df, 1892)
+m_df, y_df = data_obj.get_episode_df(data_obj.val_m_df, data_obj.val_y_df, 1635)
 v_x_arr, v_y_arr = data_obj.get_stateTarget_arr(m_df, y_df)
 v_x_arr = data_obj.applystateScaler(v_x_arr)
 v_y_arr = data_obj.applytargetScaler(v_y_arr)
-f_x_arr = data_obj.get_fixedSate(1892)
-v_x_arr = np.insert(v_x_arr, 0, f_x_arr[:,0], axis=1)
+
 v_x_arr, v_y_arr = data_obj.obsSequence(v_x_arr, v_y_arr)
 v_x_arr[0]
 # %%

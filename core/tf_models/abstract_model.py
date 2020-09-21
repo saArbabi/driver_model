@@ -40,11 +40,8 @@ class AbstractModel(tf.keras.Model):
 
     def callback_def(self):
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
-
         log_dir = self.exp_dir+'/logs/'+current_time
         return TensorBoard(log_dir=log_dir, write_graph=True)
-
-
 
 class FFMDN(AbstractModel):
     def __init__(self, config):

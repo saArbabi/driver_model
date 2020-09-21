@@ -4,8 +4,7 @@ import warnings
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 # Initialize a single 3-variate Gaussian.
-
-
+ 
 # %%
 def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
