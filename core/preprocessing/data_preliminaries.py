@@ -31,7 +31,7 @@ spec = pd.read_csv('./datasets/episode_spec.txt', delimiter=' ',
 # %%
 
 spec['frm_n'].plot.hist(bins=125)
-m_df.loc[m_df['pc']>-1.8]['pc'].plot.hist(bins=125)
+m_df.loc[m_df['pc']>2]['pc'].plot.hist(bins=125)
 
 # %%
 # def trimFeatureVals(veh_df)
@@ -41,10 +41,6 @@ def trimStatevals(_df, state_names):
     for state_name in state_names:
         if state_name == 'dx':
             df.loc[df['dx']>70, 'dx'] = 70
-
-        if state_name == 'pc':
-            df.loc[df['pc']>1.85, 'pc'] = 1.85
-            df.loc[df['pc']<-1.85, 'pc'] = -1.85
 
         else:
             min, max = df[state_name].quantile([0.005, 0.995])
@@ -116,7 +112,7 @@ len(_m_df)/len(m_df)
 # %%
 vis_dataDistribution(_f_df, o_trim_col)
 vis_dataDistribution(_fadj_df, o_trim_col)
-vis_dataDistribution(_m_df, m_trim_col)
+vis_dataDistribution(_m_df, m_trim_col+['pc'])
 
 #%%
 validation_suitable_episodes = spec.loc[(spec['frm_n']>60) &
