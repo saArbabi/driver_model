@@ -105,18 +105,17 @@ class DataPrep():
         # else:
         #     return v_x_arr
 
-    def get_episode_df(self, episode_id):
-        m_df = m_df0[m_df0['episode_id'] == episode_id]
-        y_df = y_df0[y_df0['episode_id'] == episode_id]
-        return m_df, y_df
+    def get_episode_df(self, mveh_df, yveh_df, episode_id):
+        mveh_df = mveh_df[mveh_df['episode_id'] == episode_id]
+        yveh_df = yveh_df[yveh_df['episode_id'] == episode_id]
+        return mveh_df, yveh_df
 
     def applystateScaler(self, _arr):
         _arr = np.delete(_arr, self.retain_pointer, axis=1)
         return self.state_scaler.transform(_arr)
 
     def applytargetScaler(self, _arr):
-        _arr = self.target_scaler.transform(_arr)
-        return _arr
+        return self.target_scaler.transform(_arr)
 
     def applyInvScaler(self, action_arr):
         """
@@ -208,7 +207,7 @@ class DataPrep():
         """
         :Return: x, y arrays for model training.
         """
-        m_df, y_df = self.get_episode_df(episode_id)
+        m_df, y_df = self.get_episode_df(m_df0, y_df0, episode_id)
         v_x_arr, v_y_arr = self.get_stateTarget_arr(m_df, y_df)
         v_x_arr = self.applystateScaler(v_x_arr)
         v_y_arr = self.applytargetScaler(v_y_arr)
@@ -234,6 +233,7 @@ class DataPrep():
 
     def pickler(self, episode_type):
         if episode_type == 'validation_episodes':
+            # also you want to save validation df for later use
             with open(self.dirName+'/x_val', "wb") as f:
                 pickle.dump(self.shuffArr(self.Xs), f)
 
@@ -242,6 +242,7 @@ class DataPrep():
 
             delattr(self, 'Xs')
             delattr(self, 'Ys')
+
 
 
         elif episode_type == 'training_episodes':
@@ -253,7 +254,11 @@ class DataPrep():
             delattr(self, 'Xs')
             delattr(self, 'Ys')
 
-            with open(self.dirName+'/attr', "wb") as f:
+            with open(self.dirName+'/data_obj', "wb") as f:
+                # Validation set is saved as part of data_obj for later use
+                self.val_m_df = m_df0[m_df0['episode_id'].isin(episode_ids['validation_episodes'])]
+                self.val_y_df = y_df0[y_df0['episode_id'].isin(episode_ids['validation_episodes'])]
+                self.validation_episodes = episode_ids['validation_episodes']
                 pickle.dump(self, f)
 
     def data_prep(self, episode_type=None):

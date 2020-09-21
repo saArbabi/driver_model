@@ -1,6 +1,7 @@
 from models.core.preprocessing import data_prep
 from models.core.preprocessing import data_obj
 import numpy as np
+import pickle
 
 from importlib import reload
 reload(data_prep)
@@ -35,6 +36,20 @@ x_train[-1][1]
 len(x_val[0])
 y_train[0]
 y_train[1]
+# %%
+with open('./datasets/preprocessed/'+'20200921-070747'+'/'+'data_obj', 'rb') as f:
+    data_obj = pickle.load(f)
+data_obj.validation_episodes[3]
+
+data_obj.target_scaler
+m_df, y_df = data_obj.get_episode_df(data_obj.val_m_df, data_obj.val_y_df, 1892)
+v_x_arr, v_y_arr = data_obj.get_stateTarget_arr(m_df, y_df)
+v_x_arr = data_obj.applystateScaler(v_x_arr)
+v_y_arr = data_obj.applytargetScaler(v_y_arr)
+f_x_arr = data_obj.get_fixedSate(1892)
+v_x_arr = np.insert(v_x_arr, 0, f_x_arr[:,0], axis=1)
+v_x_arr, v_y_arr = data_obj.obsSequence(v_x_arr, v_y_arr)
+v_x_arr[0]
 # %%
 
 def vis_dataDistribution(x):
