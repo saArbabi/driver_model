@@ -111,8 +111,8 @@ class DataPrep():
         return mveh_df, yveh_df
 
     def applystateScaler(self, _arr):
-        _arr = np.delete(_arr, self.retain_pointer, axis=1)
-        return self.state_scaler.transform(_arr)
+        _arr[:, self.bool_pointer[-1]+1:] = self.state_scaler.transform(_arr[:, self.bool_pointer[-1]+1:])
+        return np.delete(_arr, self.retain_pointer, axis=1)
 
     def applytargetScaler(self, _arr):
         return self.target_scaler.transform(_arr)
@@ -133,6 +133,8 @@ class DataPrep():
         i += 1
         self.retain_indx['vel_yveh'] = i
         i += 1
+        self.bool_indx['lc_type'] = i
+        i += 1
 
         for state_key in self.m_s:
             self.scalar_indx[state_key+'_mveh'] = i
@@ -144,6 +146,7 @@ class DataPrep():
 
         # these are used by the scaler
         self.retain_pointer = list(self.retain_indx.values())
+        self.bool_pointer = list(self.bool_indx.values())
 
     def get_stateTarget_arr(self, m_df, y_df):
         """Note: Not all states are used by model for prediction. Some are needed
@@ -151,24 +154,21 @@ class DataPrep():
         """
         if self.model_type == 'merge_policy':
             target_df = m_df[['act_long','act_lat']]
-        state_df = pd.DataFrame()
 
+        state_df = pd.DataFrame()
         if self.config['retain']:
             state_df = pd.concat([state_df, m_df[self.config['retain']]], axis=1)
             state_df = pd.concat([state_df, y_df[self.config['retain']]], axis=1)
 
-        if self.m_s:
-            state_df = pd.concat([state_df, m_df[self.m_s]], axis=1)
-
-        if self.y_s:
-            state_df = pd.concat([state_df, y_df[self.y_s]], axis=1)
+        state_df = pd.concat([state_df, m_df['lc_type']], axis=1)
+        state_df = pd.concat([state_df, m_df[self.m_s]], axis=1)
+        state_df = pd.concat([state_df, y_df[self.y_s]], axis=1)
 
         return state_df.values, target_df.values
 
     def setScalers(self):
         state_arr, target_arr = self.get_stateTarget_arr(m_df0, y_df0)
-        state_arr = np.delete(state_arr, self.retain_pointer, axis=1)
-        self.state_scaler = StandardScaler().fit(state_arr)
+        self.state_scaler = StandardScaler().fit(state_arr[:, self.bool_pointer[-1]+1:])
         self.target_scaler = StandardScaler().fit(target_arr)
 
     def get_fixedSate(self, episode_id):
@@ -209,14 +209,13 @@ class DataPrep():
         """
         m_df, y_df = self.get_episode_df(m_df0, y_df0, episode_id)
         v_x_arr, v_y_arr = self.get_stateTarget_arr(m_df, y_df)
+
         v_x_arr = self.applystateScaler(v_x_arr)
         v_y_arr = self.applytargetScaler(v_y_arr)
-        f_x_arr = self.get_fixedSate(episode_id)
 
+        # f_x_arr = self.get_fixedSate(episode_id)
         # vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
-
-        v_x_arr = np.insert(v_x_arr, 0, f_x_arr[:,0], axis=1)
-        v_x_arr, v_y_arr = self.obsSequence(v_x_arr, v_y_arr)
+        # v_x_arr, v_y_arr = self.obsSequence(v_x_arr, v_y_arr)
         # self.mask_history(x_df)
 
         # for i in range(len(vf_x_arr)):
@@ -267,7 +266,7 @@ class DataPrep():
 
         self.Xs = []
         self.Ys = []
-        for episode_id in episode_ids[episode_type]:
+        for episode_id in episode_ids[episode_type][0:3]:
             self.episode_prep(episode_id)
 
         self.pickler(episode_type)

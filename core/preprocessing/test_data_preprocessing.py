@@ -18,7 +18,7 @@ config = {
      "batch_n": 1124,
      "components_n": 5
 },
-"data_config": {"step_size": 1,
+"data_config": {"step_size": 3,
                 "obsSequence_n": 1,
                 "m_s":["vel", "pc"],
                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
@@ -34,7 +34,7 @@ x_train[-1][0]
 x_train[-1][1]
 
 len(x_val[0])
-y_train[0]
+x_train[0]
 y_train[1]
 # %%
 with open('./datasets/preprocessed/'+'20200921-070747'+'/'+'data_obj', 'rb') as f:
