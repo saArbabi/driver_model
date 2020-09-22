@@ -4,7 +4,7 @@ import warnings
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 # Initialize a single 3-variate Gaussian.
- 
+
 # %%
 def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
@@ -29,13 +29,12 @@ def get_pdf(parameter_vector, model_type):
                                                             parameter_vector, model_type)
 
         cov = get_CovMatrix(rhos, sigmas_long, sigmas_lat)
-
         mvn = tfd.MixtureSameFamily(
             mixture_distribution=tfd.Categorical(
                 probs=alphas),
-            components_distribution=tfd.MultivariateNormalFullCovariance(
+            components_distribution=tfd.MultivariateNormalTriL(
                 loc=tf.stack([mus_long, mus_lat], axis=2, name='mu'),
-                covariance_matrix=cov, name='MultivariateNormalFullCovariance'))
+                scale_tril=tf.linalg.cholesky(cov), name='MultivariateNormalTriL'))
     return mvn
 
 def slice_pvector(parameter_vector, model_type):
