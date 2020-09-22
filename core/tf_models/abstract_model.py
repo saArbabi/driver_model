@@ -9,6 +9,7 @@ from keras import backend as K
 from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
 from tensorflow.keras.callbacks import TensorBoard
 from datetime import datetime
+from models.core.tf_models.utils import nll_loss
 
 
 
@@ -41,7 +42,39 @@ class AbstractModel(tf.keras.Model):
     def callback_def(self):
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
         log_dir = self.exp_dir+'/logs/'+current_time
-        return TensorBoard(log_dir=log_dir, write_graph=True)
+        # return TensorBoard(log_dir=log_dir, write_graph=True)
+        self.writer = tf.summary.create_file_writer(log_dir)
+        # self.training_loss = tf.summary.scalar('training_loss', tf.squeeze(self.lossfunc))
+        # self.validation_loss = tf.summary.scalar('validation_loss', tf.squeeze(self.lossfunc))
+
+    @tf.function
+    def save_metrics(self, xs, targets, epoch, metric_name):
+        predictions = self(xs)
+        loss = nll_loss(targets, predictions, self.model_type)
+        with self.writer.as_default():
+            tf.summary.scalar(metric_name, tf.squeeze(loss), step=epoch)
+        self.writer.flush()
+
+    @tf.function
+    def train_step(self, xs, targets):
+        with tf.GradientTape() as tape:
+            predictions = self(xs)
+            loss = nll_loss(targets, predictions, self.model_type)
+
+        gradients = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+    @tf.function
+    def test_step(self, xs, targets):
+        predictions = self(xs)
+        t_loss = nll_loss(targets, predictions, self.model_type)
+
+    def add_chanel(self, tensor):
+        return tensor.astype("float32")
+
+    def batch_data(self, x, y):
+        return tf.data.Dataset.from_tensor_slices((x, y)).batch(self.batch_n)
+
 
 class FFMDN(AbstractModel):
     def __init__(self, config):
@@ -78,7 +111,6 @@ class FFMDN(AbstractModel):
             rhos = self.rhos(x)
             return self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
         return self.pvector([alphas, mus_long, sigmas_long])
-
 
 class GRUMDN(AbstractModel):
     pass

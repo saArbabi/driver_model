@@ -14,7 +14,6 @@ def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     col1 = tf.stack([tf.math.square(sigmas_long), covar], axis=2, name='stack')
     col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=2, name='stack')
     cov = tf.stack([col1, col2], axis=2, name='cov')
-    a = tf.linalg.det(cov[0])
     return cov[0]
 
 def get_pdf(parameter_vector, model_type):
@@ -62,15 +61,13 @@ def slice_pvector(parameter_vector, model_type):
 #         cov = tf.stack([col1, col2], axis=2, name='cov')
 #         tf.summary.scalar('cov_det', data=tf.linalg.det(cov[0]), step=epoch)
 
-def nll_loss(model_type):
-    def loss(y, parameter_vector):
-        """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
-        """
-        mvn = get_pdf(parameter_vector, model_type)
-        log_likelihood = mvn.log_prob(y) # Evaluate log-probability of y
+def nll_loss(y, parameter_vector, model_type):
+    """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
+    """
+    mvn = get_pdf(parameter_vector, model_type)
+    log_likelihood = mvn.log_prob(y) # Evaluate log-probability of y
 
-        return -tf.reduce_mean(log_likelihood, axis=-1)
-    return loss
+    return -tf.reduce_mean(log_likelihood, axis=-1)
 
 def get_predictionMean(parameter_vector, model_type):
     mvn = get_pdf(tf.convert_to_tensor(parameter_vector), model_type)
