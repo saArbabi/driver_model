@@ -254,11 +254,13 @@ class DataPrep():
             delattr(self, 'Ys')
 
             with open(self.dirName+'/data_obj', "wb") as f:
-                # Validation set is saved as part of data_obj for later use
-                self.val_m_df = m_df0[m_df0['episode_id'].isin(episode_ids['validation_episodes'])]
-                self.val_y_df = y_df0[y_df0['episode_id'].isin(episode_ids['validation_episodes'])]
-                self.validation_episodes = episode_ids['validation_episodes']
                 pickle.dump(self, f)
+
+            with open(self.dirName+'/val_m_df', "wb") as f:
+                pickle.dump(m_df0[m_df0['episode_id'].isin(episode_ids['validation_episodes'])], f)
+
+            with open(self.dirName+'/val_y_df', "wb") as f:
+                pickle.dump(y_df0[m_df0['episode_id'].isin(episode_ids['validation_episodes'])], f)
 
     def data_prep(self, episode_type=None):
         if not episode_type:

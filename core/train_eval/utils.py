@@ -18,7 +18,7 @@ def loadExplogs():
 
 def dumpExplogs(explogs_path, explogs):
     with open(explogs_path, 'w') as f:
-        json.dump(explogs, f, sort_keys=True,
+        json.dump(explogs, f, 
                         indent=4, separators=(',', ': '))
 
 def get_undoneExpIDs(explogs):

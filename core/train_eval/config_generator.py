@@ -14,20 +14,23 @@ def genConfig(config):
         os.mkdir(dirName)
     if not 'config.json' in os.listdir(dirName):
         with open(dirName+'/config.json','w') as f:
-            json.dump(config, f, sort_keys=True,
+            json.dump(config, f,
                             indent=4, separators=(',', ': '))
 
-def genExpID(last_exp_id):
-    id = "{0:0=3d}".format(int(last_exp_id[3:])+1)
-    return '{}{}'.format('exp',str(id))
+def genExpID(series_id, last_exp_id):
+    if last_exp_id[0:9] == series_id:
+        id = "{0:0=3d}".format(int(last_exp_id[12:])+1)
+    else:
+        id = "{0:0=3d}".format(0)
+    return  series_id + '{}{}'.format('exp',id)
 
 def get_lastExpID(explogs):
     if not explogs:
-        return 'exp000'
+        return 'series000exp000'
     else:
         return list(explogs.keys())[-1]
 
-def genExpSeires(config, test_variables=None):
+def genExpSeires(series_id, test_variables, config):
     """
     Function for generating series of folders for storing experiment reasults.
     :input: config_series defines the experiment series
@@ -45,16 +48,16 @@ def genExpSeires(config, test_variables=None):
                 last_exp_id = get_lastExpID(explogs)
                 config_i = config
                 config_i['model_config'][variable] = param
-                exp_id = genExpID(last_exp_id)
+                exp_id = genExpID(series_id, last_exp_id)
                 config_i['exp_id'] = exp_id
                 genConfig(config_i)
                 explogs[exp_id] = explog
     else:
         last_exp_id = get_lastExpID(explogs)
-        exp_id = genExpID(last_exp_id)
+        exp_id = genExpID(series_id, last_exp_id)
         config['exp_id'] = exp_id
         genConfig(config)
         explogs[exp_id] = explog
 
     utils.dumpExplogs(explogs_path, explogs)
-    print("You are ready to run your experiments")
+    print("You are ready to run experiment ", exp_id)
