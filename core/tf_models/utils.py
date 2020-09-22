@@ -6,12 +6,15 @@ warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 # Initialize a single 3-variate Gaussian.
 
 # %%
+
+# %%
 def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
 
     col1 = tf.stack([tf.math.square(sigmas_long), covar], axis=2, name='stack')
     col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=2, name='stack')
     cov = tf.stack([col1, col2], axis=2, name='cov')
+    a = tf.linalg.det(cov[0])
     return cov[0]
 
 def get_pdf(parameter_vector, model_type):
@@ -49,7 +52,15 @@ def slice_pvector(parameter_vector, model_type):
         return tf.split(parameter_vector, n_params, axis=1)
     else:
         return tf.split(parameter_vector, n_params, axis=0)
-
+#
+# def covDet(epoch, ):
+#     def covdet(epoch)
+#         covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
+#
+#         col1 = tf.stack([tf.math.square(sigmas_long), covar], axis=2, name='stack')
+#         col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=2, name='stack')
+#         cov = tf.stack([col1, col2], axis=2, name='cov')
+#         tf.summary.scalar('cov_det', data=tf.linalg.det(cov[0]), step=epoch)
 
 def nll_loss(model_type):
     def loss(y, parameter_vector):

@@ -2,6 +2,7 @@ from models.core.preprocessing import data_prep
 from models.core.preprocessing import data_obj
 import numpy as np
 import pickle
+import matplotlib.pyplot as plt
 
 from importlib import reload
 reload(data_prep)
@@ -23,6 +24,8 @@ config = {
                 "m_s":["vel", "pc"],
                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
                 "retain":["vel"],
+                "Note": "Here I am adding the time stamp"
+
 },
 "exp_id": "NA",
 "model_type": "merge_policy",
@@ -33,9 +36,11 @@ x_train, y_train, x_val, y_val = DataObj(config).loadData()
 x_train[-1][0]
 x_train[-1][1]
 
+len(x_train)
 len(x_val[0])
-x_train[0]
+x_train[1]
 y_train[1]
+np.any(np.isnan(x_train))
 # %%
 with open('./datasets/preprocessed/'+'20200921-123920'+'/'+'data_obj', 'rb') as f:
     data_obj = pickle.load(f)
@@ -48,19 +53,20 @@ v_y_arr = data_obj.applytargetScaler(v_y_arr)
 
 v_x_arr, v_y_arr = data_obj.obsSequence(v_x_arr, v_y_arr)
 v_x_arr[0]
+10e-4
 # %%
 
 def vis_dataDistribution(x):
     for i in range(len(x[0])):
         fig = plt.figure()
-        plt.hist(x[:,i], bins=125)
+        plt.hist(x[:1000000,i], bins=125)
 
 vis_dataDistribution(x_train)
 # %%
 from collections import deque
 
-v_x_arr = range(100)
-v_y_arr = range(100)
+v_x_arr = range(size0)
+v_y_arr = range(size0)
 x_seq = [] # obsSequenced x array
 y_seq = [] # obsSequenced x array
 obsSequence_n = 5
@@ -103,9 +109,35 @@ def mask_history(self, v_x_arr):
     else:
         return v_x_arr
 
-def ch(x):
-    pass
+# %%
+def get_timeStamps(size):
+    ts = np.zeros([size, 1])
+    t = 0.1
+    for i in range(1, size):
+        ts[i] = t
+        t += 0.1
+    return ts
+size = 50
+v_x_arr = np.array(range(size))
+v_y_arr = np.ones(size)*21
+f_x_arr = np.array(range(size))
+v_x_arr.shape = (size,1)
+v_y_arr.shape = (size,1)
+f_x_arr.shape = (size,1)
 
-a = 2
-a = ch(a)
-a
+
+episode_len = len(v_x_arr)
+mini_episodes_x = []
+mini_episodes_y = []
+for step in range(episode_len):
+    epis_i = v_x_arr[step:step+10]
+    target_i = v_y_arr[step:step+10]
+
+    episode_i_len = len(epis_i)
+    ts = get_timeStamps(episode_i_len)
+    epis_i = np.insert(epis_i, [0], f_x_arr[step], axis=1)
+    mini_episodes_x.append(np.concatenate([ts, epis_i], axis=1))
+    mini_episodes_y.append(target_i)
+mini_episodes_x
+# return mini_episodes_x,
+mini_episodes_y

@@ -30,7 +30,7 @@ def get_lastExpID(series_id, explogs):
     if explogs_keys:
         return max(explogs_keys)
     else:
-        return series_id+'exp001'
+        return series_id+'exp000'
 
 def genExpSeires(series_id, test_variables, config):
     """

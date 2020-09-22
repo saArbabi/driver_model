@@ -36,11 +36,11 @@ def read_episode_ids():
         episode_ids[name] = my_list
 
 def read_fixed_stateArr():
-    global fixed_state_arr
-    fixed_state_arr = pd.read_csv('./datasets/fixed_df0.txt', delimiter=' ',
+    global fixed_states_arr
+    fixed_states_arr = pd.read_csv('./datasets/fixed_df0.txt', delimiter=' ',
                                                             header=None).values
     # First two columns are lc_type and episode_id
-    fixed_state_arr[:,2:] = StandardScaler().fit(fixed_state_arr[:,2:]).transform(fixed_state_arr[:,2:])
+    fixed_states_arr[:,2:] = StandardScaler().fit(fixed_states_arr[:,2:]).transform(fixed_states_arr[:,2:])
 
 read_episode_df()
 read_episode_ids()
@@ -57,6 +57,7 @@ class DataPrep():
 
         self.m_s = self.config["m_s"]
         self.y_s = self.config["y_s"]
+        self.max_traj_n = 50 # can be set differently depending on prediction horizon
 
         self.setState_indx()
         self.setScalers() # will set the scaler attributes
@@ -172,15 +173,15 @@ class DataPrep():
         self.target_scaler = StandardScaler().fit(target_arr)
 
     def get_fixedSate(self, episode_id):
-        state_arr = fixed_state_arr[fixed_state_arr[:,1]==episode_id]
-        return np.delete(state_arr, 1, axis=1)
+        fixed_state_arr = fixed_states_arr[fixed_states_arr[:,0]==episode_id]
+        return np.delete(fixed_state_arr, 0, axis=1)
 
     def get_timeStamps(self, size):
         ts = np.zeros([size, 1])
-        t = 0.01
+        t = 0.1
         for i in range(1, size):
             ts[i] = t
-            t += 0.01
+            t += 0.1
         return ts
 
     def get_vfArrs(self, v_x_arr, v_y_arr, f_x_arr):
@@ -192,8 +193,8 @@ class DataPrep():
         mini_episodes_x = []
         mini_episodes_y = []
         for step in range(episode_len):
-            epis_i = v_x_arr[step:]
-            target_i = v_y_arr[step:]
+            epis_i = v_x_arr[step:step+self.max_traj_n]
+            target_i = v_y_arr[step:step+self.max_traj_n]
 
             episode_i_len = len(epis_i)
             ts = self.get_timeStamps(episode_i_len)
@@ -213,18 +214,20 @@ class DataPrep():
         v_x_arr = self.applystateScaler(v_x_arr)
         v_y_arr = self.applytargetScaler(v_y_arr)
 
-        # f_x_arr = self.get_fixedSate(episode_id)
-        # vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
+        f_x_arr = self.get_fixedSate(episode_id)
+        # vf_x_arr = np.concatenate([v_x_arr, f_x_arr], axis=1)
+        vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
+
         # v_x_arr, v_y_arr = self.obsSequence(v_x_arr, v_y_arr)
         # self.mask_history(x_df)
 
-        # for i in range(len(vf_x_arr)):
-        #     # use when generating ddata with time stamps
-        #     self.Xs.extend(vf_x_arr[i])
-        #     self.Ys.extend(vf_y_arr[i])
+        for i in range(len(vf_x_arr)):
+            # use when generating ddata with time stamps
+            self.Xs.extend(vf_x_arr[i])
+            self.Ys.extend(vf_y_arr[i])
 
-        self.Xs.extend(v_x_arr)
-        self.Ys.extend(v_y_arr)
+        # self.Xs.extend(vf_x_arr)
+        # self.Ys.extend(vf_y_arr)
 
     def shuffArr(self, arr):
         random.Random(2020).shuffle(arr)
@@ -241,8 +244,6 @@ class DataPrep():
 
             delattr(self, 'Xs')
             delattr(self, 'Ys')
-
-
 
         elif episode_type == 'training_episodes':
             with open(self.dirName+'/x_train', "wb") as f:
@@ -272,8 +273,6 @@ class DataPrep():
             self.episode_prep(episode_id)
 
         self.pickler(episode_type)
-
-
 
 
 # %%
