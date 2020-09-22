@@ -3,8 +3,8 @@ import json
 from models.core.train_eval import utils
 
 explogs_path = './models/experiments/exp_logs.json'
-explog = {'exp_state':'NA',
-        'model':'NA',
+explog = {'model_type':'NA',
+        'exp_state':'NA',
         'train_loss':'NA',
         'val_loss':'NA'}
 
@@ -24,11 +24,13 @@ def genExpID(series_id, last_exp_id):
         id = "{0:0=3d}".format(0)
     return  series_id + '{}{}'.format('exp',id)
 
-def get_lastExpID(explogs):
-    if not explogs:
-        return 'series000exp000'
+def get_lastExpID(series_id, explogs):
+    explogs_keys = [key for key in list(explogs.keys()) if key[0:9] == series_id]
+
+    if explogs_keys:
+        return max(explogs_keys)
     else:
-        return list(explogs.keys())[-1]
+        return series_id+'exp001'
 
 def genExpSeires(series_id, test_variables, config):
     """
@@ -42,10 +44,11 @@ def genExpSeires(series_id, test_variables, config):
     else:
         explogs = utils.loadExplogs()
 
+    explog['model_type'] = config['model_type']
     if test_variables:
         for variable in test_variables:
             for param in test_variables[variable]:
-                last_exp_id = get_lastExpID(explogs)
+                last_exp_id = get_lastExpID(series_id, explogs)
                 config_i = config
                 config_i['model_config'][variable] = param
                 exp_id = genExpID(series_id, last_exp_id)
@@ -53,7 +56,7 @@ def genExpSeires(series_id, test_variables, config):
                 genConfig(config_i)
                 explogs[exp_id] = explog
     else:
-        last_exp_id = get_lastExpID(explogs)
+        last_exp_id = get_lastExpID(series_id, explogs)
         exp_id = genExpID(series_id, last_exp_id)
         config['exp_id'] = exp_id
         genConfig(config)

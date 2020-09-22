@@ -2,6 +2,7 @@ import json
 import os
 explogs_path = './models/experiments/exp_logs.json'
 
+# %%
 def loadConfigBase(file_name):
     dirName = './models/experiments/'+file_name
     with open(dirName, 'r') as f:
@@ -14,11 +15,15 @@ def loadConfig(exp_id):
 
 def loadExplogs():
     with open(explogs_path, 'r') as f:
-        return json.load(f)
+        explogs = json.load(f)
+        _explogs = {}
+        for key in sorted(explogs):
+            _explogs[key] = explogs[key]
+        return _explogs
 
 def dumpExplogs(explogs_path, explogs):
     with open(explogs_path, 'w') as f:
-        json.dump(explogs, f, 
+        json.dump(explogs, f,
                         indent=4, separators=(',', ': '))
 
 def get_undoneExpIDs(explogs):
