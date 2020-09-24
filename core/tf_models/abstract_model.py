@@ -9,7 +9,7 @@ from keras import backend as K
 from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
 from tensorflow.keras.callbacks import TensorBoard
 from datetime import datetime
-from models.core.tf_models.utils import nll_loss
+from models.core.tf_models.utils import nll_loss, covDet
 
 
 
@@ -43,17 +43,57 @@ class AbstractModel(tf.keras.Model):
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
         log_dir = self.exp_dir+'/logs/'+current_time
         # return TensorBoard(log_dir=log_dir, write_graph=True)
-        self.writer = tf.summary.create_file_writer(log_dir)
+        self.writer_1 = tf.summary.create_file_writer(log_dir+'/loss/'+'train')
+        self.writer_2 = tf.summary.create_file_writer(log_dir+'/loss/'+'eval')
+        self.writer_3 = tf.summary.create_file_writer(log_dir+'/loss/'+'train_batch')
+        self.writer_4 = tf.summary.create_file_writer(log_dir+'/loss/'+'cov_det_max')
+        self.writer_5 = tf.summary.create_file_writer(log_dir+'/loss/'+'cov_det_min')
+        self.writer_6 = tf.summary.create_file_writer(log_dir)
+        self.train_loss = tf.keras.metrics.Mean(name='train_loss')
+        self.test_loss = tf.keras.metrics.Mean(name='test_loss')
+
         # self.training_loss = tf.summary.scalar('training_loss', tf.squeeze(self.lossfunc))
         # self.validation_loss = tf.summary.scalar('validation_loss', tf.squeeze(self.lossfunc))
-
     @tf.function
-    def save_metrics(self, xs, targets, epoch, metric_name):
+    def save_batch_metrics(self, xs, targets, batch_i, metric_name):
         predictions = self(xs)
         loss = nll_loss(targets, predictions, self.model_type)
-        with self.writer.as_default():
-            tf.summary.scalar(metric_name, tf.squeeze(loss), step=epoch)
-        self.writer.flush()
+        with self.writer_3.as_default():
+            tf.summary.scalar(metric_name, tf.squeeze(loss), step=batch_i)
+        self.writer_3.flush()
+        if metric_name != 'train_loss_batch':
+            cov_det = covDet(predictions, 'max', self.model_type)
+            with self.writer_4.as_default():
+                tf.summary.scalar('cov_det_max', cov_det, step=batch_i)
+            self.writer_4.flush()
+
+            cov_det = covDet(predictions, 'min', self.model_type)
+            with self.writer_5.as_default():
+                tf.summary.scalar('cov_det_min', cov_det, step=batch_i)
+            self.writer_5.flush()
+
+    @tf.function
+    def save_epoch_metrics(self, xs, targets, epoch, metric_name):
+        predictions = self(xs)
+        loss = nll_loss(targets, predictions, self.model_type)
+
+        if metric_name == 'train_loss':
+            with self.writer_1.as_default():
+                tf.summary.scalar(metric_name, tf.squeeze(loss), step=epoch)
+            self.writer_1.flush()
+
+        elif  metric_name == 'validation_loss':
+            with self.writer_2.as_default():
+                tf.summary.scalar(metric_name, tf.squeeze(loss), step=epoch)
+            self.writer_2.flush()
+
+        # if epoch == self.epochs_n-1:
+        if epoch == 0:
+            if metric_name == 'train_loss':
+                self.train_loss(loss)
+            elif  metric_name == 'validation_loss':
+                self.test_loss(loss)
+
 
     @tf.function
     def train_step(self, xs, targets):
@@ -69,17 +109,26 @@ class AbstractModel(tf.keras.Model):
         predictions = self(xs)
         t_loss = nll_loss(targets, predictions, self.model_type)
 
-    def add_chanel(self, tensor):
-        return tensor.astype("float32")
-
     def batch_data(self, x, y):
-        return tf.data.Dataset.from_tensor_slices((x, y)).batch(self.batch_n)
+        return tf.data.Dataset.from_tensor_slices((x.astype("float32"),
+                                        y.astype("float32"))).batch(self.batch_n)
 
 
 class FFMDN(AbstractModel):
     def __init__(self, config):
         super(FFMDN, self).__init__(config)
         self.architecture_def(config)
+        self.save_graph_status = 'NA'
+        tf.summary.trace_on()
+
+    def save_graph(self):
+        if self.save_graph_status == 'NA':
+            with self.writer_6.as_default():
+                tf.summary.trace_export(name='graph', step=0)
+            self.save_graph_status == 'complete'
+
+
+
 
     def architecture_def(self, config):
         """pi, mu, sigma = NN(x; theta)"""

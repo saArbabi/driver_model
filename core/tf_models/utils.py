@@ -3,16 +3,13 @@ from tensorflow_probability import distributions as tfd
 import warnings
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
-# Initialize a single 3-variate Gaussian.
-
-# %%
-
 # %%
 def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
 
     col1 = tf.stack([tf.math.square(sigmas_long), covar], axis=2, name='stack')
     col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=2, name='stack')
+    # sigmas_long**2 is covariance of sigmas_long with itself
     cov = tf.stack([col1, col2], axis=2, name='cov')
     return cov[0]
 
@@ -51,15 +48,20 @@ def slice_pvector(parameter_vector, model_type):
         return tf.split(parameter_vector, n_params, axis=1)
     else:
         return tf.split(parameter_vector, n_params, axis=0)
-#
-# def covDet(epoch, ):
-#     def covdet(epoch)
-#         covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
-#
-#         col1 = tf.stack([tf.math.square(sigmas_long), covar], axis=2, name='stack')
-#         col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=2, name='stack')
-#         cov = tf.stack([col1, col2], axis=2, name='cov')
-#         tf.summary.scalar('cov_det', data=tf.linalg.det(cov[0]), step=epoch)
+
+def covDet(parameter_vector, max_min, model_type):
+    alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos = slice_pvector(
+                                                        parameter_vector, model_type)
+
+    covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
+    col1 = tf.stack([tf.math.square(sigmas_long), covar], axis=2, name='stack')
+    col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=2, name='stack')
+    cov = tf.stack([col1, col2], axis=2, name='cov')
+
+    if max_min == 'max':
+        return tf.math.reduce_max(tf.linalg.det(cov[0]))
+    else:
+        return tf.math.reduce_min(tf.linalg.det(cov[0]))
 
 def nll_loss(y, parameter_vector, model_type):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
