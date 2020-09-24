@@ -20,37 +20,33 @@ def modelTrain(config, explogs):
     test_ds = model.batch_data(x_val, y_val)
 
     utils.updateExpstate(explogs, exp_id, 'in progress')
-    i = tf.constant([0], dtype='int64')
-    z = 0
-    writer_6 = tf.summary.create_file_writer(model.exp_dir+'/logs/')
 
-    for epoch in tf.range(1, dtype='int64'):
-    # for epoch in tf.range(model.epochs_n, dtype='int64'):
-        # Reset the metrics at the start of the next epoch
+    batch_i = tf.constant([0], dtype='int64')
+    write_graph = 'no'
+
+    for epoch in tf.range(model.epochs_n, dtype='int64'):
         for xs, targets in train_ds:
-            if z == 0:
+            if write_graph == 'yes':
+                graph_write = tf.summary.create_file_writer(model.exp_dir+'/logs/')
                 tf.summary.trace_on()
                 model.train_step(xs, targets)
-                with writer_6.as_default():
+                with graph_write.as_default():
                     tf.summary.trace_export(name='graph', step=0)
-                z += 1
+                write_graph == 'no'
             else:
                 model.train_step(xs, targets)
-
-            # model.save_graph()
-            model.save_batch_metrics(xs, targets, i, metric_name='train_loss_batch')
-            model.save_batch_metrics(xs, targets, i, metric_name='cov_det')
-            i += 1
-        model.save_epoch_metrics(xs, targets, epoch, metric_name='train_loss')
+            model.save_batch_metrics(xs, targets, batch_i)
+            batch_i += 1
 
         for xs, targets in test_ds:
             model.test_step(xs, targets)
-        model.save_epoch_metrics(xs, targets, epoch, metric_name='validation_loss')
+
+        model.save_epoch_metrics(epoch)
 
     # modelEvaluate(model, validation_data, config)
     explogs[exp_id]['train_loss'] = round(model.train_loss.result().numpy().item(), 2)
     explogs[exp_id]['val_loss'] = round(model.test_loss.result().numpy().item(), 2)
-    # model.save(model.exp_dir+'/trained_model')
+
     utils.updateExpstate(explogs, exp_id, 'complete')
 
 
@@ -60,4 +56,4 @@ def runSeries():
 
     for exp_id in undone_exp:
         config = utils.loadConfig(exp_id)
-        history = modelTrain(config, explogs)
+        modelTrain(config, explogs)

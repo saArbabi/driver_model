@@ -14,13 +14,7 @@ from models.core.tf_models.utils import nll_loss, covDet
 
 
 # %%
-
 class AbstractModel(tf.keras.Model):
-    """
-    See https://www.tensorflow.org/guide/intro_to_graphs if you want to wrap the model
-    in a graph using tf.function decorator.
-    """
-
     def __init__(self, config):
         super(AbstractModel, self).__init__(name="AbstractModel")
         self.config = config['model_config']
@@ -41,58 +35,29 @@ class AbstractModel(tf.keras.Model):
 
     def callback_def(self):
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
-        log_dir = self.exp_dir+'/logs/'+current_time
-        # return TensorBoard(log_dir=log_dir, write_graph=True)
-        self.writer_1 = tf.summary.create_file_writer(log_dir+'/loss/'+'train')
-        self.writer_2 = tf.summary.create_file_writer(log_dir+'/loss/'+'eval')
-        self.writer_3 = tf.summary.create_file_writer(log_dir+'/loss/'+'train_batch')
-        self.writer_4 = tf.summary.create_file_writer(log_dir+'/loss/'+'cov_det_max')
-        self.writer_5 = tf.summary.create_file_writer(log_dir+'/loss/'+'cov_det_min')
+        log_dir = self.exp_dir+'/logs/'
+        self.writer_1 = tf.summary.create_file_writer(log_dir+'epoch_loss')
+        self.writer_2 = tf.summary.create_file_writer(log_dir+'cov_det')
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-        # self.training_loss = tf.summary.scalar('training_loss', tf.squeeze(self.lossfunc))
-        # self.validation_loss = tf.summary.scalar('validation_loss', tf.squeeze(self.lossfunc))
     @tf.function
-    def save_batch_metrics(self, xs, targets, batch_i, metric_name):
+    def save_batch_metrics(self, xs, targets, batch_i):
         predictions = self(xs)
         loss = nll_loss(targets, predictions, self.model_type)
-        with self.writer_3.as_default():
-            tf.summary.scalar(metric_name, tf.squeeze(loss), step=batch_i)
-        self.writer_3.flush()
-        if metric_name != 'train_loss_batch':
+
+        with self.writer_2.as_default():
             cov_det = covDet(predictions, 'max', self.model_type)
-            with self.writer_4.as_default():
-                tf.summary.scalar('cov_det_max', cov_det, step=batch_i)
-            self.writer_4.flush()
-
+            tf.summary.scalar('det_max', cov_det, step=batch_i)
             cov_det = covDet(predictions, 'min', self.model_type)
-            with self.writer_5.as_default():
-                tf.summary.scalar('cov_det_min', cov_det, step=batch_i)
-            self.writer_5.flush()
+            tf.summary.scalar('det_min', cov_det, step=batch_i)
+        self.writer_2.flush()
 
-    @tf.function
-    def save_epoch_metrics(self, xs, targets, epoch, metric_name):
-        predictions = self(xs)
-        loss = nll_loss(targets, predictions, self.model_type)
-
-        if metric_name == 'train_loss':
-            with self.writer_1.as_default():
-                tf.summary.scalar(metric_name, tf.squeeze(loss), step=epoch)
-            self.writer_1.flush()
-
-        elif  metric_name == 'validation_loss':
-            with self.writer_2.as_default():
-                tf.summary.scalar(metric_name, tf.squeeze(loss), step=epoch)
-            self.writer_2.flush()
-
-        # if epoch == self.epochs_n-1:
-        if epoch == 0:
-            if metric_name == 'train_loss':
-                self.train_loss(loss)
-            elif  metric_name == 'validation_loss':
-                self.test_loss(loss)
-
+    def save_epoch_metrics(self, epoch):
+        with self.writer_1.as_default():
+            tf.summary.scalar('_train', self.train_loss.result(), step=epoch)
+            tf.summary.scalar('_val', self.test_loss.result(), step=epoch)
+        self.writer_1.flush()
 
     @tf.function
     def train_step(self, xs, targets):
@@ -102,11 +67,13 @@ class AbstractModel(tf.keras.Model):
 
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        self.train_loss(loss)
 
     @tf.function
     def test_step(self, xs, targets):
         predictions = self(xs)
-        t_loss = nll_loss(targets, predictions, self.model_type)
+        loss = nll_loss(targets, predictions, self.model_type)
+        self.test_loss(loss)
 
     def batch_data(self, x, y):
         return tf.data.Dataset.from_tensor_slices((x.astype("float32"),
@@ -117,16 +84,6 @@ class FFMDN(AbstractModel):
     def __init__(self, config):
         super(FFMDN, self).__init__(config)
         self.architecture_def(config)
-        self.save_graph_status = 'NA'
-
-    def save_graph(self):
-        if self.save_graph_status == 'NA':
-            with self.writer_6.as_default():
-                tf.summary.trace_export(name='graph', step=0)
-            self.save_graph_status == 'complete'
-
-
-
 
     def architecture_def(self, config):
         """pi, mu, sigma = NN(x; theta)"""
