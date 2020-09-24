@@ -21,12 +21,22 @@ def modelTrain(config, explogs):
 
     utils.updateExpstate(explogs, exp_id, 'in progress')
     i = tf.constant([0], dtype='int64')
+    z = 0
+    writer_6 = tf.summary.create_file_writer(model.exp_dir+'/logs/')
 
     for epoch in tf.range(1, dtype='int64'):
     # for epoch in tf.range(model.epochs_n, dtype='int64'):
         # Reset the metrics at the start of the next epoch
         for xs, targets in train_ds:
-            model.train_step(xs, targets)
+            if z == 0:
+                tf.summary.trace_on()
+                model.train_step(xs, targets)
+                with writer_6.as_default():
+                    tf.summary.trace_export(name='graph', step=0)
+                z += 1
+            else:
+                model.train_step(xs, targets)
+
             # model.save_graph()
             model.save_batch_metrics(xs, targets, i, metric_name='train_loss_batch')
             model.save_batch_metrics(xs, targets, i, metric_name='cov_det')

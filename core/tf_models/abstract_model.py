@@ -48,7 +48,6 @@ class AbstractModel(tf.keras.Model):
         self.writer_3 = tf.summary.create_file_writer(log_dir+'/loss/'+'train_batch')
         self.writer_4 = tf.summary.create_file_writer(log_dir+'/loss/'+'cov_det_max')
         self.writer_5 = tf.summary.create_file_writer(log_dir+'/loss/'+'cov_det_min')
-        self.writer_6 = tf.summary.create_file_writer(log_dir)
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
@@ -119,7 +118,6 @@ class FFMDN(AbstractModel):
         super(FFMDN, self).__init__(config)
         self.architecture_def(config)
         self.save_graph_status = 'NA'
-        tf.summary.trace_on()
 
     def save_graph(self):
         if self.save_graph_status == 'NA':
