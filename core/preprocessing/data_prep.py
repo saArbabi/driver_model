@@ -215,19 +215,19 @@ class DataPrep():
         v_y_arr = self.applytargetScaler(v_y_arr)
 
         f_x_arr = self.get_fixedSate(episode_id)
-        # vf_x_arr = np.concatenate([v_x_arr, f_x_arr], axis=1)
-        vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
+        vf_x_arr = np.concatenate([v_x_arr, f_x_arr], axis=1)
+        # vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
 
         # v_x_arr, v_y_arr = self.obsSequence(v_x_arr, v_y_arr)
         # self.mask_history(x_df)
 
-        for i in range(len(vf_x_arr)):
-            # use when generating ddata with time stamps
-            self.Xs.extend(vf_x_arr[i])
-            self.Ys.extend(vf_y_arr[i])
+        # for i in range(len(vf_x_arr)):
+        #     # use when generating ddata with time stamps
+        #     self.Xs.extend(vf_x_arr[i])
+        #     self.Ys.extend(vf_y_arr[i])
 
-        # self.Xs.extend(vf_x_arr)
-        # self.Ys.extend(vf_y_arr)
+        self.Xs.extend(vf_x_arr)
+        self.Ys.extend(v_y_arr)
 
     def shuffArr(self, arr):
         random.Random(2020).shuffle(arr)

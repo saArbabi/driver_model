@@ -40,17 +40,17 @@ def get_completedExpIDs(explogs):
             undone_exp.append(key)
     return undone_exp
 
-def updateExpstate(explogs, exp_id, exp_state):
+def updateExpstate(model, explogs, exp_id, exp_state):
     for key, value in explogs.items():
         # first remove failed experiments
-        if value['exp_state'] != ('complete' or 'NA'):
+        if value['exp_state'] != ('complete' or 'NA') and key != exp_id:
             explogs[key]['exp_state'] = 'failed'
+        else:
+            explogs[exp_id]['exp_state'] = exp_state
+            explogs[exp_id]['train_loss'] = round(model.train_loss.result().numpy().item(), 2)
+            explogs[exp_id]['val_loss'] = round(model.test_loss.result().numpy().item(), 2)
+            explogs[exp_id]['epoch'] += 1
 
-    explogs[exp_id]['exp_state'] = exp_state
-    if exp_state == 'complete':
-        print('Experiment ', exp_id, ' has been complete')
-    elif exp_state == 'in progress':
-        print('Experiment ', exp_id, 'is in progress')
     dumpExplogs(explogs_path, explogs)
 
 

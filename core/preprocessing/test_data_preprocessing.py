@@ -24,8 +24,8 @@ config = {
                 "m_s":["vel", "pc"],
                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
                 "retain":["vel"],
-                "Note": "Here I am adding the time stamp"
-
+                "Note": "baseline - no time stamps"
+                # "Note": "Here I am adding the time stamp"
 },
 "exp_id": "NA",
 "model_type": "merge_policy",
@@ -40,7 +40,6 @@ len(x_train)
 len(x_val[0])
 x_train[1]
 y_train[1]
-np.any(np.isnan(x_train))
 # %%
 with open('./datasets/preprocessed/'+'20200921-123920'+'/'+'data_obj', 'rb') as f:
     data_obj = pickle.load(f)

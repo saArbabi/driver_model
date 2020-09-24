@@ -6,7 +6,7 @@ tf.random.set_seed(2020)
 import os
 from tensorflow.python.ops import math_ops
 from keras import backend as K
-from tensorflow.keras.layers import Input, Dense, Activation, Concatenate
+from tensorflow.keras.layers import Input, Dense, Dropout, Concatenate
 from tensorflow.keras.callbacks import TensorBoard
 from datetime import datetime
 from models.core.tf_models.utils import nll_loss, covDet
@@ -27,7 +27,6 @@ class AbstractModel(tf.keras.Model):
         self.epochs_n = self.config['epochs_n']
         self.batch_n = self.config['batch_n']
         self.components_n = self.config['components_n'] # number of Mixtures
-        self.optimizer = tf.optimizers.Adam(self.learning_rate)
         self.callback = self.callback_def()
 
     def architecture_def(self, X):
@@ -41,7 +40,6 @@ class AbstractModel(tf.keras.Model):
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    @tf.function
     def save_batch_metrics(self, xs, targets, batch_i):
         predictions = self(xs)
         loss = nll_loss(targets, predictions, self.model_type)
@@ -60,13 +58,13 @@ class AbstractModel(tf.keras.Model):
         self.writer_1.flush()
 
     @tf.function
-    def train_step(self, xs, targets):
+    def train_step(self, xs, targets, optimizer):
         with tf.GradientTape() as tape:
             predictions = self(xs)
             loss = nll_loss(targets, predictions, self.model_type)
 
         gradients = tape.gradient(loss, self.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         self.train_loss(loss)
 
     @tf.function
@@ -90,6 +88,8 @@ class FFMDN(AbstractModel):
         # for n in range(self.layers_n):
         self.hidden_layers =  [Dense(self.neurons_n, activation='relu') for _
                                                 in range(self.config['layers_n'])]
+        self.dropout_layers = [Dropout(0.25) for _ in range(self.config['layers_n']-1)]
+
         self.alphas = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long = Dense(self.components_n, name="mus_long")
         self.sigmas_long = Dense(self.components_n, activation=K.exp, name="sigmas_long")
@@ -103,8 +103,11 @@ class FFMDN(AbstractModel):
     def call(self, inputs):
         # Defines the computation from inputs to outputs
         x = self.hidden_layers[0](inputs)
+        drop_i = 0
         for layer in self.hidden_layers[1:]:
+            x = self.dropout_layers[drop_i](x)
             x = layer(x)
+            drop_i += 1
 
         alphas = self.alphas(x)
         mus_long = self.mus_long(x)
