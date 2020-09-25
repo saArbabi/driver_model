@@ -47,9 +47,11 @@ def updateExpstate(model, explogs, exp_id, exp_state):
             explogs[key]['exp_state'] = 'failed'
 
     explogs[exp_id]['exp_state'] = exp_state
-    explogs[exp_id]['train_loss'] = round(model.train_loss.result().numpy().item(), 2)
-    explogs[exp_id]['val_loss'] = round(model.test_loss.result().numpy().item(), 2)
-    explogs[exp_id]['epoch'] += 1
+    if exp_state == 'in progress':
+        explogs[exp_id]['epoch'] += 1
+        explogs[exp_id]['train_loss'] = round(model.train_loss.result().numpy().item(), 2)
+        explogs[exp_id]['val_loss'] = round(model.test_loss.result().numpy().item(), 2)
+
     dumpExplogs(explogs_path, explogs)
 
 def delete_experiment(exp_id):

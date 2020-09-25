@@ -36,11 +36,11 @@ def read_episode_ids():
         episode_ids[name] = my_list
 
 def read_fixed_stateArr():
-    global fixed_states_arr
-    fixed_states_arr = pd.read_csv('./datasets/fixed_df0.txt', delimiter=' ',
+    global fixed_arr0
+    fixed_arr0 = pd.read_csv('./datasets/fixed_df0.txt', delimiter=' ',
                                                             header=None).values
     # First two columns are lc_type and episode_id
-    fixed_states_arr[:,2:] = StandardScaler().fit(fixed_states_arr[:,2:]).transform(fixed_states_arr[:,2:])
+    fixed_arr0[:,2:] = StandardScaler().fit(fixed_arr0[:,2:]).transform(fixed_arr0[:,2:])
 
 read_episode_df()
 read_episode_ids()
@@ -172,8 +172,8 @@ class DataPrep():
         self.state_scaler = StandardScaler().fit(state_arr[:, self.bool_pointer[-1]+1:])
         self.target_scaler = StandardScaler().fit(target_arr)
 
-    def get_fixedSate(self, episode_id):
-        fixed_state_arr = fixed_states_arr[fixed_states_arr[:,0]==episode_id]
+    def get_fixedSate(self, fixed_arr, episode_id):
+        fixed_state_arr = fixed_arr[fixed_arr[:,0]==episode_id]
         return np.delete(fixed_state_arr, 0, axis=1)
 
     def get_timeStamps(self, size):
@@ -214,7 +214,7 @@ class DataPrep():
         v_x_arr = self.applystateScaler(v_x_arr)
         v_y_arr = self.applytargetScaler(v_y_arr)
 
-        f_x_arr = self.get_fixedSate(episode_id)
+        f_x_arr = self.get_fixedSate(fixed_arr0, episode_id)
         vf_x_arr = np.concatenate([v_x_arr, f_x_arr], axis=1)
         # vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
 
@@ -263,6 +263,10 @@ class DataPrep():
             with open(self.dirName+'/val_y_df', "wb") as f:
                 pickle.dump(y_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
 
+            with open(self.dirName+'/fixed_arr', "wb") as f:
+                pickle.dump(fixed_arr0[np.isin(fixed_arr0[:,0], episode_ids['test_episodes'])], f)
+
+
     def data_prep(self, episode_type=None):
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
@@ -271,7 +275,6 @@ class DataPrep():
         self.Ys = []
         for episode_id in episode_ids[episode_type]:
             self.episode_prep(episode_id)
-
         self.pickler(episode_type)
 
 

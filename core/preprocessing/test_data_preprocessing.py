@@ -36,13 +36,14 @@ x_train, y_train, x_val, y_val = DataObj(config).loadData()
 x_train[-1][0]
 x_train[-1][1]
 
-len(x_train)
-len(x_val)
+len(x_train[0])
+len(y_val)
 x_train[1030]
 y_train[1]
 # %%
-with open('./datasets/preprocessed/'+'20200921-123920'+'/'+'data_obj', 'rb') as f:
+with open('./datasets/preprocessed/'+'20200925-184122'+'/'+'fixed_arr', 'rb') as f:
     data_obj = pickle.load(f)
+
 data_obj.validation_episodes[3]
 
 m_df, y_df = data_obj.get_episode_df(data_obj.val_m_df, data_obj.val_y_df, 1635)

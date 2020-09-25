@@ -58,7 +58,7 @@ class AbstractModel(tf.keras.Model):
     @tf.function
     def train_step(self, xs, targets, optimizer):
         with tf.GradientTape() as tape:
-            predictions = self(xs)
+            predictions = self(xs, training=True)
             loss = nll_loss(targets, predictions, self.model_type)
 
         gradients = tape.gradient(loss, self.trainable_variables)
@@ -68,7 +68,7 @@ class AbstractModel(tf.keras.Model):
 
     @tf.function
     def test_step(self, xs, targets):
-        predictions = self(xs)
+        predictions = self(xs, training=False)
         loss = nll_loss(targets, predictions, self.model_type)
         self.test_loss.reset_states()
         self.test_loss(loss)

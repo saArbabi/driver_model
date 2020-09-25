@@ -28,7 +28,7 @@ def modelTrain(exp_id, explogs):
     train_ds = model.batch_data(x_train, y_train)
     test_ds = model.batch_data(x_val, y_val)
 
-    write_graph = 'False'
+    write_graph = 'True'
     batch_i = 0
     start_epoch = explogs[exp_id]['epoch']
     end_epoch = start_epoch + model.epochs_n
@@ -36,6 +36,7 @@ def modelTrain(exp_id, explogs):
     for epoch in range(start_epoch, end_epoch):
         for xs, targets in train_ds:
             if write_graph == 'True':
+                print(tf.shape(xs))
                 graph_write = tf.summary.create_file_writer(model.exp_dir+'/logs/')
                 tf.summary.trace_on(graph=True, profiler=False)
                 model.train_step(xs, targets, optimizer)
@@ -54,7 +55,7 @@ def modelTrain(exp_id, explogs):
         utils.updateExpstate(model, explogs, exp_id, 'in progress')
 
         ckpt.step.assign_add(1)
-        if int(ckpt.step) % 10 == 0:
+        if int(ckpt.step) % 5 == 0:
             save_path = manager.save()
 
     utils.updateExpstate(model, explogs, exp_id, 'complete')
