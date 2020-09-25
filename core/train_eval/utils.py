@@ -45,14 +45,12 @@ def updateExpstate(model, explogs, exp_id, exp_state):
         # first remove failed experiments
         if value['exp_state'] != ('complete' or 'NA') and key != exp_id:
             explogs[key]['exp_state'] = 'failed'
-        else:
-            explogs[exp_id]['exp_state'] = exp_state
-            explogs[exp_id]['train_loss'] = round(model.train_loss.result().numpy().item(), 2)
-            explogs[exp_id]['val_loss'] = round(model.test_loss.result().numpy().item(), 2)
-            explogs[exp_id]['epoch'] += 1
 
+    explogs[exp_id]['exp_state'] = exp_state
+    explogs[exp_id]['train_loss'] = round(model.train_loss.result().numpy().item(), 2)
+    explogs[exp_id]['val_loss'] = round(model.test_loss.result().numpy().item(), 2)
+    explogs[exp_id]['epoch'] += 1
     dumpExplogs(explogs_path, explogs)
-
 
 def delete_experiment(exp_id):
     dirName = './models/experiments/'+exp_id

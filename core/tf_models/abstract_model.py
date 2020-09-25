@@ -11,8 +11,6 @@ from tensorflow.keras.callbacks import TensorBoard
 from datetime import datetime
 from models.core.tf_models.utils import nll_loss, covDet
 
-
-
 # %%
 class AbstractModel(tf.keras.Model):
     def __init__(self, config):
@@ -65,12 +63,14 @@ class AbstractModel(tf.keras.Model):
 
         gradients = tape.gradient(loss, self.trainable_variables)
         optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        self.train_loss.reset_states()
         self.train_loss(loss)
 
     @tf.function
     def test_step(self, xs, targets):
         predictions = self(xs)
         loss = nll_loss(targets, predictions, self.model_type)
+        self.test_loss.reset_states()
         self.test_loss(loss)
 
     def batch_data(self, x, y):
@@ -86,9 +86,9 @@ class FFMDN(AbstractModel):
     def architecture_def(self, config):
         """pi, mu, sigma = NN(x; theta)"""
         # for n in range(self.layers_n):
-        self.hidden_layers =  [Dense(self.neurons_n, activation='relu') for _
+        self.net_layers =  [Dense(self.neurons_n, activation='relu') for _
                                                 in range(self.config['layers_n'])]
-        self.dropout_layers = [Dropout(0.25) for _ in range(self.config['layers_n']-1)]
+        self.dropout_layers = Dropout(0.25)
 
         self.alphas = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long = Dense(self.components_n, name="mus_long")
@@ -102,12 +102,10 @@ class FFMDN(AbstractModel):
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-        x = self.hidden_layers[0](inputs)
-        drop_i = 0
-        for layer in self.hidden_layers[1:]:
-            x = self.dropout_layers[drop_i](x)
+        x = self.net_layers[0](inputs)
+        # x = self.dropout_layers(x)
+        for layer in self.net_layers[1:]:
             x = layer(x)
-            drop_i += 1
 
         alphas = self.alphas(x)
         mus_long = self.mus_long(x)

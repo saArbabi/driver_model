@@ -115,13 +115,16 @@ vis_dataDistribution(_fadj_df, o_trim_col)
 vis_dataDistribution(_m_df, m_trim_col+['pc'])
 
 #%%
-validation_suitable_episodes = spec.loc[(spec['frm_n']>60) &
-                                (spec['f_id']>0) &
-                                (spec['fadj_id']>0)]['episode_id'].values
+all_episodes = list(spec['episode_id'].values)
+validation_episodes = list(np.random.choice(all_episodes, int(0.1*len(all_episodes))))
+test_episodes = spec.loc[(spec['episode_id'].isin(validation_episodes)) &
+                                        (spec['frm_n']>60) &
+                                        (spec['f_id']>0) &
+                                        (spec['fadj_id']>0)]['episode_id'].sample(50).values
 
-validation_episodes = list(np.random.choice(validation_suitable_episodes, 50))
+len(test_episodes)
 training_episodes = list(set(spec['episode_id']).symmetric_difference(set(validation_episodes)))
-len(validation_episodes)/len(training_episodes)
+len(validation_epijhsodes)/len(training_episodes)
 # %%
 
 
@@ -150,3 +153,4 @@ data_saver(fixed_df, 'fixed_df0')
 
 save_list(training_episodes, 'training_episodes')
 save_list(validation_episodes, 'validation_episodes')
+save_list(test_episodes, 'test_episodes')

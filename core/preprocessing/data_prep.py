@@ -29,7 +29,7 @@ def read_episode_ids():
     global episode_ids
 
     episode_ids = {}
-    for name in ['training_episodes', 'validation_episodes']:
+    for name in ['training_episodes', 'validation_episodes', 'test_episodes']:
         file_name = './datasets/'+name+'.txt'
         with open(file_name, "r") as file:
             my_list = [int(item) for item in file.read().split()]
@@ -258,10 +258,10 @@ class DataPrep():
                 pickle.dump(self, f)
 
             with open(self.dirName+'/val_m_df', "wb") as f:
-                pickle.dump(m_df0[m_df0['episode_id'].isin(episode_ids['validation_episodes'])], f)
+                pickle.dump(m_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
 
             with open(self.dirName+'/val_y_df', "wb") as f:
-                pickle.dump(y_df0[m_df0['episode_id'].isin(episode_ids['validation_episodes'])], f)
+                pickle.dump(y_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
 
     def data_prep(self, episode_type=None):
         if not episode_type:

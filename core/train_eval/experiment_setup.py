@@ -31,7 +31,7 @@ def modelTrain(exp_id, explogs):
     write_graph = 'False'
     batch_i = 0
     start_epoch = explogs[exp_id]['epoch']
-    end_epoch = start_epoch +  model.epochs_n
+    end_epoch = start_epoch + model.epochs_n
 
     for epoch in range(start_epoch, end_epoch):
         for xs, targets in train_ds:

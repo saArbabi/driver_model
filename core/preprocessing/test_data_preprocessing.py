@@ -37,8 +37,8 @@ x_train[-1][0]
 x_train[-1][1]
 
 len(x_train)
-len(x_val[0])
-x_train[1]
+len(x_val)
+x_train[1030]
 y_train[1]
 # %%
 with open('./datasets/preprocessed/'+'20200921-123920'+'/'+'data_obj', 'rb') as f:
