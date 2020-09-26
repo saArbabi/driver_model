@@ -39,7 +39,7 @@ class AbstractModel(tf.keras.Model):
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
     def save_batch_metrics(self, xs, targets, batch_i):
-        predictions = self(xs)
+        predictions = self(xs, training=True)
         loss = nll_loss(targets, predictions, self.model_type)
 
         with self.writer_2.as_default():

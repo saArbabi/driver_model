@@ -196,7 +196,7 @@ class DataPrep():
             epis_i = v_x_arr[step:step+self.max_traj_n]
             target_i = v_y_arr[step:step+self.max_traj_n]
 
-            episode_i_len = len(epis_i)
+            episode_i_len = len(epis_i) # len(epis_i) not always equals self.max_traj_n
             ts = self.get_timeStamps(episode_i_len)
             epis_i = np.insert(epis_i, [0], f_x_arr[step], axis=1)
             mini_episodes_x.append(np.concatenate([ts, epis_i], axis=1))
@@ -214,8 +214,8 @@ class DataPrep():
         v_x_arr = self.applystateScaler(v_x_arr)
         v_y_arr = self.applytargetScaler(v_y_arr)
 
-        f_x_arr = self.get_fixedSate(fixed_arr0, episode_id)
-        vf_x_arr = np.concatenate([v_x_arr, f_x_arr], axis=1)
+        # f_x_arr = self.get_fixedSate(fixed_arr0, episode_id)
+        # vf_x_arr = np.concatenate([v_x_arr, f_x_arr], axis=1)
         # vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
 
         # v_x_arr, v_y_arr = self.obsSequence(v_x_arr, v_y_arr)
@@ -226,7 +226,7 @@ class DataPrep():
         #     self.Xs.extend(vf_x_arr[i])
         #     self.Ys.extend(vf_y_arr[i])
 
-        self.Xs.extend(vf_x_arr)
+        self.Xs.extend(v_x_arr)
         self.Ys.extend(v_y_arr)
 
     def shuffArr(self, arr):
@@ -257,13 +257,13 @@ class DataPrep():
             with open(self.dirName+'/data_obj', "wb") as f:
                 pickle.dump(self, f)
 
-            with open(self.dirName+'/val_m_df', "wb") as f:
+            with open(self.dirName+'/test_m_df', "wb") as f:
                 pickle.dump(m_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
 
-            with open(self.dirName+'/val_y_df', "wb") as f:
+            with open(self.dirName+'/test_y_df', "wb") as f:
                 pickle.dump(y_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
 
-            with open(self.dirName+'/fixed_arr', "wb") as f:
+            with open(self.dirName+'/test_fixed_arr', "wb") as f:
                 pickle.dump(fixed_arr0[np.isin(fixed_arr0[:,0], episode_ids['test_episodes'])], f)
 
 

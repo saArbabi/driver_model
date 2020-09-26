@@ -3,12 +3,7 @@ from models.core.train_eval import utils
 # from models.core.train_eval.model_evaluation import modelEvaluate
 from models.core.preprocessing.data_obj import DataObj
 import tensorflow as tf
-import os
-import numpy as np
 from models.core.tf_models.utils import nll_loss
-from tensorflow import keras
-import random
-from datetime import datetime
 
 def modelTrain(exp_id, explogs):
     config = utils.loadConfig(exp_id)

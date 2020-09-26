@@ -24,8 +24,9 @@ config = {
                 "m_s":["vel", "pc"],
                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
                 "retain":["vel"],
-                "Note": "baseline - no time stamps"
+                # "Note": "baseline - no time stamps"
                 # "Note": "Here I am adding the time stamp"
+                "Note": "Here I remove partially correlated vehicles completely"
 },
 "exp_id": "NA",
 "model_type": "merge_policy",
@@ -37,8 +38,9 @@ x_train[-1][0]
 x_train[-1][1]
 
 len(x_train[0])
-len(y_val)
-x_train[1030]
+len(x_val[0])
+x_train[1]
+
 y_train[1]
 # %%
 with open('./datasets/preprocessed/'+'20200925-184122'+'/'+'fixed_arr', 'rb') as f:
