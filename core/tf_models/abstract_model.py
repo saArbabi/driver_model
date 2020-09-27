@@ -9,7 +9,7 @@ from keras import backend as K
 from tensorflow.keras.layers import Input, Dense, Dropout, Concatenate
 from tensorflow.keras.callbacks import TensorBoard
 from datetime import datetime
-from models.core.tf_models.utils import nll_loss, covDet
+from models.core.tf_models.utils import nll_loss, varMin
 
 # %%
 class AbstractModel(tf.keras.Model):
@@ -43,10 +43,15 @@ class AbstractModel(tf.keras.Model):
         loss = nll_loss(targets, predictions, self.model_type)
 
         with self.writer_2.as_default():
-            cov_det = covDet(predictions, 'max', self.model_type)
-            tf.summary.scalar('det_max', cov_det, step=batch_i)
-            cov_det = covDet(predictions, 'min', self.model_type)
-            tf.summary.scalar('det_min', cov_det, step=batch_i)
+            if self.model_type == 'merge_policy':
+                var_long_min, var_lat_min = varMin(predictions, self.model_type)
+                tf.summary.scalar('var_long_min', var_long_min, step=batch_i)
+                tf.summary.scalar('var_lat_min', var_lat_min, step=batch_i)
+
+            elif model_type == '///':
+                var_long_min = varMin(predictions, self.model_type)
+                tf.summary.scalar('var_long_min', var_long_min, step=batch_i)
+
         self.writer_2.flush()
 
     def save_epoch_metrics(self, epoch):
