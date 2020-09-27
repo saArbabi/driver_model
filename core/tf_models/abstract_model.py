@@ -34,31 +34,29 @@ class AbstractModel(tf.keras.Model):
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
         log_dir = self.exp_dir+'/logs/'
         self.writer_1 = tf.summary.create_file_writer(log_dir+'epoch_loss')
-        self.writer_2 = tf.summary.create_file_writer(log_dir+'cov_det')
+        self.writer_2 = tf.summary.create_file_writer(log_dir+'variances')
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    def save_batch_metrics(self, xs, targets, batch_i):
-        predictions = self(xs, training=True)
-        loss = nll_loss(targets, predictions, self.model_type)
-
-        with self.writer_2.as_default():
-            if self.model_type == 'merge_policy':
-                var_long_min, var_lat_min = varMin(predictions, self.model_type)
-                tf.summary.scalar('var_long_min', var_long_min, step=batch_i)
-                tf.summary.scalar('var_lat_min', var_lat_min, step=batch_i)
-
-            elif model_type == '///':
-                var_long_min = varMin(predictions, self.model_type)
-                tf.summary.scalar('var_long_min', var_long_min, step=batch_i)
-
-        self.writer_2.flush()
-
-    def save_epoch_metrics(self, epoch):
+    def save_epoch_metrics(self, xs, targets, epoch):
         with self.writer_1.as_default():
             tf.summary.scalar('_train', self.train_loss.result(), step=epoch)
             tf.summary.scalar('_val', self.test_loss.result(), step=epoch)
         self.writer_1.flush()
+
+        with self.writer_2.as_default():
+            predictions = self(xs, training=True)
+            loss = nll_loss(targets, predictions, self.model_type)
+
+            if self.model_type == 'merge_policy':
+                var_long_min, var_lat_min = varMin(predictions, self.model_type)
+                tf.summary.scalar('var_long_min', var_long_min, step=epoch)
+                tf.summary.scalar('var_lat_min', var_lat_min, step=epoch)
+
+            elif self.model_type == '///':
+                var_long_min = varMin(predictions, self.model_type)
+                tf.summary.scalar('var_long_min', var_long_min, step=epoch)
+        self.writer_2.flush()
 
     @tf.function
     def train_step(self, xs, targets, optimizer):

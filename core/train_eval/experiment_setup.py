@@ -11,8 +11,9 @@ def modelTrain(exp_id, explogs):
     optimizer = tf.optimizers.Adam(model.learning_rate)
 
     # for more on checkpointing model see: https://www.tensorflow.org/guide/checkpoint
-    ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
-    manager = tf.train.CheckpointManager(ckpt, model.exp_dir+'/model_dir', max_to_keep=3)
+    ckpt = tf.train.Checkpoint(step=tf.Variable(1), net=model) # no need for optimizer for now
+    # ckpt = tf.train.Checkpoint(step=tf.Variable(1), optimizer=optimizer, net=model)
+    manager = tf.train.CheckpointManager(ckpt, model.exp_dir+'/model_dir', max_to_keep=None)
     ckpt.restore(manager.latest_checkpoint)
     if manager.latest_checkpoint:
         print("Restored from {}".format(manager.latest_checkpoint))
@@ -24,7 +25,6 @@ def modelTrain(exp_id, explogs):
     test_ds = model.batch_data(x_val, y_val)
 
     write_graph = 'True'
-    batch_i = 0
     start_epoch = explogs[exp_id]['epoch']
     end_epoch = start_epoch + model.epochs_n
 
@@ -40,13 +40,11 @@ def modelTrain(exp_id, explogs):
                 write_graph = 'False'
             else:
                 model.train_step(xs, targets, optimizer)
-            model.save_batch_metrics(xs, targets, batch_i)
-            batch_i += 1
 
         for xs, targets in test_ds:
             model.test_step(xs, targets)
 
-        model.save_epoch_metrics(epoch)
+        model.save_epoch_metrics(xs, targets, epoch)
         utils.updateExpstate(model, explogs, exp_id, 'in progress')
 
         ckpt.step.assign_add(1)

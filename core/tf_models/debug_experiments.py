@@ -119,7 +119,7 @@ def modelTrain(config):
     write_graph = 'True'
     batch_i = 0
     t0 = time.time()
-    for epoch in range(1):
+    for epoch in range(50):
         for xs, targets in train_ds:
             if write_graph == 'True':
                 print(tf.shape(xs))
@@ -131,7 +131,7 @@ def modelTrain(config):
                 write_graph = 'False'
             else:
                 model.train_step(xs, targets, optimizer)
-            # model.save_batch_metrics(xs, targets, batch_i)
+            model.save_batch_metrics(xs, targets, batch_i)
             batch_i += 1
 
         for xs, targets in test_ds:

@@ -11,7 +11,6 @@ def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=2, name='stack')
     # sigmas_long**2 is covariance of sigmas_long with itself
     cov = tf.stack([col1, col2], axis=2, name='cov')
-    print('cov shape: ', cov.shape)
 
     return cov
 
@@ -25,7 +24,6 @@ def get_pdf(parameter_vector, model_type):
             components_distribution=tfd.Normal(
                 loc=mus,
                 scale=sigmas))
-        print('mu shape: ', mus.shape)
 
     if model_type == 'merge_policy':
         alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos = slice_pvector(
@@ -40,7 +38,6 @@ def get_pdf(parameter_vector, model_type):
                 loc=mu,
                 scale_tril=tf.linalg.cholesky(cov), name='MultivariateNormalTriL'))
 
-    print(str(mvn))
     return mvn
 
 def slice_pvector(parameter_vector, model_type):
@@ -57,10 +54,10 @@ def slice_pvector(parameter_vector, model_type):
         return tf.split(parameter_vector, n_params, axis=0)
 
 def varMin(parameter_vector, model_type):
-    if self.model_type == 'merge_policy':
+    if model_type == 'merge_policy':
         _, _, sigmas_long, _, sigmas_lat, _ = slice_pvector(parameter_vector, model_type)
 
-        return tf.math.reduce_min(tf.math.square(sigmas_long)),
+        return tf.math.reduce_min(tf.math.square(sigmas_long)), \
                                     tf.math.reduce_min(tf.math.square(sigmas_lat))
 
     elif model_type == '///':
@@ -76,12 +73,9 @@ def nll_loss(y, parameter_vector, model_type):
     if model_type == '///':
         log_likelihood = mvn.log_prob(tf.reshape(y, [1, y_shape[0]]))
         # shape: [sample_shape, batch_shape]
-        print(log_likelihood.shape)
-
     if model_type == 'merge_policy':
         log_likelihood = mvn.log_prob(tf.reshape(y, [1, y_shape[0], 2]))
         # shape: [sample_shape, batch_shape, event_shape]
-        print(log_likelihood.shape)
     return -tf.reduce_mean(log_likelihood)
 
 def get_predictionMean(parameter_vector, model_type):
