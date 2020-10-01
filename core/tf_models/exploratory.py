@@ -53,8 +53,13 @@ plt.legend(['val_loss', 'train_loss'])
 # %%
 """Autoencoder - Recursive prediction
 """
-time = np.arange(0, 100, 0.1)
-sin = np.sin(time)
+x_len = 10
+y_len = 10
+time = np.arange(0, 500, 0.1)
+time_stamp = np.arange(0, y_len/10, 0.1)
+time_stamp.shape = (y_len,1)
+sin = np.sin(time)/5
+# plt.plot(sin)
 # sin = np.sin(time) + np.random.normal(scale=0.5, size=len(time))
 df = pd.DataFrame(dict(sine=sin), index=time, columns=['sine'])
 
@@ -62,23 +67,25 @@ train_size = int(len(df) * 0.8)
 test_size = len(df) - train_size
 train, test = df.iloc[0:train_size], df.iloc[train_size:len(df)]
 print(len(train), len(test))
+# Take all numerical cols and normalize data b/w 0 and 1
+
 def create_dataset(data, x_len, y_len):
     Xs, ys_input, ys_target = [], [], []
     for i in range(len(data) - x_len - y_len):
-        conditioning_param = np.random.choice(range(-3,3)) # to test if I can condition the model
+        conditioning_param = np.random.choice([0.5, -0.5]) # to test if I can condition the model
         x_sequence = data.iloc[i:(i + x_len)].values
         y_input_sequence = data.iloc[(i + x_len):(i + x_len + y_len)].values
         y_target_sequence = data.iloc[(i + x_len + 1):(i + x_len + y_len + 1)].values + conditioning_param
 
         y_input_sequence = np.insert(y_input_sequence, [0], conditioning_param, axis=1)
+        y_input_sequence = np.insert(y_input_sequence, [0], time_stamp, axis=1)
         Xs.append(x_sequence)
         ys_input.append(y_input_sequence)
         ys_target.append(y_target_sequence)
 
     return np.array(Xs), np.array(ys_input), np.array(ys_target)
 
-x_len = 10
-y_len = 10
+
 # reshape to [samples, time_steps, n_features]
 xs, ys_input, ys_target = create_dataset(train, x_len, y_len)
 xs_val, ys_input_val, ys_target_val = create_dataset(test, x_len, y_len)
@@ -89,6 +96,13 @@ print(xs_val.shape, ys_input_val.shape, ys_target_val.shape)
 # plt.plot(range(x_len),xs[0])
 # plt.plot(range(x_len,x_len+y_len),ys_input[0])
 # plt.plot(range(x_len + 1,x_len+y_len + 1),ys_target[0])
+start = 0
+
+for i in [10, 100, 500]:
+    end = start + step_n
+    plt.plot(range(start, end), ys_input_val[i][:, 2].flatten(), color='green')
+    plt.plot(range(start, end), ys_target_val[i].flatten(), color='red')
+    start += step_n
 # %%
 
 
@@ -108,7 +122,7 @@ encoder_outputs, state_h, state_c = encoder(encoder_inputs)
 encoder_states = [state_h, state_c]
 
 # Set up the decoder, using `encoder_states` as initial state.
-decoder_inputs = keras.Input(shape=(None, 2))
+decoder_inputs = keras.Input(shape=(None, 3))
 
 # We set up our decoder to return full output sequences,
 # and to return internal states as well. We don't use the
@@ -133,7 +147,11 @@ history = model.fit(
     [xs, ys_input],
     ys_target,
     batch_size=32,
-    epochs=50,
+<<<<<<< Updated upstream
+    epochs=5,
+=======
+    epochs=20,
+>>>>>>> Stashed changes
     validation_data=([xs_val, ys_input_val], ys_target_val),
     shuffle=False,
     verbose=0)
@@ -170,11 +188,16 @@ decoder_outputs = decoder_dense(decoder_outputs)
 decoder_model = keras.Model(
     [decoder_inputs] + decoder_states_inputs, [decoder_outputs] + decoder_states
 )
+model.summary()
 # %%
 # Reverse-lookup token index to decode sequences back to
 # something readable.
-y_feature_n = 2
+<<<<<<< Updated upstream
+y_feature_n = 3
 target_seq = np.zeros((1, 1, y_feature_n))
+=======
+y_feature_n = 2
+>>>>>>> Stashed changes
 def decode_sequence(input_seq, input_t0, step_n):
     # Encode the input as state vectors.
     states_value = encoder_model.predict(input_seq)
@@ -182,13 +205,21 @@ def decode_sequence(input_seq, input_t0, step_n):
     # Generate empty target sequence of length 1.
     target_seq = np.zeros((1, 1, y_feature_n))
     # Populate the first character of target sequence with the start character.
-    target_seq[0, 0, 1] = input_t0
-    conditioning_param = 1
+<<<<<<< Updated upstream
+    conditioning_param = input_t0[0][1]
+    target_seq[0, 0, 0] = input_t0[0][0]
+    target_seq[0, 0, 1] = conditioning_param
+    target_seq[0, 0, 2] = input_t0[0][2]
+=======
+    target_seq[0, 0, 1] = input_t0[0][1]
+    conditioning_param = input_t0[0][0]
     target_seq[0, 0, 0] = conditioning_param
+>>>>>>> Stashed changes
 
     # Sampling loop for a batch of sequences
     # (to simplify, here we assume a batch of size 1).
     decoded_seq = []
+    time_stamp = 0
     for i in range(step_n):
         output_, h, c = decoder_model.predict([target_seq] + states_value)
 
@@ -196,17 +227,21 @@ def decode_sequence(input_seq, input_t0, step_n):
         decoded_seq.append(output_)
         # Update the target sequence (of length 1).
         target_seq = np.zeros((1, 1, y_feature_n))
-        target_seq[0, 0, 1] = output_
-        target_seq[0, 0, 0] = conditioning_param
+        time_stamp += 0.1
+
+        target_seq[0, 0, 0] = time_stamp
+        target_seq[0, 0, 1] = conditioning_param
+        target_seq[0, 0, 2] = output_
 
         # Update states
         states_value = [h, c]
+
     return decoded_seq
 
 input_seq = xs_val[0]
 step_n = 10
 input_seq.shape = (1, 10, 1)
-decoded_seq = decode_sequence(input_seq, ys_input_val[0][0][1], step_n)
+decoded_seq = decode_sequence(input_seq, ys_input_val[0], step_n)
 np.array(decoded_seq).flatten()
 # %%
 
@@ -214,13 +249,35 @@ np.array(decoded_seq).flatten()
 len(x_true)
 # plt.plot(range(100),x_true)
 # plt.plot(range(x_len,x_len+y_len),ys_input_val[0])
-plt.plot(range(y_len),ys_input_val[0][:, 1])
-plt.plot(range(step_n), np.array(decoded_seq).flatten())
+start = 0
+<<<<<<< Updated upstream
+legend = []
+ys_target_val.shape
 
-plt.plot(range(y_len),ys_input_val[0][:, 1])
-plt.plot(range(step_n), np.array(decoded_seq).flatten())
+for i in [10, 100, 500]:
+    end = start + step_n
+    decoded_seq = decode_sequence(input_seq, ys_input_val[i], step_n)
+
+    plt.plot(range(start, end), ys_input_val[i][:, 2].flatten(), color='green')
+    plt.plot(range(start, end), ys_target_val[i].flatten(), color='red')
+    # plt.plot(range(start, end), np.array(decoded_seq).flatten())
+    legend.append(str(ys_input_val[i][0][1]))
+    start += step_n
+plt.grid()
+plt.legend(legend)
+
 
 # %%
+for i in range(3):
+    end = start + step_n
+    plt.plot(range(start, end), ys_input_val[i][:, 1].flatten(), color='red')
+    start += step_n
+plt.grid()
+
+# %%
+ys_target_val[0]
+
+ys_input_val[0]
 for seq_index in range(20):
     # Take one sequence (part of the training set)
     # for trying out decoding.
@@ -237,3 +294,15 @@ test_output = model.predict(test_input, verbose=0)
 print(test_output)
 
 # %%
+=======
+for i in [10, 50, 150]:
+    end = start + step_n
+    decoded_seq = decode_sequence(input_seq, ys_input_val[i], step_n)
+
+    plt.plot(range(start, end), ys_input_val[i][:, 1].flatten(), color='green')
+    plt.plot(range(start, end), ys_target_val[i].flatten(), color='red')
+    # plt.plot(range(start, end), np.array(decoded_seq).flatten())
+    start += step_n
+plt.grid()
+ 
+>>>>>>> Stashed changes
