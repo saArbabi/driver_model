@@ -107,6 +107,7 @@ for i in [10, 100, 500]:
 
 
 # %%
+
 """model configuration
 """
 latent_dim = 20  # Latent dimensionality of the encoding space.
@@ -186,6 +187,9 @@ decoder_model = keras.Model(
 )
 model.summary()
 # %%
+"""
+Model evaluation
+"""
 # Reverse-lookup token index to decode sequences back to
 # something readable.
 y_feature_n = 3
@@ -260,4 +264,3 @@ for i in range(3):
 plt.grid()
 
 # %%
- 
