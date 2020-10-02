@@ -29,7 +29,8 @@ class DataObj():
         return time
 
     def loadPickledObj(self, dataFolderName):
-        obj_names = ['x_train', 'y_train', 'x_val', 'y_val']
+        obj_names = ['states_train', 'targets_train', 'conditions_train',
+                                    'states_val', 'targets_val', 'conditions_val']
         data_objs = []
 
         for item in obj_names:
