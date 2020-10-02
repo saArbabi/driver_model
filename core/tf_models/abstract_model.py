@@ -6,7 +6,7 @@ tf.random.set_seed(2020)
 import os
 from tensorflow.python.ops import math_ops
 from keras import backend as K
-from tensorflow.keras.layers import Input, Dense, Dropout, Concatenate
+from tensorflow.keras.layers import Input, Dense, Dropout, Concatenate, LSTM
 from tensorflow.keras.callbacks import TensorBoard
 from datetime import datetime
 from models.core.tf_models.utils import nll_loss, varMin
@@ -76,10 +76,10 @@ class AbstractModel(tf.keras.Model):
         self.test_loss.reset_states()
         self.test_loss(loss)
 
-    def batch_data(self, x, y):
-        return tf.data.Dataset.from_tensor_slices((x.astype("float32"),
-                                        y.astype("float32"))).batch(self.batch_n)
-
+    def batch_data(self, states, targets, conditions):
+        states, targets, conditions = tf.data.Dataset.from_tensor_slices((x.astype("float32"),
+                    y.astype("float32"), y.astype("float32"))).batch(self.batch_n)
+        return states, targets, conditions
 
 class FFMDN(AbstractModel):
     def __init__(self, config):
@@ -122,3 +122,59 @@ class FFMDN(AbstractModel):
 
 class GRUMDN(AbstractModel):
     pass
+
+class Encoder(tf.keras.Model):
+    def __init__(self, config):
+        super(Encoder, self).__init__(name="Encoder")
+        self.latent_dim = 20
+        self.architecture_def(config)
+
+    def architecture_def(self, config):
+        self.lstm_layers = LSTM(self.latent_dim, return_state=True)
+
+    def call(self, inputs):
+        # Defines the computation from inputs to outputs
+        _, state_h, state_c = self.lstm_layers(inputs)
+        return [state_h, state_c]
+
+class Decoder(tf.keras.Model):
+    def __init__(self, config):
+        super(Decoder, self).__init__(name="Decoder")
+        self.latent_dim = 20
+        self.architecture_def(config)
+
+    def architecture_def(self, config):
+        self.lstm_layers = LSTM(self.latent_dim, return_sequences=True, return_state=True)
+        self.mus = Dense(1)
+        self.sigmas = Dense(1, activation=K.exp)
+        self.pvector = Concatenate(name="output") # parameter vector
+
+    def call(self, inputs):
+        # input[0] = conditions
+        # input[1] = encoder states
+        decoder_outputs, state_h, state_c = self.lstm_layers(inputs[0], initial_state=inputs[1])
+        mu = self.mus(decoder_outputs)
+        sigma = self.sigmas(decoder_outputs)
+        self.state_h = state_h
+        self.state_c = state_c
+        self.decoder_outputs = decoder_outputs
+
+        return self.pvector([mu, sigma])
+
+
+class CAE(AbstractModel):
+    def __init__(self, config):
+        super(CAE, self).__init__(config)
+        self.encoder_model = Encoder(config)
+        self.decoder_model = Decoder(config)
+
+    def architecture_def(self, X):
+        pass
+
+    def call(self, inputs):
+        # Defines the computation from inputs to outputs
+        # input[0] = state obs
+        # input[1] = conditions
+        encoder_states = self.encoder_model(inputs[0])
+        pvector = self.decoder_model([inputs[1], encoder_states])
+        return pvector
