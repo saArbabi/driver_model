@@ -65,14 +65,11 @@ def modelTrain(config):
                 write_graph = 'False'
             else:
                 model.train_step(xs, targets, optimizer)
-            model.save_batch_metrics(xs, targets, batch_i)
             batch_i += 1
 
         for xs, targets in test_ds:
             model.test_step(xs, targets)
 
-        model.save_epoch_metrics(epoch)
-    # modelEvaluate(model, validation_data, config)
     print('experiment duration ', time.time() - t0)
     return model
 
@@ -93,6 +90,7 @@ config = {
 model = modelTrain(config)
 X_train, X_test, y_train, y_test = build_toy_dataset()
 predictions = model(X_test)
+
 y_pred = get_pdf_samples(1, predictions, '///')
 
 plt.scatter(X_test, y_test)
@@ -108,7 +106,8 @@ get_pdf_samples = utils.get_pdf_samples
 
 config = loadConfig('series000exp001')
 config['exp_id'] = 'debug_experiment_2'
-
+train_loss = []
+valid_loss = []
 def modelTrain(config):
     model = am.FFMDN(config)
     optimizer = tf.optimizers.Adam(model.learning_rate)
@@ -119,7 +118,7 @@ def modelTrain(config):
     write_graph = 'True'
     batch_i = 0
     t0 = time.time()
-    for epoch in range(50):
+    for epoch in range(20):
         for xs, targets in train_ds:
             if write_graph == 'True':
                 print(tf.shape(xs))
@@ -131,28 +130,26 @@ def modelTrain(config):
                 write_graph = 'False'
             else:
                 model.train_step(xs, targets, optimizer)
-            model.save_batch_metrics(xs, targets, batch_i)
             batch_i += 1
 
         for xs, targets in test_ds:
             model.test_step(xs, targets)
-
-        model.save_epoch_metrics(epoch)
+        train_loss.append(round(model.train_loss.result().numpy().item(), 2))
+        valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
     # modelEvaluate(model, validation_data, config)
     print('experiment duration ', time.time() - t0)
     return model
 
 
 model = modelTrain(config)
+plt.plot(valid_loss)
+plt.plot(train_loss)
 
 
 
 # %%
-y_pred = get_pdf_samples(1, predictions, '///')
-# y_pred = get_predictionMean(predictions, '///')
-plt.scatter(X_test, y_test)
-# plt.scatter(X_train, y_train)
-plt.scatter(X_test, y_pred)
+plt.plot(valid_loss)
+plt.plot(train_loss)
 
 
 # %%

@@ -71,7 +71,7 @@ def nll_loss(y, parameter_vector, model_type):
     y_shape = y.shape
 
     if model_type == '///':
-        log_likelihood = mvn.log_prob(tf.reshape(y, [1, y_shape[0]]))
+        log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0]]))
         # shape: [sample_shape, batch_shape]
     if model_type == 'merge_policy':
         log_likelihood = mvn.log_prob(tf.reshape(y, [1, y_shape[0], 2]))
