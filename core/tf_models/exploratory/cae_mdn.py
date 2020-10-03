@@ -58,7 +58,6 @@ def create_dataset(data, x_len, y_len):
 xs, ys_input, ys_target = create_dataset(train, x_len, y_len)
 xs_val, ys_input_val, ys_target_val = create_dataset(test, x_len, y_len)
 # X_test, y_test = create_dataset(test, x_len, y_len)
-len(y_test)
 print(xs.shape, ys_input.shape, ys_target.shape)
 print(xs_val.shape, ys_input_val.shape, ys_target_val.shape)
 # plt.plot(range(x_len),xs[0])
@@ -139,7 +138,6 @@ plt.grid()
 Train inference
 """
 import copy
-
 # Define sampling models
 model = copy.copy(model)
 encoder_inputs = model.input[0]  # input_1
@@ -190,6 +188,7 @@ def decode_sequence(input_seq, input_t0, step_n):
         target_seq = np.zeros((1, 1, y_feature_n))
         # Populate the first character of target sequence with the start character.
         target_seq[0, 0, 0] = input_t0
+
         for i in range(step_n):
             output_, h, c = decoder_model([target_seq] + states_value)
             # print(output_.stddev())
@@ -227,4 +226,3 @@ for i in range(50):
     end = start + x_len
     plt.plot(range(start, end), xs_val[i].flatten(), color='red')
     start += 1
- 

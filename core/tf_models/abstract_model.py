@@ -8,8 +8,9 @@ from tensorflow.python.ops import math_ops
 from keras import backend as K
 from tensorflow.keras.layers import Input, Dense, Dropout, Concatenate, LSTM
 from tensorflow.keras.callbacks import TensorBoard
+from tensorflow_probability import distributions as tfd
 from datetime import datetime
-from models.core.tf_models.utils import nll_loss, varMin
+# from models.core.tf_models.utils import self.nll_loss, varMin
 
 # %%
 class AbstractModel(tf.keras.Model):
@@ -26,6 +27,7 @@ class AbstractModel(tf.keras.Model):
         self.batch_n = self.config['batch_n']
         self.components_n = self.config['components_n'] # number of Mixtures
         self.callback = self.callback_def()
+        self.nll_loss = lambda y, p_y: -p_y.log_prob(tf.reshape(y, (tf.shape(y)[0], 10)))
 
     def architecture_def(self, X):
         raise NotImplementedError()
@@ -38,15 +40,15 @@ class AbstractModel(tf.keras.Model):
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    def save_epoch_metrics(self, xs, targets, epoch):
+    def save_epoch_metrics(self, states, targets, conditions, epoch):
         with self.writer_1.as_default():
             tf.summary.scalar('_train', self.train_loss.result(), step=epoch)
             tf.summary.scalar('_val', self.test_loss.result(), step=epoch)
         self.writer_1.flush()
 
         with self.writer_2.as_default():
-            predictions = self(xs, training=True)
-            loss = nll_loss(targets, predictions, self.model_type)
+            predictions = self([states, conditions], training=True)
+            loss = self.nll_loss(targets, predictions)
 
             if self.model_type == 'merge_policy':
                 var_long_min, var_lat_min = varMin(predictions, self.model_type)
@@ -59,10 +61,10 @@ class AbstractModel(tf.keras.Model):
         self.writer_2.flush()
 
     @tf.function
-    def train_step(self, xs, targets, optimizer):
+    def train_step(self, states, targets, conditions, optimizer):
         with tf.GradientTape() as tape:
-            predictions = self(xs, training=True)
-            loss = nll_loss(targets, predictions, self.model_type)
+            predictions = self([states, conditions], training=True)
+            loss = self.nll_loss(targets, predictions)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         optimizer.apply_gradients(zip(gradients, self.trainable_variables))
@@ -70,16 +72,16 @@ class AbstractModel(tf.keras.Model):
         self.train_loss(loss)
 
     @tf.function
-    def test_step(self, xs, targets):
-        predictions = self(xs, training=False)
-        loss = nll_loss(targets, predictions, self.model_type)
+    def test_step(self, states, targets, conditions):
+        predictions = self([states, conditions], training=False)
+        loss = self.nll_loss(targets, predictions)
         self.test_loss.reset_states()
         self.test_loss(loss)
 
     def batch_data(self, states, targets, conditions):
-        states, targets, conditions = tf.data.Dataset.from_tensor_slices((x.astype("float32"),
-                    y.astype("float32"), y.astype("float32"))).batch(self.batch_n)
-        return states, targets, conditions
+        dataset = tf.data.Dataset.from_tensor_slices((states.astype("float32"),
+                    targets.astype("float32"), conditions.astype("float32"))).batch(self.batch_n)
+        return dataset
 
 class FFMDN(AbstractModel):
     def __init__(self, config):
@@ -147,34 +149,34 @@ class Decoder(tf.keras.Model):
         self.lstm_layers = LSTM(self.latent_dim, return_sequences=True, return_state=True)
         self.mus = Dense(1)
         self.sigmas = Dense(1, activation=K.exp)
-        self.pvector = Concatenate(name="output") # parameter vector
+        # self.pvector = Concatenate(name="output") # parameter vector
 
     def call(self, inputs):
         # input[0] = conditions
         # input[1] = encoder states
-        decoder_outputs, state_h, state_c = self.lstm_layers(inputs[0], initial_state=inputs[1])
-        mu = self.mus(decoder_outputs)
-        sigma = self.sigmas(decoder_outputs)
-        self.state_h = state_h
-        self.state_c = state_c
-        self.decoder_outputs = decoder_outputs
+        with tf.name_scope("Decoder") as scope:
+            decoder_outputs, state_h, state_c = self.lstm_layers(inputs[0], initial_state=inputs[1])
+            mu = self.mus(decoder_outputs)
+            sigma = self.sigmas(decoder_outputs)
+            self.state_h = state_h
+            self.state_c = state_c
+            self.decoder_outputs = decoder_outputs
 
-        return self.pvector([mu, sigma])
-
+        return tfd.Normal(loc=mu[..., 0], scale=sigma[..., 0])
 
 class CAE(AbstractModel):
-    def __init__(self, config):
+    def __init__(self, encoder_model, decoder_model, config):
         super(CAE, self).__init__(config)
-        self.encoder_model = Encoder(config)
-        self.decoder_model = Decoder(config)
+        self.encoder_model = encoder_model
+        self.decoder_model = decoder_model
 
     def architecture_def(self, X):
         pass
 
     def call(self, inputs):
-        # Defines the computation from inputs to outputs
-        # input[0] = state obs
-        # input[1] = conditions
-        encoder_states = self.encoder_model(inputs[0])
-        pvector = self.decoder_model([inputs[1], encoder_states])
-        return pvector
+        with tf.name_scope("CAE") as scope:
+            # Defines the computation from inputs to outputs
+            # input[0] = state obs
+            # input[1] = conditions
+            encoder_states = self.encoder_model(inputs[0])
+        return self.decoder_model([inputs[1], encoder_states])
