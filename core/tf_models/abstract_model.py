@@ -3,7 +3,7 @@ seed(2020)
 import tensorflow as tf
 tf.random.set_seed(2020)
 from datetime import datetime
-from models.core.tf_models.utils import nll_loss, varMin
+from models.core.tf_models.utils import nll_loss
 
 # %%
 class AbstractModel(tf.keras.Model):
@@ -16,8 +16,8 @@ class AbstractModel(tf.keras.Model):
         self.learning_rate = self.config['learning_rate']
         self.epochs_n = self.config['epochs_n']
         self.batch_n = self.config['batch_n']
-        self.components_n = self.config['components_n'] # number of Mixtures
         self.callback = self.callback_def()
+        self.nll_loss = nll_loss
 
     def architecture_def(self, X):
         raise NotImplementedError()
@@ -46,7 +46,7 @@ class AbstractModel(tf.keras.Model):
     def train_step(self, states, targets, conditions, optimizer):
         with tf.GradientTape() as tape:
             predictions = self([states, conditions], training=True)
-            loss = self.nll_loss(targets, predictions)
+            loss = self.nll_loss(targets, predictions, self.model_type)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         optimizer.apply_gradients(zip(gradients, self.trainable_variables))
@@ -56,7 +56,7 @@ class AbstractModel(tf.keras.Model):
     @tf.function
     def test_step(self, states, targets, conditions):
         predictions = self([states, conditions], training=False)
-        loss = self.nll_loss(targets, predictions)
+        loss = self.nll_loss(targets, predictions, self.model_type)
         self.test_loss.reset_states()
         self.test_loss(loss)
 
