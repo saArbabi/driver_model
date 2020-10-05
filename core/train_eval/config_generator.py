@@ -3,8 +3,7 @@ import json
 from models.core.train_eval import utils
 
 explogs_path = './models/experiments/exp_logs.json'
-explog = {'model_type':'NA',
-        'exp_state':'NA',
+explog = {'exp_state':'NA',
         'epoch': 0,
         'train_loss':'NA',
         'val_loss':'NA'}
@@ -45,7 +44,6 @@ def genExpSeires(series_id, test_variables, config):
     else:
         explogs = utils.loadExplogs()
 
-    explog['model_type'] = config['model_type']
     if test_variables:
         for variable in test_variables:
             for param in test_variables[variable]:

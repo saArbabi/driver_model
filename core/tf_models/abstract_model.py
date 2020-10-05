@@ -3,23 +3,19 @@ seed(2020)
 import tensorflow as tf
 tf.random.set_seed(2020)
 from datetime import datetime
-from models.core.tf_models.utils import nll_loss
+from models.core.tf_models.utils import loss_merge, loss_yield, covDet_min
 
-# %%
 class AbstractModel(tf.keras.Model):
     def __init__(self, config):
         super(AbstractModel, self).__init__(name="AbstractModel")
         self.config = config['model_config']
-        self.model_type = config['model_type']
-
         self.exp_dir = './models/experiments/'+config['exp_id']
         self.learning_rate = self.config['learning_rate']
         self.epochs_n = self.config['epochs_n']
         self.batch_n = self.config['batch_n']
         self.callback = self.callback_def()
-        self.nll_loss = nll_loss
 
-    def architecture_def(self, X):
+    def architecture_def(self):
         raise NotImplementedError()
 
     def callback_def(self):
@@ -30,23 +26,23 @@ class AbstractModel(tf.keras.Model):
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    def save_epoch_metrics(self, states, targets, conditions, epoch):
+    def save_epoch_metrics(self, states, targets_m, targets_y, conditions, epoch):
         with self.writer_1.as_default():
             tf.summary.scalar('_train', self.train_loss.result(), step=epoch)
             tf.summary.scalar('_val', self.test_loss.result(), step=epoch)
         self.writer_1.flush()
 
         with self.writer_2.as_default():
-            predictions = self([states, conditions], training=True)
-            covdet_min = covDet_min(predictions, self.model_type)
+            gmm_m, _ = self([states, conditions], training=True)
+            covdet_min = covDet_min(gmm_m)
             tf.summary.scalar('covdet_min', covdet_min, step=epoch)
         self.writer_2.flush()
 
     @tf.function
-    def train_step(self, states, targets, conditions, optimizer):
+    def train_step(self, states, targets_m, targets_y, conditions, optimizer):
         with tf.GradientTape() as tape:
-            predictions = self([states, conditions], training=True)
-            loss = self.nll_loss(targets, predictions, self.model_type)
+            gmm_m, gmm_y = self([states, conditions], training=True)
+            loss = loss_merge(targets_m, gmm_m) + loss_yield(targets_y, gmm_y)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         optimizer.apply_gradients(zip(gradients, self.trainable_variables))
@@ -54,13 +50,15 @@ class AbstractModel(tf.keras.Model):
         self.train_loss(loss)
 
     @tf.function
-    def test_step(self, states, targets, conditions):
-        predictions = self([states, conditions], training=False)
-        loss = self.nll_loss(targets, predictions, self.model_type)
+    def test_step(self, states, targets_m, targets_y, conditions):
+        gmm_m, gmm_y = self([states, conditions], training=False)
+        loss = loss_merge(targets_m, gmm_m) + loss_yield(targets_y, gmm_y)
         self.test_loss.reset_states()
         self.test_loss(loss)
 
-    def batch_data(self, states, targets, conditions):
-        dataset = tf.data.Dataset.from_tensor_slices((states.astype("float32"),
-                    targets.astype("float32"), conditions.astype("float32"))).batch(self.batch_n)
+    def batch_data(self, sets):
+        a, b, c, d = sets
+        a, b, c, d = a.astype("float32"), b.astype("float32"), \
+                                            c.astype("float32"), d.astype("float32")
+        dataset = tf.data.Dataset.from_tensor_slices((a,b,c,d)).batch(self.batch_n)
         return dataset

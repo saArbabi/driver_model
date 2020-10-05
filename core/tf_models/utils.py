@@ -55,7 +55,7 @@ def slice_pvector(param_vec, vehicle):
 def covDet_min(mvn):
     """Use as a metric
     """
-    return tf.math.reduce_min(tf.linalg.det(mvn.cov()))
+    return tf.math.reduce_min(tf.linalg.det(mvn.covariance()))
 
 def loss_merge(y, mvn):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.

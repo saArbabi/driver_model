@@ -94,8 +94,8 @@ def vis_dataDistribution(_df, state_names):
 def get_Fixedstate_df(f_df, fadj_df):
     """These remain fixed during state propagation.
     """
-    f_df = f_df[['episode_id', 'dv', 'dx', 'act_long_p']]
-    fadj_df = fadj_df[['dv', 'dx', 'act_long_p']]
+    f_df = f_df[['episode_id', 'dv', 'dx', 'da', 'a_ratio']]
+    fadj_df = fadj_df[['dv', 'dx', 'da', 'a_ratio']]
     return pd.concat([f_df, fadj_df], axis=1)
 
 # %%

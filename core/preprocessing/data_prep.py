@@ -4,6 +4,7 @@ start of training.
 """
 from collections import deque
 import numpy as np
+from sklearn.utils import shuffle
 import random
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -51,7 +52,6 @@ class DataPrep():
 
     def __init__(self, config, dirName):
         self.config = config['data_config']
-        self.model_type = config['model_type']
         self.obsSequence_n = self.config["obsSequence_n"]
         self.step_size = self.config["step_size"]
 
@@ -154,10 +154,9 @@ class DataPrep():
         """Note: Not all states are used by model for prediction. Some are needed
             for state propagation.
         """
-        if self.model_type == 'merge_policy':
-            target_m_df = m_df[['act_long','act_lat']]
-            target_y_df = y_df['act_long']
-            condition_df = pd.concat([m_df[['act_long_p','act_lat_p']], y_df['act_long_p']], axis=1)
+        target_m_df = m_df[['act_long','act_lat']]
+        target_y_df = y_df['act_long']
+        condition_df = y_df[['da', 'a_ratio']]
 
         state_df = pd.DataFrame()
         state_df = pd.concat([state_df, m_df['lc_type']], axis=1)
@@ -214,10 +213,6 @@ class DataPrep():
         self.targets_y.extend(target_y_arr)
         self.conditions.extend(condition_arr)
 
-    def shuffArr(self, arr):
-        random.Random(2020).shuffle(arr)
-        return np.array(arr)
-
     def padArr(self, arr):
         padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(
                     arr, padding="post", maxlen=self.pred_horizon, dtype='float')
@@ -228,10 +223,9 @@ class DataPrep():
         self.targets_y = self.padArr(self.targets_y)
         self.conditions = self.padArr(self.conditions)
 
-        self.states = self.shuffArr(self.states)
-        self.targets_m = self.shuffArr(self.targets_m)
-        self.targets_y = self.shuffArr(self.targets_y)
-        self.conditions = self.shuffArr(self.conditions)
+        self.states = np.array(self.states)
+        self.states, self.targets_m, self.targets_y, self.conditions = shuffle(self.states,
+                                                    self.targets_m, self.targets_y, self.conditions)
 
         if episode_type == 'validation_episodes':
             # also you want to save validation df for later use

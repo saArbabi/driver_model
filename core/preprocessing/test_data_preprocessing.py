@@ -24,36 +24,49 @@ config = {
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
-                "m_s":["vel", "pc", "act_long_p", "act_lat_p"],
-                "y_s":["vel", "dv", "dx", "act_long_p"],
+                "m_s":["vel", "pc"],
+                "y_s":["vel", "dx", 'da', 'a_ratio'],
                 # "Note": "baseline - no time stamps"
                 # "Note": "Here I am adding the time stamp"
-                "Note": "cae setup"
+                "Note": "cae setup - with a_ratio/da only to reduce model cheating"
 },
 "exp_id": "NA",
-"model_type": "merge_policy",
 "Note": "NA"
 }
 data_objs =  DataObj(config).loadData()
 states_train, targets_m_train, targets_y_train, conditions_train, \
             states_val, targets_m_val, targets_y_val, conditions_val = data_objs
 
-states_train[0][-1]
+states_train[5][-1]
+conditions_train[5][0]
+targets_y_train[1]
+targets_m_train[0]
 conditions_train.shape
 states_train.shape
-# %%
-
-
-
+states_val.shape
+states_train.shape
 
 # %%
+"""Distribution vis with sequence data
+"""
+def vis_dataDistribution(x):
+    for i in range(len(x[0][0])):
+        fig = plt.figure()
+        plt.hist(x[:100000,:100000,i], bins=125)
 
+vis_dataDistribution(states_train)
+
+# %%
+"""Distribution vis for sinlge step data
+"""
 def vis_dataDistribution(x):
     for i in range(len(x[0])):
         fig = plt.figure()
         plt.hist(x[:1000000,i], bins=125)
 
 vis_dataDistribution(states_train)
+
+
 # %%
 from collections import deque
 
