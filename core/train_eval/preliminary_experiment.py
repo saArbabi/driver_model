@@ -38,7 +38,7 @@ history = model.fit(x=x_train, y=y_train, epochs=1, validation_data=(x_val, y_va
                     verbose=2, batch_size=128, callbacks=model.callback)
 # %%
 rhos, alphas, mus_long, sigmas_long, mus_lat, sigmas_lat = slice_pvector(
-                                                    parameter_vector, config)
+                                                    param_vec, config)
 cov = get_CovMatrix(rhos, sigmas_long, sigmas_lat)
 covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
 diag_long = tf.math.square(sigmas_long)

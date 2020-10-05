@@ -29,10 +29,12 @@ class DataObj():
         return time
 
     def loadPickledObj(self, dataFolderName):
-        obj_names = ['states_train', 'targets_train', 'conditions_train',
-                                    'states_val', 'targets_val', 'conditions_val']
-        data_objs = []
+        obj_names = ['states_train', 'targets_m_train', 'targets_y_train',
+                                                            'conditions_train',
+                                'states_val', 'targets_m_val', 'targets_y_val',
+                                                            'conditions_val']
 
+        data_objs = []
         for item in obj_names:
             with open(self.dirName+dataFolderName+'/'+item, 'rb') as f:
                 data_objs.append(pickle.load(f))

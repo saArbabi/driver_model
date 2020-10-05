@@ -64,9 +64,10 @@ class DataPrep():
         self.dirName = dirName
         os.mkdir(dirName)
 
-    def obsSequence(self, state_arr, target_arr, condition_arr):
+    def obsSequence(self, state_arr, target_m_arr, target_y_arr,  condition_arr):
         state_seq = []
-        target_seq = []
+        target_m_seq = []
+        target_y_seq = []
         condition_seq = []
         prediction_step_n = 20
 
@@ -79,14 +80,15 @@ class DataPrep():
                 prev_states.append(state_arr[i])
                 if len(prev_states) == self.obsSequence_n:
                     state_seq.append(np.array(prev_states))
-                    target_seq.append(target_arr[i:i+prediction_step_n])
+                    target_m_seq.append(target_m_arr[i:i+prediction_step_n])
+                    target_y_seq.append(target_y_arr[i:i+prediction_step_n])
                     condition_seq.append(condition_arr[i:i+prediction_step_n])
 
                 i += step_size
             i_reset += 1
             i = i_reset
 
-        return state_seq, target_seq, condition_seq
+        return state_seq, target_m_seq, target_y_seq, condition_seq
 
     def mask_history(self, v_x_arr):
         pass
@@ -115,8 +117,11 @@ class DataPrep():
         _arr[:, self.bool_pointer[-1]+1:] = self.state_scaler.transform(_arr[:, self.bool_pointer[-1]+1:])
         return np.delete(_arr, self.retain_pointer, axis=1)
 
-    def applytargetScaler(self, _arr):
-        return self.target_scaler.transform(_arr)
+    def applytarget_mScaler(self, _arr):
+        return self.target_m_scaler.transform(_arr)
+
+    def applytarget_yScaler(self, _arr):
+        return self.target_y_scaler.transform(_arr.reshape(-1, 1))
 
     def applyconditionScaler(self, _arr):
         return self.condition_scaler.transform(_arr)
@@ -157,7 +162,8 @@ class DataPrep():
             for state propagation.
         """
         if self.model_type == 'merge_policy':
-            target_df = m_df[['act_long','act_lat']]
+            target_m_df = m_df[['act_long','act_lat']]
+            target_y_df = y_df['act_long']
             condition_df = pd.concat([m_df[['act_long_p','act_lat_p']], y_df['act_long_p']], axis=1)
 
         state_df = pd.DataFrame()
@@ -169,12 +175,13 @@ class DataPrep():
         state_df = pd.concat([state_df, m_df[self.m_s]], axis=1)
         state_df = pd.concat([state_df, y_df[self.y_s]], axis=1)
 
-        return state_df.values, target_df.values, condition_df.values
+        return state_df.values, target_m_df.values, target_y_df.values, condition_df.values
 
     def setScalers(self):
-        state_arr, target_arr, condition_arr = self.get_stateTarget_arr(m_df0, y_df0)
+        state_arr, target_m_arr, target_y_arr,  condition_arr = self.get_stateTarget_arr(m_df0, y_df0)
         self.state_scaler = StandardScaler().fit(state_arr[:, self.bool_pointer[-1]+1:])
-        self.target_scaler = StandardScaler().fit(target_arr)
+        self.target_m_scaler = StandardScaler().fit(target_m_arr)
+        self.target_y_scaler = StandardScaler().fit(target_y_arr.reshape(-1, 1))
         self.condition_scaler = StandardScaler().fit(condition_arr)
 
     def get_fixedSate(self, fixed_arr, episode_id):
@@ -214,17 +221,19 @@ class DataPrep():
         :Return: x, y arrays for model training.
         """
         m_df, y_df = self.get_episode_df(m_df0, y_df0, episode_id)
-        state_arr, target_arr, condition_arr = self.get_stateTarget_arr(m_df, y_df)
+        state_arr, target_m_arr, target_y_arr,  condition_arr = self.get_stateTarget_arr(m_df, y_df)
 
         state_arr = self.applystateScaler(state_arr)
-        target_arr = self.applytargetScaler(target_arr)
+        target_m_arr = self.applytarget_mScaler(target_m_arr)
+        target_y_arr = self.applytarget_yScaler(target_y_arr)
         condition_arr = self.applyconditionScaler(condition_arr)
 
         # f_x_arr = self.get_fixedSate(fixed_arr0, episode_id)
         # vf_x_arr = np.concatenate([v_x_arr, f_x_arr], axis=1)
         # vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
 
-        state_arr, target_arr, condition_arr = self.obsSequence(state_arr, target_arr, condition_arr)
+        state_arr, target_m_arr, target_y_arr,  condition_arr = self.obsSequence(
+                                    state_arr, target_m_arr, target_y_arr,  condition_arr)
         # self.mask_history(x_df)
 
         # for i in range(len(vf_x_arr)):
@@ -233,7 +242,8 @@ class DataPrep():
         #     self.targets.extend(vf_y_arr[i])
 
         self.states.extend(state_arr)
-        self.targets.extend(target_arr)
+        self.targets_m.extend(target_m_arr)
+        self.targets_y.extend(target_y_arr)
         self.conditions.extend(condition_arr)
 
     def shuffArr(self, arr):
@@ -246,28 +256,36 @@ class DataPrep():
             with open(self.dirName+'/states_val', "wb") as f:
                 pickle.dump(self.shuffArr(self.states), f)
 
-            with open(self.dirName+'/targets_val', "wb") as f:
-                pickle.dump(self.shuffArr(self.targets), f)
+            with open(self.dirName+'/targets_m_val', "wb") as f:
+                pickle.dump(self.shuffArr(self.targets_m), f)
+
+            with open(self.dirName+'/targets_y_val', "wb") as f:
+                pickle.dump(self.shuffArr(self.targets_y), f)
 
             with open(self.dirName+'/conditions_val', "wb") as f:
                 pickle.dump(self.shuffArr(self.conditions), f)
 
             delattr(self, 'states')
-            delattr(self, 'targets')
+            delattr(self, 'targets_m')
+            delattr(self, 'targets_y')
             delattr(self, 'conditions')
 
         elif episode_type == 'training_episodes':
             with open(self.dirName+'/states_train', "wb") as f:
                 pickle.dump(self.shuffArr(self.states), f)
 
-            with open(self.dirName+'/targets_train', "wb") as f:
-                pickle.dump(self.shuffArr(self.targets), f)
+            with open(self.dirName+'/targets_m_train', "wb") as f:
+                pickle.dump(self.shuffArr(self.targets_m), f)
+
+            with open(self.dirName+'/targets_y_train', "wb") as f:
+                pickle.dump(self.shuffArr(self.targets_y), f)
 
             with open(self.dirName+'/conditions_train', "wb") as f:
                 pickle.dump(self.shuffArr(self.conditions), f)
 
             delattr(self, 'states')
-            delattr(self, 'targets')
+            delattr(self, 'targets_m')
+            delattr(self, 'targets_y')
             delattr(self, 'conditions')
 
             with open(self.dirName+'/data_obj', "wb") as f:
@@ -279,16 +297,13 @@ class DataPrep():
             with open(self.dirName+'/test_y_df', "wb") as f:
                 pickle.dump(y_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
 
-            with open(self.dirName+'/test_fixed_arr', "wb") as f:
-                pickle.dump(fixed_arr0[np.isin(fixed_arr0[:,0], episode_ids['test_episodes'])], f)
-
-
     def data_prep(self, episode_type=None):
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
 
         self.states = []
-        self.targets = []
+        self.targets_m = []
+        self.targets_y = []
         self.conditions = []
         for episode_id in episode_ids[episode_type]:
             self.episode_prep(episode_id)

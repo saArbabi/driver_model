@@ -58,13 +58,7 @@ reload(utils)
 from models.core.tf_models import utils
 
 from models.core.tf_models import cae_model
-from models.core.tf_models import abstract_model
 reload(cae_model)
-reload(abstract_model)
-from models.core.tf_models import cae_model
-
-from models.core.tf_models import abstract_model
-
 from models.core.tf_models.cae_model import  Encoder, Decoder, CAE
 
 # config = loadConfig('series000exp001')
@@ -78,48 +72,45 @@ decoder_model = Decoder(config)
 model = CAE(encoder_model, decoder_model, config)
 
 optimizer = tf.optimizers.Adam(model.learning_rate)
-states_train, targets_train, conditions_train, \
-        states_val, targets_val, conditions_val = DataObj(config).loadData()
-
-train_ds = model.batch_data(states_train, targets_train, conditions_train)
-test_ds = model.batch_data(states_train, targets_train, conditions_train)
+data_objs =  DataObj(config).loadData()
+train_ds = model.batch_data(data_objs[0:4])
+test_ds = model.batch_data(data_objs[4:])
 
 write_graph = 'False'
 batch_i = 0
 t0 = time.time()
-for epoch in range(10):
-    for states, targets, conditions in train_ds:
+for epoch in range(1):
+    for states, targets_m, targets_y, conditions in train_ds:
         if write_graph == 'True':
             print(tf.shape(states))
-            print(tf.shape(targets))
             graph_write = tf.summary.create_file_writer(model.exp_dir+'/logs/')
             tf.summary.trace_on(graph=True, profiler=False)
-            model.train_step(states, targets, conditions, optimizer)
+            model.train_step(states, targets_m, targets_y, conditions, optimizer)
             with graph_write.as_default():
                 tf.summary.trace_export(name='graph', step=0)
             write_graph = 'False'
         else:
-            model.train_step(states, targets, conditions, optimizer)
+            model.train_step(states, targets_m, targets_y, conditions, optimizer)
 
-    for states, targets, conditions in test_ds:
-        model.test_step(states, targets, conditions)
+    for states, targets_m, targets_y, conditions in test_ds:
+        model.test_step(states, targets_m, targets_y, conditions)
     train_loss.append(round(model.train_loss.result().numpy().item(), 2))
     valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
 # modelEvaluate(model, validation_data, config)
 print('experiment duration ', time.time() - t0)
 
 
-model = modelTrain(config)
 plt.plot(valid_loss)
 plt.plot(train_loss)
+
 # %%
 conditions.shape
 state_obs = tf.reshape(states[0], [1, 20, 10])
 cond = tf.reshape(conditions[0], [1, 20, 3])
 state_obs.shape
 enc_state = encoder_model(state_obs)
-parameter_vector = decoder_model([cond, enc_state])
-utils.get_pdf_samples(samples_n=1, parameter_vector=parameter_vector, model_type='merge_policy')
+param_vec = decoder_model([cond, enc_state])
+utils.get_pdf_samples(samples_n=1, param_vec=param_vec, model_type='merge_policy')
 targets[0]
 # %%
 """
@@ -143,9 +134,9 @@ def decode_sequence(state_obs, condition, step_n):
         conditioning  = tf.reshape(condition[0, 0, :], cond_shape)
         for i in range(20):
 
-            parameter_vector = decoder_model([conditioning , states_value])
+            param_vec = decoder_model([conditioning , states_value])
             # print(output_.stddev())
-            output_ = utils.get_pdf_samples(samples_n=1, parameter_vector=parameter_vector, model_type='merge_policy')
+            output_ = utils.get_pdf_samples(samples_n=1, param_vec=param_vec, model_type='merge_policy')
             output_ = tf.reshape(output_, [2])
             decoded_seq.append(output_)
             # Update the target sequence (of length 1).

@@ -33,16 +33,23 @@ config = {
 "model_type": "merge_policy",
 "Note": "NA"
 }
-states_train, targets_train, conditions_train, \
-            states_val, targets_val, conditions_val = DataObj(config).loadData()
+data_objs =  DataObj(config).loadData()
+states_train, targets_m_train, targets_y_train, conditions_train, \
+            states_val, targets_m_val, targets_y_val, conditions_val = data_objs
 
-states_train[1]
-targets_train[-1]
-conditions_train[1]
+states_train[0][-1]
+targets_m_train[0][0]
+targets_y_train[0][0]
+conditions_train[0][1]
 
 len(states_train)
-len(targets_train[0])
-states_train[1]
+# %%
+sample = 2
+states_train[sample][-1]
+targets_m_train[sample][0]
+targets_y_train[sample][0]
+conditions_train[sample][1]
+
 
 # %%
 

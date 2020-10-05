@@ -6,28 +6,27 @@ warnings.filterwarnings("ignore", message="numpy.ufunc size changed")
 # %%
 def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
-
     col1 = tf.stack([tf.math.square(sigmas_long), covar], axis=3, name='stack')
     col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=3, name='stack')
     # sigmas_long**2 is covariance of sigmas_long with itself
     cov = tf.stack([col1, col2], axis=3, name='cov')
-    # print('covariance shape: ', cov.shape)
     return cov
 
-def get_pdf(parameter_vector, model_type):
+def get_pdf(param_vec, vehicle):
     # see https://ericmjl.github.io/blog/2019/5/29/reasoning-about-shapes-and-probability-distributions/
     # for info on shapes
-    if model_type == '///':
-        alpha, mus, sigmas = slice_pvector(parameter_vector, model_type) # Unpack parameter vectors
+    if vehicle == 'yield_vehicle':
+        alpha, mus, sigmas = slice_pvector(param_vec, vehicle) # Unpack parameter vectors
         mvn = tfd.MixtureSameFamily(
             mixture_distribution=tfd.Categorical(probs=alpha),
             components_distribution=tfd.Normal(
                 loc=mus,
                 scale=sigmas))
 
-    if model_type == 'merge_policy':
-        alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos = slice_pvector(
-                                                            parameter_vector, model_type)
+    if vehicle == 'merge_vehicle':
+        alphas, mus_long, sigmas_long, mus_lat, \
+                            sigmas_lat, rhos = slice_pvector(param_vec, vehicle)
+
 
         cov = get_CovMatrix(rhos, sigmas_long, sigmas_lat)
         mus = tf.stack([mus_long, mus_lat], axis=3, name='mus')
@@ -40,47 +39,48 @@ def get_pdf(parameter_vector, model_type):
     # print('mus shape: ', mus.shape)
     return mvn
 
-def slice_pvector(parameter_vector, model_type):
+def slice_pvector(param_vec, vehicle):
     """ Returns an unpacked list of paramter vectors.
     """
-    if model_type == '///':
-        n_params = 3 # number of parameters being learned
-    if model_type == 'merge_policy':
+    if vehicle == 'yield_vehicle':
+        n_params = 3 # number of parameters being learned per GMM compnent
+    if vehicle == 'merge_vehicle':
         n_params = 6
 
-    if tf.is_tensor(parameter_vector):
-        return tf.split(parameter_vector, n_params, axis=2)
+    if tf.is_tensor(param_vec):
+        return tf.split(param_vec, n_params, axis=2)
     else:
-        return tf.split(parameter_vector, n_params, axis=1)
+        return tf.split(param_vec, n_params, axis=1)
 
-def covDet_min(parameter_vector, model_type):
-    alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos = slice_pvector(
-                                                        parameter_vector, model_type)
-
-    covar = tf.math.multiply(tf.math.multiply(sigmas_lat,sigmas_long),rhos)
-    col1 = tf.stack([tf.math.square(sigmas_long), covar], axis=3, name='stack')
-    col2 = tf.stack([covar, tf.math.square(sigmas_lat)], axis=3, name='stack')
-    cov = tf.stack([col1, col2], axis=3, name='cov')
-    return tf.math.reduce_min(tf.linalg.det(cov[0]))
-
-def nll_loss(y, parameter_vector, model_type):
-    """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
+def covDet_min(mvn):
+    """Use as a metric
     """
-    mvn = get_pdf(parameter_vector, model_type)
-    y_shape = y.shape
+    return tf.math.reduce_min(tf.linalg.det(mvn.cov()))
 
-    if model_type == '///':
-        log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0]]))
-        # shape: [sample_shape, batch_shape]
-    if model_type == 'merge_policy':
-        log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1], 2]))
-        # shape: [sample_shape, batch_shape, event_shape]
+def loss_merge(y, mvn):
+    """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
+        Loss for the merge vehicle
+    """
+    y_shape = y.shape
+    log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1], 2]))
+
+    # shape: [sample_shape, batch_shape, event_shape]
     return -tf.reduce_mean(log_likelihood)
 
-def get_predictionMean(parameter_vector, model_type):
-    mvn = get_pdf(tf.convert_to_tensor(parameter_vector), model_type)
+def loss_yield(y, mvn):
+    """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
+        Loss for the yield vehicle
+    """
+    y_shape = y.shape
+    log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1]]))
+    # shape: [sample_shape, batch_shape]
+
+    return -tf.reduce_mean(log_likelihood)
+
+def get_predictionMean(param_vec, model_type):
+    mvn = get_pdf(tf.convert_to_tensor(param_vec), model_type)
     return mvn.mean()
 
-def get_pdf_samples(samples_n, parameter_vector, model_type):
-    mvn = get_pdf(tf.convert_to_tensor(parameter_vector), model_type)
+def get_pdf_samples(samples_n, param_vec, model_type):
+    mvn = get_pdf(tf.convert_to_tensor(param_vec), model_type)
     return mvn.sample(samples_n)
