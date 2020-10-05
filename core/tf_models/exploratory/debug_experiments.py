@@ -42,9 +42,9 @@ config = {
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
+                "pred_horizon": 20,
                 "m_s":["vel", "pc", "act_long_p", "act_lat_p"],
-                "y_s":["vel", "dv", "dx", "da", "act_long_p"],
-                "retain":["vel"],
+                "y_s":["vel", "dv", "dx", "act_long_p"],
                 # "Note": "baseline - no time stamps"
                 # "Note": "Here I am adding the time stamp"
                 "Note": "cae setup"
@@ -79,7 +79,7 @@ test_ds = model.batch_data(data_objs[4:])
 write_graph = 'False'
 batch_i = 0
 t0 = time.time()
-for epoch in range(1):
+for epoch in range(10):
     for states, targets_m, targets_y, conditions in train_ds:
         if write_graph == 'True':
             print(tf.shape(states))

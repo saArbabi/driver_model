@@ -4,7 +4,7 @@ seed(2020)
 import tensorflow as tf
 tf.random.set_seed(2020)
 from keras import backend as K
-from tensorflow.keras.layers import Dense, Concatenate, LSTM
+from tensorflow.keras.layers import Dense, Concatenate, LSTM, Masking
 from datetime import datetime
 from models.core.tf_models.utils import loss_merge, loss_yield, covDet_min, get_pdf
 physical_devices = tf.config.list_physical_devices('GPU')
@@ -14,8 +14,6 @@ class AbstractModel(tf.keras.Model):
     def __init__(self, config):
         super(AbstractModel, self).__init__(name="AbstractModel")
         self.config = config['model_config']
-        self.model_type = config['model_type']
-
         self.exp_dir = './models/experiments/'+config['exp_id']
         self.learning_rate = self.config['learning_rate']
         self.epochs_n = self.config['epochs_n']
@@ -89,12 +87,14 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__(name="Decoder")
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
-        self.model_type = config['model_type']
+        self.pred_horizon = config['data_config']['pred_horizon']
+
         self.architecture_def()
 
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
         self.lstm_layers = LSTM(self.dec_units, return_sequences=True, return_state=True)
+        self.masking = Masking(mask_value=0., input_shape=(self.pred_horizon, None))
         """Merger vehicle
         """
         self.alphas_m = Dense(self.components_n, activation=K.softmax, name="alphas")
@@ -112,7 +112,8 @@ class Decoder(tf.keras.Model):
     def call(self, inputs):
         # input[0] = conditions
         # input[1] = encoder states
-        outputs, state_h, state_c = self.lstm_layers(inputs[0], initial_state=inputs[1])
+        conditions = self.masking(inputs[0])
+        outputs, state_h, state_c = self.lstm_layers(conditions, initial_state=inputs[1])
         self.state = [state_h, state_c]
         """Merger vehicle
         """

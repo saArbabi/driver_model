@@ -28,7 +28,7 @@ config = {
                 "y_s":["vel", "dv", "dx", "act_long_p"],
                 # "Note": "baseline - no time stamps"
                 # "Note": "Here I am adding the time stamp"
-                "Note": "cae setup2"
+                "Note": "cae setup"
 },
 "exp_id": "NA",
 "model_type": "merge_policy",
