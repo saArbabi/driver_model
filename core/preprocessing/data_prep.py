@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import os
 import pickle
-
+import tensorflow as tf
 
 # %%
 def read_episode_df():
@@ -39,8 +39,8 @@ def read_fixed_stateArr():
     global fixed_arr0
     fixed_arr0 = pd.read_csv('./datasets/fixed_df0.txt', delimiter=' ',
                                                             header=None).values
-    # First two columns are lc_type and episode_id
-    fixed_arr0[:,2:] = StandardScaler().fit(fixed_arr0[:,2:]).transform(fixed_arr0[:,2:])
+    # First column is episode_id
+    fixed_arr0[:,1:] = StandardScaler().fit(fixed_arr0[:,1:]).transform(fixed_arr0[:,1:])
 
 read_episode_df()
 read_episode_ids()
@@ -57,8 +57,7 @@ class DataPrep():
 
         self.m_s = self.config["m_s"]
         self.y_s = self.config["y_s"]
-        self.max_traj_n = 50 # can be set differently depending on prediction horizon
-
+        self.pred_horizon = self.config["pred_horizon"]
         self.setState_indx()
         self.setScalers() # will set the scaler attributes
         self.dirName = dirName
@@ -69,20 +68,20 @@ class DataPrep():
         target_m_seq = []
         target_y_seq = []
         condition_seq = []
-        prediction_step_n = 20
 
         step_size = 1
         i_reset = 0
         i = 0
         for chunks in range(step_size):
             prev_states = deque(maxlen=self.obsSequence_n)
-            while i < (len(state_arr) - prediction_step_n):
+            while i < (len(state_arr)-2):
+                # 2 is minimum prediction horizon
                 prev_states.append(state_arr[i])
                 if len(prev_states) == self.obsSequence_n:
                     state_seq.append(np.array(prev_states))
-                    target_m_seq.append(target_m_arr[i:i+prediction_step_n])
-                    target_y_seq.append(target_y_arr[i:i+prediction_step_n])
-                    condition_seq.append(condition_arr[i:i+prediction_step_n])
+                    target_m_seq.append(target_m_arr[i:i+self.pred_horizon].tolist())
+                    target_y_seq.append(target_y_arr[i:i+self.pred_horizon].tolist())
+                    condition_seq.append(condition_arr[i:i+self.pred_horizon].tolist())
 
                 i += step_size
             i_reset += 1
@@ -115,7 +114,7 @@ class DataPrep():
 
     def applystateScaler(self, _arr):
         _arr[:, self.bool_pointer[-1]+1:] = self.state_scaler.transform(_arr[:, self.bool_pointer[-1]+1:])
-        return np.delete(_arr, self.retain_pointer, axis=1)
+        return _arr
 
     def applytarget_mScaler(self, _arr):
         return self.target_m_scaler.transform(_arr)
@@ -134,14 +133,9 @@ class DataPrep():
 
     def setState_indx(self):
         i = 0
-        self.retain_indx = {}
         self.bool_indx = {}
         self.scalar_indx = {}
 
-        self.retain_indx['vel_mveh'] = i
-        i += 1
-        self.retain_indx['vel_yveh'] = i
-        i += 1
         self.bool_indx['lc_type'] = i
         i += 1
 
@@ -154,7 +148,6 @@ class DataPrep():
             i += 1
 
         # these are used by the scaler
-        self.retain_pointer = list(self.retain_indx.values())
         self.bool_pointer = list(self.bool_indx.values())
 
     def get_stateTarget_arr(self, m_df, y_df):
@@ -167,10 +160,6 @@ class DataPrep():
             condition_df = pd.concat([m_df[['act_long_p','act_lat_p']], y_df['act_long_p']], axis=1)
 
         state_df = pd.DataFrame()
-        if self.config['retain']:
-            state_df = pd.concat([state_df, m_df[self.config['retain']]], axis=1)
-            state_df = pd.concat([state_df, y_df[self.config['retain']]], axis=1)
-
         state_df = pd.concat([state_df, m_df['lc_type']], axis=1)
         state_df = pd.concat([state_df, m_df[self.m_s]], axis=1)
         state_df = pd.concat([state_df, y_df[self.y_s]], axis=1)
@@ -196,26 +185,6 @@ class DataPrep():
             t += 0.1
         return ts
 
-    def get_vfArrs(self, v_x_arr, v_y_arr, f_x_arr):
-        """
-        Note: Output will be orders of magnitude larger in size.
-        :Return: state arrays with time stamps and fixed features included
-        """
-        episode_len = len(v_x_arr)
-        mini_episodes_x = []
-        mini_episodes_y = []
-        for step in range(episode_len):
-            epis_i = v_x_arr[step:step+self.max_traj_n]
-            target_i = v_y_arr[step:step+self.max_traj_n]
-
-            episode_i_len = len(epis_i) # len(epis_i) not always equals self.max_traj_n
-            ts = self.get_timeStamps(episode_i_len)
-            epis_i = np.insert(epis_i, [0], f_x_arr[step], axis=1)
-            mini_episodes_x.append(np.concatenate([ts, epis_i], axis=1))
-            mini_episodes_y.append(target_i)
-
-        return mini_episodes_x, mini_episodes_y
-
     def episode_prep(self, episode_id):
         """
         :Return: x, y arrays for model training.
@@ -228,9 +197,8 @@ class DataPrep():
         target_y_arr = self.applytarget_yScaler(target_y_arr)
         condition_arr = self.applyconditionScaler(condition_arr)
 
-        # f_x_arr = self.get_fixedSate(fixed_arr0, episode_id)
-        # vf_x_arr = np.concatenate([v_x_arr, f_x_arr], axis=1)
-        # vf_x_arr, vf_y_arr = self.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
+        f_x_arr = self.get_fixedSate(fixed_arr0, episode_id)
+        state_arr = np.concatenate([state_arr, f_x_arr], axis=1)
 
         state_arr, target_m_arr, target_y_arr,  condition_arr = self.obsSequence(
                                     state_arr, target_m_arr, target_y_arr,  condition_arr)
@@ -250,20 +218,34 @@ class DataPrep():
         random.Random(2020).shuffle(arr)
         return np.array(arr)
 
+    def padArr(self, arr):
+        padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(
+                    arr, padding="post", maxlen=self.pred_horizon, dtype='float')
+        return padded_inputs
+
     def pickler(self, episode_type):
+        self.targets_m = self.padArr(self.targets_m)
+        self.targets_y = self.padArr(self.targets_y)
+        self.conditions = self.padArr(self.conditions)
+
+        self.states = self.shuffArr(self.states)
+        self.targets_m = self.shuffArr(self.targets_m)
+        self.targets_y = self.shuffArr(self.targets_y)
+        self.conditions = self.shuffArr(self.conditions)
+
         if episode_type == 'validation_episodes':
             # also you want to save validation df for later use
             with open(self.dirName+'/states_val', "wb") as f:
-                pickle.dump(self.shuffArr(self.states), f)
+                pickle.dump(self.states, f)
 
             with open(self.dirName+'/targets_m_val', "wb") as f:
-                pickle.dump(self.shuffArr(self.targets_m), f)
+                pickle.dump(self.targets_m, f)
 
             with open(self.dirName+'/targets_y_val', "wb") as f:
-                pickle.dump(self.shuffArr(self.targets_y), f)
+                pickle.dump(self.targets_y, f)
 
             with open(self.dirName+'/conditions_val', "wb") as f:
-                pickle.dump(self.shuffArr(self.conditions), f)
+                pickle.dump(self.conditions, f)
 
             delattr(self, 'states')
             delattr(self, 'targets_m')
@@ -272,16 +254,16 @@ class DataPrep():
 
         elif episode_type == 'training_episodes':
             with open(self.dirName+'/states_train', "wb") as f:
-                pickle.dump(self.shuffArr(self.states), f)
+                pickle.dump(self.states, f)
 
             with open(self.dirName+'/targets_m_train', "wb") as f:
-                pickle.dump(self.shuffArr(self.targets_m), f)
+                pickle.dump(self.targets_m, f)
 
             with open(self.dirName+'/targets_y_train', "wb") as f:
-                pickle.dump(self.shuffArr(self.targets_y), f)
+                pickle.dump(self.targets_y, f)
 
             with open(self.dirName+'/conditions_train', "wb") as f:
-                pickle.dump(self.shuffArr(self.conditions), f)
+                pickle.dump(self.conditions, f)
 
             delattr(self, 'states')
             delattr(self, 'targets_m')
@@ -308,93 +290,3 @@ class DataPrep():
         for episode_id in episode_ids[episode_type]:
             self.episode_prep(episode_id)
         self.pickler(episode_type)
-
-
-# %%
-# Data = DataObj(config)
-# x_train, y_train = Data.data_prep('training_episodes')
-# x_val, y_val = Data.data_prep('validation_episodes')
-# # m_df, y_df = Data.get_episode_df(811)
-# # v_x_arr, v_y_arr = Data.get_stateTarget_arr(m_df, y_df)
-# # %%
-# m_df, y_df = Data.get_episode_df(811)
-# v_x_arr, v_y_arr = Data.get_stateTarget_arr(m_df, y_df)
-# v_x_arr = Data.applystateScaler(v_x_arr)
-# v_y_arr = Data.applytargetScaler(v_y_arr)
-#
-# f_x_arr = Data.get_fixedSate(811)
-#
-# # v_x_arr = Data.obsSequence(v_x_arr)
-# vf_x_arr, vf_y_arr = Data.get_vfArrs(v_x_arr, v_y_arr, f_x_arr)
-#
-# %%
-
-
-# %%
-# config1 = {
-#  "model_config": {
-#      "learning_rate": 1e-2,
-#      "neurons_n": 50,
-#      "layers_n": 2,
-#      "epochs_n": 5,
-#      "batch_n": 128,
-#      "components_n": 4
-# },
-# "data_config": {"step_size": 3,
-#                 "obsSequence_n": 2,
-#                 "m_s":["vel", "pc", "act_long_p"],
-#                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
-#                 "retain":["vel"],
-# },
-# "exp_id": "NA",
-# "model_type": "merge_policy",
-# "Note": "NA"
-# }
-#
-#
-#
-# config2 = {
-#  "model_config": {
-#      "learning_rate": 1e-2,
-#      "neurons_n": 50,
-#      "layers_n": 2,
-#      "epochs_n": 5,
-#      "batch_n": 128,
-#      "components_n": 5
-# },
-# "data_config": {"step_size": 3,
-#                 "obsSequence_n": 1,
-#                 "m_s":["vel", "pc", "act_long_p"],
-#                 "y_s":["vel", "dv", "dx", "da", "a_ratio"],
-#                 "retain":["vel"],
-# },
-# "exp_id": "NA",
-# "model_type": "merge_policy",
-# "Note": "NA"
-# }
-# config1==config2
-# %%
-# def vis_dataDistribution(x):
-#     for i in range(len(x[0])):
-#         fig = plt.figure()
-#         plt.hist(x[:,i], bins=125)
-#
-# vis_dataDistribution(x_val)
-# # %%
-# def vis_beforeAfterScale(x, features):
-#     i = 0
-#     # x = Data.state_scaler.inverse_transform(x[:,1:])
-#     for feature in features:
-#         fig = plt.figure()
-#         ax1 = fig.add_subplot(1,2,1)
-#         ax2 = fig.add_subplot(1,2,2)
-#
-#         ax1.hist(m_df0[feature], bins=125)
-#         # ax2.hist(x[:,i], bins=125)
-#         ax2.hist(x[:,i], bins=125)
-#
-#         i += 1
-#         ax1.set_title(feature + ' before')
-#         ax2.set_title(feature + ' after')
-#
-# vis_beforeAfterScale(x_val, Data._states['mveh'])

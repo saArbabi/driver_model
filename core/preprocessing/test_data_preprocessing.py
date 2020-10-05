@@ -4,6 +4,7 @@ import numpy as np
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 from importlib import reload
 reload(data_prep)
@@ -22,12 +23,12 @@ config = {
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
+                "pred_horizon": 20,
                 "m_s":["vel", "pc", "act_long_p", "act_lat_p"],
-                "y_s":["vel", "dv", "dx", "da", "act_long_p"],
-                "retain":["vel"],
+                "y_s":["vel", "dv", "dx", "act_long_p"],
                 # "Note": "baseline - no time stamps"
                 # "Note": "Here I am adding the time stamp"
-                "Note": "cae setup"
+                "Note": "cae setup2"
 },
 "exp_id": "NA",
 "model_type": "merge_policy",
@@ -38,17 +39,11 @@ states_train, targets_m_train, targets_y_train, conditions_train, \
             states_val, targets_m_val, targets_y_val, conditions_val = data_objs
 
 states_train[0][-1]
-targets_m_train[0][0]
-targets_y_train[0][0]
-conditions_train[0][1]
-
-len(states_train)
+conditions_train.shape
+states_train.shape
 # %%
-sample = 2
-states_train[sample][-1]
-targets_m_train[sample][0]
-targets_y_train[sample][0]
-conditions_train[sample][1]
+
+
 
 
 # %%
@@ -78,7 +73,7 @@ i_reset = 0
 i = 0
 for chunks in range(step_size):
     prev_states = deque(maxlen=obsSequence_n)
-    while i < (len(obs) - prediction_step_n ):
+    while i < (len(obs)):
         prev_states.append(obs[i])
         if len(prev_states) == obsSequence_n:
             obs_seq.append(np.array(prev_states))

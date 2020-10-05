@@ -94,8 +94,8 @@ def vis_dataDistribution(_df, state_names):
 def get_Fixedstate_df(f_df, fadj_df):
     """These remain fixed during state propagation.
     """
-    f_df = f_df[['episode_id', 'dv', 'dx', 'da', 'a_ratio']]
-    fadj_df = fadj_df[['dv', 'dx', 'da', 'a_ratio']]
+    f_df = f_df[['episode_id', 'dv', 'dx', 'act_long_p']]
+    fadj_df = fadj_df[['dv', 'dx', 'act_long_p']]
     return pd.concat([f_df, fadj_df], axis=1)
 
 # %%
@@ -109,10 +109,12 @@ _y_df = trimStatevals(y_df, y_trim_col)
 _m_df = trimStatevals(m_df, m_trim_col)
 fixed_df = get_Fixedstate_df(_f_df, _fadj_df)
 len(_m_df)/len(m_df)
+fixed_df.shape
 # %%
 vis_dataDistribution(_f_df, o_trim_col)
 vis_dataDistribution(_fadj_df, o_trim_col)
-vis_dataDistribution(_m_df, m_trim_col+['pc'])
+vis_dataDistribution(_fadj_df, o_trim_col)
+vis_dataDistribution(fixed_df, ['act_long_p'])
 
 #%%
 all_episodes = list(spec['episode_id'].values)
@@ -124,7 +126,7 @@ test_episodes = spec.loc[(spec['episode_id'].isin(validation_episodes)) &
 
 len(test_episodes)
 training_episodes = list(set(spec['episode_id']).symmetric_difference(set(validation_episodes)))
-len(validation_epijhsodes)/len(training_episodes)
+len(validation_episodes)/len(training_episodes)
 # %%
 
 
