@@ -8,9 +8,9 @@ def modelTrain(exp_id, explogs):
     config = utils.loadConfig(exp_id)
 
     # (1) Load model and setup checkpoints
-    encoder_model = Encoder(config)
-    decoder_model = Decoder(config)
-    model = CAE(encoder_model, decoder_model, config)
+    enc_model = Encoder(config)
+    dec_model = Decoder(config)
+    model = CAE(enc_model, dec_model, config)
     optimizer = tf.optimizers.Adam(model.learning_rate)
 
     # for more on checkpointing model see: https://www.tensorflow.org/guide/checkpoint

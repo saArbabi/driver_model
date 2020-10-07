@@ -76,11 +76,3 @@ def loss_yield(y, mvn):
     # shape: [sample_shape, batch_shape]
 
     return -tf.reduce_mean(log_likelihood)
-
-def get_predictionMean(param_vec, model_type):
-    mvn = get_pdf(tf.convert_to_tensor(param_vec), model_type)
-    return mvn.mean()
-
-def get_pdf_samples(samples_n, param_vec, model_type):
-    mvn = get_pdf(tf.convert_to_tensor(param_vec), model_type)
-    return mvn.sample(samples_n)

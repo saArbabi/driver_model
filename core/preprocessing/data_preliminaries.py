@@ -91,8 +91,8 @@ def vis_dataDistribution(_df, state_names):
         _df[state_name].plot.hist(bins=125)
         plt.title(state_name)
 
-def get_Fixedstate_df(f_df, fadj_df):
-    """These remain fixed during state propagation.
+def get_ffadjstate_df(f_df, fadj_df):
+    """These remain ffadj during state propagation.
     """
     f_df = f_df[['episode_id', 'dv', 'dx', 'da', 'a_ratio']]
     fadj_df = fadj_df[['dv', 'dx', 'da', 'a_ratio']]
@@ -107,14 +107,14 @@ _f_df = trimStatevals(f_df, o_trim_col)
 _fadj_df = trimStatevals(fadj_df, o_trim_col)
 _y_df = trimStatevals(y_df, y_trim_col)
 _m_df = trimStatevals(m_df, m_trim_col)
-fixed_df = get_Fixedstate_df(_f_df, _fadj_df)
+ffadj_df = get_ffadjstate_df(_f_df, _fadj_df)
 len(_m_df)/len(m_df)
-fixed_df.shape
+ffadj_df.shape
 # %%
 vis_dataDistribution(_f_df, o_trim_col)
 vis_dataDistribution(_fadj_df, o_trim_col)
 vis_dataDistribution(_fadj_df, o_trim_col)
-vis_dataDistribution(fixed_df, ['act_long_p'])
+vis_dataDistribution(ffadj_df, ['act_long_p'])
 
 #%%
 all_episodes = list(spec['episode_id'].values)
@@ -151,7 +151,7 @@ for episode_id in all_episodes[0:5]:
 # %%
 data_saver(_m_df, 'm_df0')
 data_saver(_y_df, 'y_df0')
-data_saver(fixed_df, 'fixed_df0')
+data_saver(ffadj_df, 'ffadj_df0')
 
 save_list(training_episodes, 'training_episodes')
 save_list(validation_episodes, 'validation_episodes')

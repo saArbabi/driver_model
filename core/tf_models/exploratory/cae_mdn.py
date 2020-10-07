@@ -168,7 +168,7 @@ model = copy.copy(model)
 encoder_inputs = model.input[0]  # input_1
 encoder_outputs, state_h_enc, state_c_enc = model.layers[2].output  # lstm_1
 encoder_states = [state_h_enc, state_c_enc]
-encoder_model = keras.Model(encoder_inputs, encoder_states) # initialize inference_encoder
+enc_model = keras.Model(encoder_inputs, encoder_states) # initialize inference_encoder
 
 decoder_inputs = model.input[1]  # input_2
 decoder_state_input_h = keras.Input(shape=(latent_dim,), name="input_3")
@@ -187,7 +187,7 @@ low_normal =  model.layers[7]
 high_output_dis = high_normal(high_dense_outputs)
 low_output_dis = low_normal(low_dense_outputs)
 
-decoder_model = keras.Model(
+dec_model = keras.Model(
     [decoder_inputs, decoder_states_inputs], [high_output_dis, low_output_dis, decoder_states]
 )
 model.summary()
@@ -205,7 +205,7 @@ conditioning = np.zeros((1, 1, y_feature_n))
 t0 = time.time()
 def decode_sequence(input_seq, cond, step_n):
     # Encode the input as state vectors.
-    encoder_states_value = encoder_model.predict(input_seq)
+    encoder_states_value = enc_model.predict(input_seq)
 
     # Sampling loop for a batch of sequences
     # (to simplify, here we assume a batch of size 1).
@@ -221,7 +221,7 @@ def decode_sequence(input_seq, cond, step_n):
         # Generate empty target sequence of length 1.
         # Populate the first character of target sequence with the start character.
         for i in range(step_n):
-            high_dis, low_dis, states_value = decoder_model([conditioning] + states_value)
+            high_dis, low_dis, states_value = dec_model([conditioning] + states_value)
             # print(output_.stddev())
             # Sample a token
             high_dis_sample = high_dis.sample(1).numpy()

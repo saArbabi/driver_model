@@ -36,16 +36,16 @@ def read_episode_ids():
             my_list = [int(item) for item in file.read().split()]
         episode_ids[name] = my_list
 
-def read_fixed_stateArr():
-    global fixed_arr0
-    fixed_arr0 = pd.read_csv('./datasets/fixed_df0.txt', delimiter=' ',
+def read_ffadj_stateArr():
+    global ffadj_arr0
+    ffadj_arr0 = pd.read_csv('./datasets/ffadj_df0.txt', delimiter=' ',
                                                             header=None).values
     # First column is episode_id
-    fixed_arr0[:,1:] = StandardScaler().fit(fixed_arr0[:,1:]).transform(fixed_arr0[:,1:])
+    ffadj_arr0[:,1:] = StandardScaler().fit(ffadj_arr0[:,1:]).transform(ffadj_arr0[:,1:])
 
 read_episode_df()
 read_episode_ids()
-read_fixed_stateArr()
+read_ffadj_stateArr()
 # %%
 class DataPrep():
     random.seed(2020)
@@ -122,14 +122,18 @@ class DataPrep():
     def applytarget_yScaler(self, _arr):
         return self.target_y_scaler.transform(_arr.reshape(-1, 1))
 
-    def applyconditionScaler(self, _arr):
+    def applycondition_Scaler(self, _arr):
         return self.condition_scaler.transform(_arr)
 
-    def applyInvScaler(self, action_arr):
+    def apply_InvScaler(self, action_arr):
         """
         Note: only applies to target (i.e. action) values
         """
-        return self.target_scaler.inverse_transform(action_arr)
+        arr_shape = action_arr.shape
+        if arr_shape[1] == 1:
+            return self.target_y_scaler.inverse_transform(action_arr)
+        elif arr_shape[1] == 2:
+            return self.target_m_scaler.inverse_transform(action_arr)
 
     def setState_indx(self):
         i = 0
@@ -172,9 +176,9 @@ class DataPrep():
         self.target_y_scaler = StandardScaler().fit(target_y_arr.reshape(-1, 1))
         self.condition_scaler = StandardScaler().fit(condition_arr)
 
-    def get_fixedSate(self, fixed_arr, episode_id):
-        fixed_state_arr = fixed_arr[fixed_arr[:,0]==episode_id]
-        return np.delete(fixed_state_arr, 0, axis=1)
+    def get_ffadjSate(self, ffadj_arr, episode_id):
+        ffadj_state_arr = ffadj_arr[ffadj_arr[:,0]==episode_id]
+        return np.delete(ffadj_state_arr, 0, axis=1)
 
     def get_timeStamps(self, size):
         ts = np.zeros([size, 1])
@@ -194,9 +198,9 @@ class DataPrep():
         state_arr = self.applystateScaler(state_arr)
         target_m_arr = self.applytarget_mScaler(target_m_arr)
         target_y_arr = self.applytarget_yScaler(target_y_arr)
-        condition_arr = self.applyconditionScaler(condition_arr)
+        condition_arr = self.applycondition_Scaler(condition_arr)
 
-        f_x_arr = self.get_fixedSate(fixed_arr0, episode_id)
+        f_x_arr = self.get_ffadjSate(ffadj_arr0, episode_id)
         state_arr = np.concatenate([state_arr, f_x_arr], axis=1)
 
         state_arr, target_m_arr, target_y_arr,  condition_arr = self.obsSequence(
@@ -272,6 +276,9 @@ class DataPrep():
 
             with open(self.dirName+'/test_y_df', "wb") as f:
                 pickle.dump(y_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
+
+            with open(self.dirName+'/test_ffadj_arr', "wb") as f:
+                pickle.dump(ffadj_arr0[np.isin(ffadj_arr0[:,0], episode_ids['test_episodes'])], f)
 
     def data_prep(self, episode_type=None):
         if not episode_type:

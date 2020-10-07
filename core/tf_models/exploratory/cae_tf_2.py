@@ -74,9 +74,9 @@ self.nll_loss = lambda y, p_y: -p_y.log_prob()
 tf.reshape(targets, (tf.shape(targets)[0], 10)).shape
 # %%
 reload(am)
-encoder_model = am.Encoder(config)
-decoder_model = am.Decoder(config)
-model = am.CAE(encoder_model, decoder_model, config)
+enc_model = am.Encoder(config)
+dec_model = am.Decoder(config)
+model = am.CAE(enc_model, dec_model, config)
 
 optimizer = tf.optimizers.Adam(model.learning_rate)
 train_ds = model.batch_data(xs, ys_target, ys_input)
@@ -137,7 +137,7 @@ target_seq = np.zeros((1, 1, y_feature_n))
 t0 = time.time()
 def decode_sequence(input_seq, input_t0, step_n):
     # Encode the input as state vectors.
-    encoder_states_value = encoder_model.predict(input_seq)
+    encoder_states_value = enc_model.predict(input_seq)
 
     # Sampling loop for a batch of sequences
     # (to simplify, here we assume a batch of size 1).
@@ -149,12 +149,12 @@ def decode_sequence(input_seq, input_t0, step_n):
         target_seq = np.zeros((1, 1, y_feature_n))
         # Populate the first character of target sequence with the start character.
         target_seq[0, 0, 0] = input_t0
-        # output_ = decoder_model([target_seq, states_value])
+        # output_ = dec_model([target_seq, states_value])
         # print(output_.stddev())
 
         for i in range(step_n):
-            output_ = decoder_model([target_seq, states_value])
-            h, c = decoder_model.state_h, decoder_model.state_c
+            output_ = dec_model([target_seq, states_value])
+            h, c = dec_model.state_h, dec_model.state_c
             # print(output_.stddev())
 
             # Sample a token

@@ -41,7 +41,7 @@ states_train[5][-1]
 conditions_train[5][0]
 targets_y_train[1]
 targets_m_train[0]
-conditions_train.shape
+conditions_train[0].shape
 states_train.shape
 states_val.shape
 states_train.shape

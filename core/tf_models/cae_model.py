@@ -78,10 +78,10 @@ class Decoder(tf.keras.Model):
         return gmm_m, gmm_y
 
 class CAE(AbstractModel):
-    def __init__(self, encoder_model, decoder_model, config):
+    def __init__(self, config):
         super(CAE, self).__init__(config)
-        self.encoder_model = encoder_model
-        self.decoder_model = decoder_model
+        self.enc_model = Encoder(config)
+        self.dec_model = Decoder(config)
 
     def architecture_def(self, X):
         pass
@@ -90,5 +90,5 @@ class CAE(AbstractModel):
         # Defines the computation from inputs to outputs
         # input[0] = state obs
         # input[1] = conditions
-        encoder_states = self.encoder_model(inputs[0])
-        return self.decoder_model([inputs[1], encoder_states])
+        encoder_states = self.enc_model(inputs[0])
+        return self.dec_model([inputs[1], encoder_states])

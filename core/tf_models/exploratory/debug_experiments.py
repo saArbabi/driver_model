@@ -64,9 +64,9 @@ train_loss = []
 valid_loss = []
 
 
-encoder_model = Encoder(config)
-decoder_model = Decoder(config)
-model = CAE(encoder_model, decoder_model, config)
+enc_model = Encoder(config)
+dec_model = Decoder(config)
+model = CAE(enc_model, dec_model, config)
 
 optimizer = tf.optimizers.Adam(model.learning_rate)
 data_objs =  DataObj(config).loadData()
@@ -105,8 +105,8 @@ conditions.shape
 state_obs = tf.reshape(states[0], [1, 20, 10])
 cond = tf.reshape(conditions[0], [1, 20, 3])
 state_obs.shape
-enc_state = encoder_model(state_obs)
-param_vec = decoder_model([cond, enc_state])
+enc_state = enc_model(state_obs)
+param_vec = dec_model([cond, enc_state])
 utils.get_pdf_samples(samples_n=1, param_vec=param_vec, model_type='merge_policy')
 targets[0]
 # %%
@@ -117,7 +117,7 @@ y_feature_n = 3
 t0 = time.time()
 def decode_sequence(state_obs, condition, step_n):
     # Encode the input as state vectors.
-    encoder_states_value = encoder_model(state_obs)
+    encoder_states_value = enc_model(state_obs)
 
     # Sampling loop for a batch of sequences
     # (to simplify, here we assume a batch of size 1).
@@ -131,7 +131,7 @@ def decode_sequence(state_obs, condition, step_n):
         conditioning  = tf.reshape(condition[0, 0, :], cond_shape)
         for i in range(20):
 
-            param_vec = decoder_model([conditioning , states_value])
+            param_vec = dec_model([conditioning , states_value])
             # print(output_.stddev())
             output_ = utils.get_pdf_samples(samples_n=1, param_vec=param_vec, model_type='merge_policy')
             output_ = tf.reshape(output_, [2])
@@ -144,7 +144,7 @@ def decode_sequence(state_obs, condition, step_n):
                 conditioning  = tf.reshape(conditioning, cond_shape)
 
             # Update states
-            states_value = decoder_model.state
+            states_value = dec_model.state
 
 
         sequences.append(np.array(decoded_seq))
