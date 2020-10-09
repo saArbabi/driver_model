@@ -52,28 +52,50 @@ class Decoder(tf.keras.Model):
         self.sigmas_long_y = Dense(self.components_n, activation=K.exp, name="sigmas_long")
 
     def call(self, inputs):
-        # input[0] = conditions
+        # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
+        vec_ms = []
+        vec_ys = []
+        self.state = inputs[1]
         conditions = self.masking(inputs[0])
-        outputs, state_h, state_c = self.lstm_layers(conditions, initial_state=inputs[1])
-        self.state = [state_h, state_c]
-        """Merger vehicle
-        """
-        alphas = self.alphas_m(outputs)
-        mus_long = self.mus_long_m(outputs)
-        sigmas_long = self.sigmas_long_m(outputs)
-        mus_lat = self.mus_lat_m(outputs)
-        sigmas_lat = self.sigmas_lat_m(outputs)
-        rhos = self.rhos_m(outputs)
-        param_vec_m = self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
-        gmm_m = get_pdf(param_vec_m, 'merge_vehicle')
-        """Yielder vehicle
-        """
-        alphas = self.alphas_y(outputs)
-        mus_long = self.mus_long_y(outputs)
-        sigmas_long = self.sigmas_long_y(outputs)
-        param_vec_y = self.pvector([alphas, mus_long, sigmas_long])
-        gmm_y = get_pdf(param_vec_y, 'yield_vehicle')
+        step_condition = tf.expand_dims(conditions[:, 0, :], axis=1)
+        input_shape = inputs[0].shape
+        print(inputs[1].)
+        for i in range(self.pred_horizon):
+
+            outputs, state_h, state_c = self.lstm_layers(step_condition, initial_state=self.state)
+            self.state = [state_h, state_c]
+            """Merger vehicle
+            """
+            alphas = self.alphas_m(outputs)
+            mus_long = self.mus_long_m(outputs)
+            sigmas_long = self.sigmas_long_m(outputs)
+            mus_lat = self.mus_lat_m(outputs)
+            sigmas_lat = self.sigmas_lat_m(outputs)
+            rhos = self.rhos_m(outputs)
+            param_vec_m = self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
+            """Yielder vehicle
+            """
+            alphas = self.alphas_y(outputs)
+            mus_long = self.mus_long_y(outputs)
+            sigmas_long = self.sigmas_long_y(outputs)
+            param_vec_y = self.pvector([alphas, mus_long, sigmas_long])
+
+            vec_ms.append(param_vec_m)
+            vec_ys.append(param_vec_y)
+
+            if i != (self.pred_horizon - 1):
+                gmm_m = get_pdf(param_vec_m, 'merge_vehicle')
+                gmm_y = get_pdf(param_vec_y, 'yield_vehicle')
+                sample_m = tf.reshape(gmm_m.sample(1), [input_shape[0], 1, 2])
+                sample_y = tf.reshape(gmm_y.sample(1), [input_shape[0], 1, 1])
+
+                step_condition = tf.concat([sample_m, sample_y], axis=-1)
+
+        vec_ms = tf.concat(vec_ms, axis=1)
+        vec_ys = tf.concat(vec_ys, axis=1)
+        gmm_m = get_pdf(vec_ms, 'merge_vehicle')
+        gmm_y = get_pdf(vec_ys, 'yield_vehicle')
 
         return gmm_m, gmm_y
 

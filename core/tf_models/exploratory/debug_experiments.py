@@ -43,9 +43,9 @@ config = {
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
-                "m_s":["vel", "pc", "act_long_p", "act_lat_p"],
-                "y_s":["vel", "dv", "dx", "act_long_p"],
-                "Note": "cae setup"
+                "m_s":["vel", "pc", 'act_long_p', 'act_lat_p'],
+                "y_s":["vel", "dx", 'act_long_p'],
+                "Note": "cae setup - with condition: past vehicle actions"
 },
 "exp_id": "NA",
 "Note": "NA"
@@ -63,10 +63,7 @@ config['exp_id'] = 'debug_experiment_2'
 train_loss = []
 valid_loss = []
 
-
-enc_model = Encoder(config)
-dec_model = Decoder(config)
-model = CAE(enc_model, dec_model, config)
+model = CAE(config)
 
 optimizer = tf.optimizers.Adam(model.learning_rate)
 data_objs =  DataObj(config).loadData()
@@ -76,7 +73,7 @@ test_ds = model.batch_data(data_objs[4:])
 write_graph = 'False'
 batch_i = 0
 t0 = time.time()
-for epoch in range(10):
+for epoch in range(2):
     for states, targets_m, targets_y, conditions in train_ds:
         if write_graph == 'True':
             print(tf.shape(states))
@@ -99,7 +96,12 @@ print('experiment duration ', time.time() - t0)
 
 plt.plot(valid_loss)
 plt.plot(train_loss)
+plt.legend(['valid_loss', 'train_loss'])
 
+# %%
+a = tf.constant([1,2])
+b = tf.constant([3])
+tf.concat([a,b], axis=)
 # %%
 conditions.shape
 state_obs = tf.reshape(states[0], [1, 20, 10])
