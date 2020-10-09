@@ -10,6 +10,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import os
 import pickle
+import dill
 import tensorflow as tf
 
 # %%
@@ -160,7 +161,8 @@ class DataPrep():
         """
         target_m_df = m_df[['act_long','act_lat']]
         target_y_df = y_df['act_long']
-        condition_df = y_df[['da', 'a_ratio']]
+        # condition_df = y_df[['da', 'a_ratio']]
+        condition_df = pd.concat([m_df[['vel','pc']], y_df[['vel','dx']]], axis=1)
 
         state_df = pd.DataFrame()
         state_df = pd.concat([state_df, m_df['lc_type']], axis=1)
@@ -176,7 +178,7 @@ class DataPrep():
         self.target_y_scaler = StandardScaler().fit(target_y_arr.reshape(-1, 1))
         self.condition_scaler = StandardScaler().fit(condition_arr)
 
-    def get_ffadjSate(self, ffadj_arr, episode_id):
+    def get_ffadjState(self, ffadj_arr, episode_id):
         ffadj_state_arr = ffadj_arr[ffadj_arr[:,0]==episode_id]
         return np.delete(ffadj_state_arr, 0, axis=1)
 
@@ -200,7 +202,7 @@ class DataPrep():
         target_y_arr = self.applytarget_yScaler(target_y_arr)
         condition_arr = self.applycondition_Scaler(condition_arr)
 
-        f_x_arr = self.get_ffadjSate(ffadj_arr0, episode_id)
+        f_x_arr = self.get_ffadjState(ffadj_arr0, episode_id)
         state_arr = np.concatenate([state_arr, f_x_arr], axis=1)
 
         state_arr, target_m_arr, target_y_arr,  condition_arr = self.obsSequence(
@@ -269,7 +271,7 @@ class DataPrep():
             delattr(self, 'conditions')
 
             with open(self.dirName+'/data_obj', "wb") as f:
-                pickle.dump(self, f)
+                dill.dump(self, f)
 
             with open(self.dirName+'/test_m_df', "wb") as f:
                 pickle.dump(m_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
@@ -283,7 +285,6 @@ class DataPrep():
     def data_prep(self, episode_type=None):
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
-
         self.states = []
         self.targets_m = []
         self.targets_y = []

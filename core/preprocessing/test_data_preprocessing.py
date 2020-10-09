@@ -28,7 +28,8 @@ config = {
                 "y_s":["vel", "dx", 'da', 'a_ratio'],
                 # "Note": "baseline - no time stamps"
                 # "Note": "Here I am adding the time stamp"
-                "Note": "cae setup - with a_ratio/da only to reduce model cheating"
+                "Note": "cae setup - with condition: m_df[['vel','pc']], y_df[['vel','dx']]"
+                # "Note": "cae setup - with a_ratio/da only to reduce model cheating11"
 },
 "exp_id": "NA",
 "Note": "NA"
