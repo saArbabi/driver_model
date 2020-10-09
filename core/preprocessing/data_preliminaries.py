@@ -94,8 +94,10 @@ def vis_dataDistribution(_df, state_names):
 def get_ffadjstate_df(f_df, fadj_df):
     """These remain ffadj during state propagation.
     """
-    f_df = f_df[['episode_id', 'dv', 'dx', 'da', 'a_ratio']]
-    fadj_df = fadj_df[['dv', 'dx', 'da', 'a_ratio']]
+    # f_df = f_df[['episode_id', 'dv', 'dx', 'da', 'a_ratio']]
+    # fadj_df = fadj_df[['dv', 'dx', 'da', 'a_ratio']]
+    f_df = f_df[['episode_id', 'dv', 'dx', 'act_long_p']]
+    fadj_df = fadj_df[['dv', 'dx', 'act_long_p']]
     return pd.concat([f_df, fadj_df], axis=1)
 
 # %%

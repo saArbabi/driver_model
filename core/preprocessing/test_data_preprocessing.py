@@ -24,11 +24,11 @@ config = {
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
-                "m_s":["vel", "pc"],
-                "y_s":["vel", "dx", 'da', 'a_ratio'],
+                "m_s":["vel", "pc", 'act_long_p', 'act_lat_p'],
+                "y_s":["vel", "dx", 'act_long_p'],
                 # "Note": "baseline - no time stamps"
                 # "Note": "Here I am adding the time stamp"
-                "Note": "cae setup - with condition: m_df[['vel','pc']], y_df[['vel','dx']]"
+                "Note": "cae setup - with condition: past vehicle actions"
                 # "Note": "cae setup - with a_ratio/da only to reduce model cheating11"
 },
 "exp_id": "NA",

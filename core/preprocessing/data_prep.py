@@ -162,7 +162,8 @@ class DataPrep():
         target_m_df = m_df[['act_long','act_lat']]
         target_y_df = y_df['act_long']
         # condition_df = y_df[['da', 'a_ratio']]
-        condition_df = pd.concat([m_df[['vel','pc']], y_df[['vel','dx']]], axis=1)
+        # condition_df = pd.concat([m_df[['vel','pc']], y_df[['vel','dx']]], axis=1)
+        condition_df = pd.concat([m_df[['act_long_p','act_lat_p']], y_df['act_long_p']], axis=1)
 
         state_df = pd.DataFrame()
         state_df = pd.concat([state_df, m_df['lc_type']], axis=1)
