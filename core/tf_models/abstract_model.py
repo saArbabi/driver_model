@@ -3,7 +3,7 @@ seed(2020)
 import tensorflow as tf
 tf.random.set_seed(2020)
 from datetime import datetime
-from models.core.tf_models.utils import loss_merge, loss_yield, covDet_min
+from models.core.tf_models.utils import loss_merge, loss_other, covDet_min
 
 class AbstractModel(tf.keras.Model):
     def __init__(self, config):
@@ -26,23 +26,24 @@ class AbstractModel(tf.keras.Model):
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    def save_epoch_metrics(self, states, targets_m, targets_y, conditions, epoch):
+    def save_epoch_metrics(self, states, targs, conditions, epoch):
         with self.writer_1.as_default():
             tf.summary.scalar('_train', self.train_loss.result(), step=epoch)
             tf.summary.scalar('_val', self.test_loss.result(), step=epoch)
         self.writer_1.flush()
 
         with self.writer_2.as_default():
-            gmm_m, _ = self([states, conditions], training=True)
+            gmm_m, _, _, _ = self([states, conditions], training=True)
             covdet_min = covDet_min(gmm_m)
             tf.summary.scalar('covdet_min', covdet_min, step=epoch)
         self.writer_2.flush()
 
     @tf.function
-    def train_step(self, states, targets_m, targets_y, conditions, optimizer):
+    def train_step(self, states, targs, conditions, optimizer):
         with tf.GradientTape() as tape:
-            gmm_m, gmm_y = self([states, conditions], training=True)
-            loss = loss_merge(targets_m, gmm_m) + loss_yield(targets_y, gmm_y)
+            gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=True)
+            loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
+                            loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         optimizer.apply_gradients(zip(gradients, self.trainable_variables))
@@ -50,9 +51,10 @@ class AbstractModel(tf.keras.Model):
         self.train_loss(loss)
 
     @tf.function
-    def test_step(self, states, targets_m, targets_y, conditions):
-        gmm_m, gmm_y = self([states, conditions], training=False)
-        loss = loss_merge(targets_m, gmm_m) + loss_yield(targets_y, gmm_y)
+    def test_step(self, states, targs, conditions):
+        gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=False)
+        loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
+                        loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
         self.test_loss.reset_states()
         self.test_loss(loss)
 

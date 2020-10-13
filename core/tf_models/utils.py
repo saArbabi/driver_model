@@ -15,7 +15,7 @@ def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
 def get_pdf(param_vec, vehicle):
     # see https://ericmjl.github.io/blog/2019/5/29/reasoning-about-shapes-and-probability-distributions/
     # for info on shapes
-    if vehicle == 'yield_vehicle':
+    if vehicle == 'other_vehicle':
         alpha, mus, sigmas = slice_pvector(param_vec, vehicle) # Unpack parameter vectors
         mvn = tfd.MixtureSameFamily(
             mixture_distribution=tfd.Categorical(probs=alpha),
@@ -42,7 +42,7 @@ def get_pdf(param_vec, vehicle):
 def slice_pvector(param_vec, vehicle):
     """ Returns an unpacked list of paramter vectors.
     """
-    if vehicle == 'yield_vehicle':
+    if vehicle == 'other_vehicle':
         n_params = 3 # number of parameters being learned per GMM compnent
     if vehicle == 'merge_vehicle':
         n_params = 6
@@ -67,7 +67,7 @@ def loss_merge(y, mvn):
     # shape: [sample_shape, batch_shape, event_shape]
     return -tf.reduce_mean(log_likelihood)
 
-def loss_yield(y, mvn):
+def loss_other(y, mvn):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
         Loss for the yield vehicle
     """

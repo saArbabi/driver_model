@@ -81,12 +81,25 @@ class Decoder(tf.keras.Model):
         self.alphas_y = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_y = Dense(self.components_n, name="mus_long")
         self.sigmas_long_y = Dense(self.components_n, activation=K.exp, name="sigmas_long")
+        """F vehicle
+        """
+        self.alphas_f = Dense(self.components_n, activation=K.softmax, name="alphas")
+        self.mus_long_f = Dense(self.components_n, name="mus_long")
+        self.sigmas_long_f = Dense(self.components_n, activation=K.exp, name="sigmas_long")
+        """Fadj vehicle
+        """
+        self.alphas_fadj = Dense(self.components_n, activation=K.softmax, name="alphas")
+        self.mus_long_fadj = Dense(self.components_n, name="mus_long")
+        self.sigmas_long_fadj = Dense(self.components_n, activation=K.exp, name="sigmas_long")
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
         vec_ms = [] # parameter vectors for all the steps
         vec_ys = []
+        vec_fs = []
+        vec_fadjs = []
+
         self.state = inputs[1]
         batch_size = inputs[0].shape[0]
         enc_h = tf.reshape(self.state[0], [batch_size, 1, self.dec_units]) # encoder hidden state
@@ -110,29 +123,51 @@ class Decoder(tf.keras.Model):
             sigmas_lat = self.sigmas_lat_m(outputs)
             rhos = self.rhos_m(outputs)
             param_vec_m = self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
+            vec_ms.append(param_vec_m)
             """Yielder vehicle
             """
             alphas = self.alphas_y(outputs)
             mus_long = self.mus_long_y(outputs)
             sigmas_long = self.sigmas_long_y(outputs)
             param_vec_y = self.pvector([alphas, mus_long, sigmas_long])
-
-            vec_ms.append(param_vec_m)
             vec_ys.append(param_vec_y)
+            """F vehicle
+            """
+            alphas = self.alphas_f(outputs)
+            mus_long = self.mus_long_f(outputs)
+            sigmas_long = self.sigmas_long_f(outputs)
+            param_vec_f = self.pvector([alphas, mus_long, sigmas_long])
+            vec_fs.append(param_vec_f)
+            """Fadj vehicle
+            """
+            alphas = self.alphas_fadj(outputs)
+            mus_long = self.mus_long_fadj(outputs)
+            sigmas_long = self.sigmas_long_fadj(outputs)
+            param_vec_fadj = self.pvector([alphas, mus_long, sigmas_long])
+            vec_fadjs.append(param_vec_fadj)
 
             if i != (self.pred_horizon - 1):
                 gmm_m = get_pdf(param_vec_m, 'merge_vehicle')
-                gmm_y = get_pdf(param_vec_y, 'yield_vehicle')
+                gmm_y = get_pdf(param_vec_y, 'other_vehicle')
+                gmm_f = get_pdf(param_vec_f, 'other_vehicle')
+                gmm_fadj = get_pdf(param_vec_fadj, 'other_vehicle')
+
                 sample_m = tf.reshape(gmm_m.sample(1), [batch_size, 1, 2])
                 sample_y = tf.reshape(gmm_y.sample(1), [batch_size, 1, 1])
-                step_condition = tf.concat([sample_m, sample_y], axis=-1)
+                sample_f = tf.reshape(gmm_f.sample(1), [batch_size, 1, 1])
+                sample_fadj = tf.reshape(gmm_fadj.sample(1), [batch_size, 1, 1])
+                step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
 
         vec_ms = tf.concat(vec_ms, axis=1)
         vec_ys = tf.concat(vec_ys, axis=1)
+        vec_fs = tf.concat(vec_fs, axis=1)
+        vec_fadjs = tf.concat(vec_fadjs, axis=1)
         gmm_m = get_pdf(vec_ms, 'merge_vehicle')
-        gmm_y = get_pdf(vec_ys, 'yield_vehicle')
+        gmm_y = get_pdf(vec_ys, 'other_vehicle')
+        gmm_f = get_pdf(vec_fs, 'other_vehicle')
+        gmm_fadj = get_pdf(vec_fadjs, 'other_vehicle')
 
-        return gmm_m, gmm_y
+        return gmm_m, gmm_y, gmm_f, gmm_fadj
 
 class CAE(AbstractModel):
     def __init__(self, config):
