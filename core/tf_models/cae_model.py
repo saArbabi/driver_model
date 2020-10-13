@@ -1,9 +1,10 @@
 from numpy.random import seed # keep this at top
 seed(2020)
+import numpy as np
 import tensorflow as tf
 tf.random.set_seed(2020)
 from keras import backend as K
-from tensorflow.keras.layers import Dense, Concatenate, LSTM, Masking
+from tensorflow.keras.layers import Dense, Concatenate, LSTM, Masking, TimeDistributed
 from models.core.tf_models.utils import get_pdf
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
@@ -14,13 +15,24 @@ class Encoder(tf.keras.Model):
     def __init__(self, config):
         super(Encoder, self).__init__(name="Encoder")
         self.enc_units = config['model_config']['enc_units']
+        # self.enc_emb_units = config['model_config']['enc_emb_units']
+        self.enc_emb_units = 15
         self.architecture_def()
 
+    def fc_embedding(self, inputs):
+        output = self.embedding_layer_1(inputs)
+        output = self.embedding_layer_2(output)
+        return output
+
+
     def architecture_def(self):
+        self.embedding_layer_1 = TimeDistributed(Dense(self.enc_emb_units))
+        self.embedding_layer_2 = TimeDistributed(Dense(self.enc_emb_units))
         self.lstm_layers = LSTM(self.enc_units, return_state=True)
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
+        inputs = self.fc_embedding(inputs)
         _, state_h, state_c = self.lstm_layers(inputs)
         return [state_h, state_c]
 
@@ -30,13 +42,32 @@ class Decoder(tf.keras.Model):
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
         self.pred_horizon = config['data_config']['pred_horizon']
+        self.dec_emb_units = 3
+        self.time_stamp = np.zeros([1,1,self.pred_horizon], dtype='float32')
 
         self.architecture_def()
 
+    def fc_embedding(self, inputs):
+        output = self.embedding_layer_1(inputs)
+        output = self.embedding_layer_2(output)
+        return output
+
+    def get_timeStamp(self, step, batch_size):
+        if step == 0:
+            self.time_stamp[0,0,0] = 1
+        else:
+            self.time_stamp[0,0,step-1] = 0
+            self.time_stamp[0,0,step] = 1
+
+        time_stamp = tf.repeat(self.time_stamp, batch_size, axis=0)
+        return time_stamp
+
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
-        self.lstm_layers = LSTM(self.dec_units, return_sequences=True, return_state=True)
-        self.masking = Masking(mask_value=0., input_shape=(self.pred_horizon, None))
+        self.embedding_layer_1 = Dense(self.dec_emb_units)
+        self.embedding_layer_2 = Dense(self.dec_emb_units)
+        self.lstm_layer = LSTM(self.dec_units, return_sequences=True, return_state=True)
+        self.masking = Masking(mask_value=0., batch_size=(self.pred_horizon, None))
         """Merger vehicle
         """
         self.alphas_m = Dense(self.components_n, activation=K.softmax, name="alphas")
@@ -54,17 +85,22 @@ class Decoder(tf.keras.Model):
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
-        vec_ms = []
+        vec_ms = [] # parameter vectors for all the steps
         vec_ys = []
         self.state = inputs[1]
+        batch_size = inputs[0].shape[0]
+        enc_h = tf.reshape(self.state[0], [batch_size, 1, self.dec_units]) # encoder hidden state
         conditions = self.masking(inputs[0])
         step_condition = tf.expand_dims(conditions[:, 0, :], axis=1)
-        input_shape = inputs[0].shape
-        print(inputs[1].)
-        for i in range(self.pred_horizon):
 
-            outputs, state_h, state_c = self.lstm_layers(step_condition, initial_state=self.state)
-            self.state = [state_h, state_c]
+        for i in range(self.pred_horizon):
+        # for i in range(5):
+            step_condition = self.fc_embedding(step_condition)
+            time_stamp = self.get_timeStamp(i, batch_size)
+            contex_vector = tf.concat([step_condition, enc_h, time_stamp], axis=2)
+
+            outputs, state_h, state_c = self.lstm_layer(contex_vector, initial_state=self.state)
+            self.state_m = [state_h, state_c]
             """Merger vehicle
             """
             alphas = self.alphas_m(outputs)
@@ -87,9 +123,8 @@ class Decoder(tf.keras.Model):
             if i != (self.pred_horizon - 1):
                 gmm_m = get_pdf(param_vec_m, 'merge_vehicle')
                 gmm_y = get_pdf(param_vec_y, 'yield_vehicle')
-                sample_m = tf.reshape(gmm_m.sample(1), [input_shape[0], 1, 2])
-                sample_y = tf.reshape(gmm_y.sample(1), [input_shape[0], 1, 1])
-
+                sample_m = tf.reshape(gmm_m.sample(1), [batch_size, 1, 2])
+                sample_y = tf.reshape(gmm_y.sample(1), [batch_size, 1, 1])
                 step_condition = tf.concat([sample_m, sample_y], axis=-1)
 
         vec_ms = tf.concat(vec_ms, axis=1)

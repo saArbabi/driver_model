@@ -51,6 +51,11 @@ config = {
 "Note": "NA"
 }
 # %%
+data_objs =  DataObj(config).loadData()
+train_ds = model.batch_data(data_objs[0:4])
+test_ds = model.batch_data(data_objs[4:])
+
+# %%
 reload(utils)
 from models.core.tf_models import utils
 
@@ -64,12 +69,7 @@ train_loss = []
 valid_loss = []
 
 model = CAE(config)
-
 optimizer = tf.optimizers.Adam(model.learning_rate)
-data_objs =  DataObj(config).loadData()
-train_ds = model.batch_data(data_objs[0:4])
-test_ds = model.batch_data(data_objs[4:])
-
 write_graph = 'False'
 batch_i = 0
 t0 = time.time()
@@ -96,12 +96,23 @@ print('experiment duration ', time.time() - t0)
 
 plt.plot(valid_loss)
 plt.plot(train_loss)
+plt.grid()
 plt.legend(['valid_loss', 'train_loss'])
 
 # %%
 a = tf.constant([1,2])
 b = tf.constant([3])
 tf.concat([a,b], axis=)
+b = [0,0]
+b[-1] = 1
+b.append(3)
+a = np.zeros([1,1,20])
+type(a)
+np.dtype(1)
+a[1] = 1
+a
+np.zeros(10)
+tf.repeat([[a]], 2, axis=0)
 # %%
 conditions.shape
 state_obs = tf.reshape(states[0], [1, 20, 10])
