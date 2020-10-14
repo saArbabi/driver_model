@@ -46,15 +46,12 @@ def trimStatevals(_df, names):
 
     return df
 
-def save_list(my_list, name):
-    file_name = './datasets/'+name+'.txt'
-    with open(file_name, "w") as f:
-        for item in my_list:
-            f.write("%s\n"%item)
-
-def data_saver(veh_df, o_name):
-    file_name = './datasets/' + o_name + '.txt'
-    veh_df.to_csv(file_name, header=None, index=None, sep=' ', mode='a')
+def data_saver(data, data_name):
+    file_name = './datasets/' + data_name + '.csv'
+    if data.dtype == 'int64':
+        np.savetxt(file_name, data, fmt='%i', delimiter=',')
+    else:
+        np.savetxt(file_name, data, fmt='%10.3f', delimiter=',')
 
 def draw_traj(all_dfs, features, episode_id):
     for item in features:
@@ -149,15 +146,14 @@ vis_dataDistribution(target_arr, target_col)
 
 
 #%%
-all_episodes = list(spec['episode_id'].values)
-validation_episodes = list(np.random.choice(all_episodes, int(0.1*len(all_episodes))))
+all_episodes = spec['episode_id'].values
+validation_episodes = np.random.choice(all_episodes, int(0.1*len(all_episodes)))
 test_episodes = spec.loc[(spec['episode_id'].isin(validation_episodes)) &
                                         (spec['frm_n']>60) &
                                         (spec['f_id']>0) &
                                         (spec['fadj_id']>0)]['episode_id'].sample(50).values
+training_episodes = np.setdiff1d(all_episodes, validation_episodes)
 
-len(test_episodes)
-training_episodes = list(set(spec['episode_id']).symmetric_difference(set(validation_episodes)))
 len(validation_episodes)/len(training_episodes)
 # %%
 
@@ -184,7 +180,10 @@ for episode_id in all_episodes[0:5]:
 
 data_saver(state_arr, 'states_arr')
 data_saver(target_arr, 'targets_arr')
+data_saver(condition_arr, 'conditions_arr')
 
-save_list(training_episodes, 'training_episodes')
-save_list(validation_episodes, 'validation_episodes')
-save_list(test_episodes, 'test_episodes')
+data_saver(training_episodes, 'training_episodes')
+data_saver(validation_episodes, 'validation_episodes')
+data_saver(test_episodes, 'test_episodes')
+
+ 

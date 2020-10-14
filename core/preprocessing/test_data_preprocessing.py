@@ -24,29 +24,22 @@ config = {
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
-                "m_s":["vel", "pc", 'act_long_p', 'act_lat_p'],
-                "y_s":["vel", "dx", 'act_long_p'],
-                # "Note": "baseline - no time stamps"
-                # "Note": "Here I am adding the time stamp"
-                "Note": "cae setup - with condition: past vehicle actions"
-                # "Note": "cae setup - with a_ratio/da only to reduce model cheating11"
+                "Note": ""
 },
 "exp_id": "NA",
 "Note": "NA"
 }
 data_objs =  DataObj(config).loadData()
-states_train, targets_m_train, targets_y_train, conditions_train, \
-            states_val, targets_m_val, targets_y_val, conditions_val = data_objs
+states_train, targets_train, conditions_train, \
+                            states_val, targets_val, conditions_val = data_objs
 
 states_train[5][-1]
+targets_train[5][0]
 conditions_train[5][0]
-targets_y_train[1]
-targets_m_train[0]
-conditions_train[0].shape
-states_train.shape
-states_val.shape
-states_train.shape
 
+conditions_train.shape
+targets_train.shape
+states_train.shape
 # %%
 """Distribution vis with sequence data
 """

@@ -26,28 +26,31 @@ def modelTrain(exp_id, explogs):
 
     # (2) Load data
     data_objs =  DataObj(config).loadData()
-    train_ds = model.batch_data(data_objs[0:4])
-    test_ds = model.batch_data(data_objs[4:])
+    train_ds = model.batch_data(data_objs[0:3])
+    test_ds = model.batch_data(data_objs[3:])
 
     # (3) Run experiment
     write_graph = 'True'
     for epoch in range(start_epoch, end_epoch):
-        for states, targets_m, targets_y, conditions in train_ds:
+        for states, targets, conditions in train_ds:
+
             if write_graph == 'True':
-                print(tf.shape(states))
                 graph_write = tf.summary.create_file_writer(model.exp_dir+'/logs/')
                 tf.summary.trace_on(graph=True, profiler=False)
-                model.train_step(states, targets_m, targets_y, conditions, optimizer)
+                model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                            targets[:, :, 4]], conditions, optimizer)
                 with graph_write.as_default():
                     tf.summary.trace_export(name='graph', step=0)
                 write_graph = 'False'
             else:
-                model.train_step(states, targets_m, targets_y, conditions, optimizer)
+                model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                            targets[:, :, 4]], conditions, optimizer)
 
-        for states, targets_m, targets_y, conditions in test_ds:
-            model.test_step(states, targets_m, targets_y, conditions)
+        for states, targets, conditions in test_ds:
+            model.test_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                                        targets[:, :, 4]], conditions)
 
-        model.save_epoch_metrics(states, targets_m, targets_y, conditions, epoch)
+        model.save_epoch_metrics(states, conditions, epoch)
         utils.updateExpstate(model, explogs, exp_id, 'in progress')
 
         ckpt.step.assign_add(1)
@@ -56,7 +59,6 @@ def modelTrain(exp_id, explogs):
 
     utils.updateExpstate(model, explogs, exp_id, 'complete')
     # modelEvaluate(model, validation_data, config)
-    # model.save(model.exp_dir+'/model_dir',save_format='tf')
 
 def runSeries(exp_ids=None):
     explogs = utils.loadExplogs()

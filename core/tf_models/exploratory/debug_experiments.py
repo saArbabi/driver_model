@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from importlib import reload
 import time
 
+
 # %%
 """
 Use this script for debugging the following:
@@ -33,8 +34,10 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 20,
-     "dec_units": 20,
+     "enc_units": 200,
+     "dec_units": 200,
+     "enc_emb_units": 20,
+     "dec_emb_units": 5,
      "layers_n": 2,
      "epochs_n": 50,
      "batch_n": 1124,
@@ -43,17 +46,15 @@ config = {
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
-                "m_s":["vel", "pc", 'act_long_p', 'act_lat_p'],
-                "y_s":["vel", "dx", 'act_long_p'],
-                "Note": "cae setup - with condition: past vehicle actions"
+                "Note": ""
 },
 "exp_id": "NA",
 "Note": "NA"
 }
 # %%
 data_objs =  DataObj(config).loadData()
-train_ds = model.batch_data(data_objs[0:4])
-test_ds = model.batch_data(data_objs[4:])
+train_ds = model.batch_data(data_objs[0:3])
+test_ds = model.batch_data(data_objs[3:])
 
 # %%
 reload(utils)
@@ -74,20 +75,24 @@ write_graph = 'False'
 batch_i = 0
 t0 = time.time()
 for epoch in range(2):
-    for states, targets_m, targets_y, conditions in train_ds:
+    for states, targets, conditions in train_ds:
+
         if write_graph == 'True':
-            print(tf.shape(states))
             graph_write = tf.summary.create_file_writer(model.exp_dir+'/logs/')
             tf.summary.trace_on(graph=True, profiler=False)
-            model.train_step(states, targets_m, targets_y, conditions, optimizer)
+            model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                        targets[:, :, 4]], conditions, optimizer)
             with graph_write.as_default():
                 tf.summary.trace_export(name='graph', step=0)
             write_graph = 'False'
         else:
-            model.train_step(states, targets_m, targets_y, conditions, optimizer)
+            model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                        targets[:, :, 4]], conditions, optimizer)
 
-    for states, targets_m, targets_y, conditions in test_ds:
-        model.test_step(states, targets_m, targets_y, conditions)
+    for states, targets, conditions in test_ds:
+        model.test_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                                    targets[:, :, 4]], conditions)
+
     train_loss.append(round(model.train_loss.result().numpy().item(), 2))
     valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
 # modelEvaluate(model, validation_data, config)

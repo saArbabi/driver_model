@@ -8,7 +8,9 @@ from tensorflow.keras.layers import Dense, Concatenate, LSTM, Masking, TimeDistr
 from models.core.tf_models.utils import get_pdf
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
-from models.core.tf_models.abstract_model import  AbstractModel
+from models.core.tf_models import  abstract_model
+from importlib import reload
+reload(abstract_model)
 
 
 class Encoder(tf.keras.Model):
@@ -16,7 +18,7 @@ class Encoder(tf.keras.Model):
         super(Encoder, self).__init__(name="Encoder")
         self.enc_units = config['model_config']['enc_units']
         # self.enc_emb_units = config['model_config']['enc_emb_units']
-        self.enc_emb_units = 15
+        self.enc_emb_units = config['model_config']['enc_emb_units']
         self.architecture_def()
 
     def fc_embedding(self, inputs):
@@ -42,7 +44,7 @@ class Decoder(tf.keras.Model):
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
         self.pred_horizon = config['data_config']['pred_horizon']
-        self.dec_emb_units = 3
+        self.dec_emb_units = config['model_config']['dec_emb_units']
         self.time_stamp = np.zeros([1,1,self.pred_horizon], dtype='float32')
 
         self.architecture_def()
@@ -111,6 +113,7 @@ class Decoder(tf.keras.Model):
             step_condition = self.fc_embedding(step_condition)
             time_stamp = self.get_timeStamp(i, batch_size)
             contex_vector = tf.concat([step_condition, enc_h, time_stamp], axis=2)
+            # contex_vector = tf.concat([step_condition, enc_h], axis=2)
 
             outputs, state_h, state_c = self.lstm_layer(contex_vector, initial_state=self.state)
             self.state_m = [state_h, state_c]
@@ -169,7 +172,7 @@ class Decoder(tf.keras.Model):
 
         return gmm_m, gmm_y, gmm_f, gmm_fadj
 
-class CAE(AbstractModel):
+class CAE(abstract_model.AbstractModel):
     def __init__(self, config):
         super(CAE, self).__init__(config)
         self.enc_model = Encoder(config)

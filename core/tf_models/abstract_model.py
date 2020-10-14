@@ -26,7 +26,7 @@ class AbstractModel(tf.keras.Model):
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    def save_epoch_metrics(self, states, targs, conditions, epoch):
+    def save_epoch_metrics(self, states, conditions, epoch):
         with self.writer_1.as_default():
             tf.summary.scalar('_train', self.train_loss.result(), step=epoch)
             tf.summary.scalar('_val', self.test_loss.result(), step=epoch)
@@ -43,7 +43,7 @@ class AbstractModel(tf.keras.Model):
         with tf.GradientTape() as tape:
             gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=True)
             loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
-                            loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
+                            + loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         optimizer.apply_gradients(zip(gradients, self.trainable_variables))
@@ -54,13 +54,12 @@ class AbstractModel(tf.keras.Model):
     def test_step(self, states, targs, conditions):
         gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=False)
         loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
-                        loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
+                        + loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
         self.test_loss.reset_states()
         self.test_loss(loss)
 
     def batch_data(self, sets):
-        a, b, c, d = sets
-        a, b, c, d = a.astype("float32"), b.astype("float32"), \
-                                            c.astype("float32"), d.astype("float32")
-        dataset = tf.data.Dataset.from_tensor_slices((a,b,c,d)).batch(self.batch_n)
+        a, b, c = sets
+        a, b, c = a.astype("float32"), b.astype("float32"), c.astype("float32")
+        dataset = tf.data.Dataset.from_tensor_slices((a,b,c)).batch(self.batch_n)
         return dataset

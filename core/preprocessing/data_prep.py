@@ -14,26 +14,20 @@ import dill
 import tensorflow as tf
 
 # %%
-def read_episode_ids():
-    global episode_ids
-
-    episode_ids = {}
-    for name in ['training_episodes', 'validation_episodes', 'test_episodes']:
-        file_name = './datasets/'+name+'.txt'
-        with open(file_name, "r") as file:
-            my_list = [int(item) for item in file.read().split()]
-        episode_ids[name] = my_list
-
-def read_ffadj_stateArr():
+def read_data():
     global all_state_arr, all_target_arr, all_condition_arr
-    ffadj_arr0 = pd.read_csv('./datasets/ffadj_df0.txt', delimiter=' ',
-                                                            header=None).values
-    # First column is episode_id
+    global training_episodes, validation_episodes, test_episodes
+
+    all_state_arr = np.loadtxt('./datasets/states_arr.csv', delimiter=',')
+    all_target_arr = np.loadtxt('./datasets/targets_arr.csv', delimiter=',')
+    all_condition_arr = np.loadtxt('./datasets/conditions_arr.csv', delimiter=',')
+
+    training_episodes = np.loadtxt('./datasets/training_episodes.csv', delimiter=',')
+    validation_episodes = np.loadtxt('./datasets/validation_episodes.csv', delimiter=',')
+    test_episodes = np.loadtxt('./datasets/test_episodes.csv', delimiter=',')
 
 
-read_episode_df()
-read_episode_ids()
-read_ffadj_stateArr()
+read_data()
 # %%
 class DataPrep():
     random.seed(2020)
@@ -63,6 +57,7 @@ class DataPrep():
                 if len(prev_states) == self.obsSequence_n:
                     state_seq.append(np.array(prev_states))
                     target_seq.append(target_arr[i:i+self.pred_horizon].tolist())
+                    condition_seq.append(condition_arr[i:i+self.pred_horizon].tolist())
 
                 i += step_size
             i_reset += 1
@@ -89,10 +84,10 @@ class DataPrep():
         #     return v_x_arr
 
     def get_episode_arr(self, episode_id):
-        state_arr = all_state_arr[all_state_arr[0] == episode_id]
-        target_arr = all_target_arr[all_target_arr[0] == episode_id]
-        condition_arr = all_condition_arr[all_condition_arr[0] == episode_id]
-        return state_arr[:, 1], target_arr[:, 1], condition_arr[:, 1]
+        state_arr = all_state_arr[all_state_arr[:, 0] == episode_id]
+        target_arr = all_target_arr[all_target_arr[:, 0] == episode_id]
+        condition_arr = all_condition_arr[all_condition_arr[:, 0] == episode_id]
+        return state_arr[:, 1:], target_arr[:, 1:], condition_arr[:, 1:]
 
     def applystateScaler(self, _arr):
         _arr[:, :-4] = self.state_scaler.transform(_arr[:, :-4])
@@ -101,6 +96,9 @@ class DataPrep():
     def applytargetScaler(self, _arr):
         return self.target_scaler.transform(_arr)
 
+    def applyconditionScaler(self, _arr):
+        return self.condition_scaler.transform(_arr)
+
     def apply_InvScaler(self, action_arr):
         """
         Note: only applies to target (i.e. action) values
@@ -108,8 +106,9 @@ class DataPrep():
         return self.target_scaler.inverse_transform(action_arr)
 
     def setScalers(self):
-        self.state_scaler = StandardScaler().fit(all_state_arr[1:, -4:])
-        self.target_scaler = StandardScaler().fit(all_target_arr[1:])
+        self.state_scaler = StandardScaler().fit(all_state_arr[:, 1:-4])
+        self.target_scaler = StandardScaler().fit(all_target_arr[:, 1:])
+        self.condition_scaler = StandardScaler().fit(all_condition_arr[:, 1:])
 
     def episode_prep(self, episode_id):
         """
@@ -119,7 +118,7 @@ class DataPrep():
 
         state_arr = self.applystateScaler(state_arr)
         target_arr = self.applytargetScaler(target_arr)
-        condition_arr = self.applytargetScaler(condition_arr)
+        condition_arr = self.applyconditionScaler(condition_arr)
         state_seq, target_seq, condition_seq = self.obsSequence(state_arr, target_arr, condition_arr)
         # self.mask_history(x_df)
         self.states.extend(state_seq)
@@ -140,7 +139,6 @@ class DataPrep():
                                                     self.targets, self.conditions)
 
         if episode_type == 'validation_episodes':
-            # also you want to save validation df for later use
             with open(self.dirName+'/states_val', "wb") as f:
                 pickle.dump(self.states, f)
 
@@ -168,19 +166,35 @@ class DataPrep():
             delattr(self, 'targets')
             delattr(self, 'conditions')
 
+            # also you want to save validation arr for later use
             with open(self.dirName+'/data_obj', "wb") as f:
                 dill.dump(self, f)
 
-            with open(self.dirName+'/test_df', "wb") as f:
-                pickle.dump(m_df0[m_df0['episode_id'].isin(episode_ids['test_episodes'])], f)
+            with open(self.dirName+'/states_test', "wb") as f:
+                _arr = all_state_arr[np.isin(all_state_arr[:, 0], test_episodes)]
+                pickle.dump(_arr, f)
+
+            with open(self.dirName+'/targets_test', "wb") as f:
+                _arr = all_target_arr[np.isin(all_target_arr[:, 0], test_episodes)]
+                pickle.dump(_arr, f)
+
+            with open(self.dirName+'/conditions_test', "wb") as f:
+                _arr = all_condition_arr[np.isin(all_condition_arr[:, 0], test_episodes)]
+                pickle.dump(_arr, f)
 
     def data_prep(self, episode_type=None):
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
         self.states = []
         self.targets = []
-        self.targets_y = []
         self.conditions = []
-        for episode_id in episode_ids[episode_type]:
-            self.episode_prep(episode_id)
+
+        if episode_type == 'training_episodes':
+            for episode_id in training_episodes:
+                self.episode_prep(episode_id)
+
+        elif episode_type == 'validation_episodes':
+            for episode_id in validation_episodes:
+                self.episode_prep(episode_id)
+
         self.pickler(episode_type)
