@@ -12,11 +12,11 @@ def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
     cov = tf.stack([col1, col2], axis=3, name='cov')
     return cov
 
-def get_pdf(param_vec, vehicle):
+def get_pdf(param_vec, vehicle_type):
     # see https://ericmjl.github.io/blog/2019/5/29/reasoning-about-shapes-and-probability-distributions/
     # for info on shapes
     if vehicle == 'other_vehicle':
-        alpha, mus, sigmas = slice_pvector(param_vec, vehicle) # Unpack parameter vectors
+        alpha, mus, sigmas = slice_pvector(param_vec, vehicle_type) # Unpack parameter vectors
         mvn = tfd.MixtureSameFamily(
             mixture_distribution=tfd.Categorical(probs=alpha),
             components_distribution=tfd.Normal(
@@ -25,7 +25,7 @@ def get_pdf(param_vec, vehicle):
 
     if vehicle == 'merge_vehicle':
         alphas, mus_long, sigmas_long, mus_lat, \
-                            sigmas_lat, rhos = slice_pvector(param_vec, vehicle)
+                            sigmas_lat, rhos = slice_pvector(param_vec, vehicle_type)
 
 
         cov = get_CovMatrix(rhos, sigmas_long, sigmas_lat)
@@ -39,7 +39,7 @@ def get_pdf(param_vec, vehicle):
     # print('mus shape: ', mus.shape)
     return mvn
 
-def slice_pvector(param_vec, vehicle):
+def slice_pvector(param_vec, vehicle_type):
     """ Returns an unpacked list of paramter vectors.
     """
     if vehicle == 'other_vehicle':

@@ -109,7 +109,6 @@ class Decoder(tf.keras.Model):
         step_condition = tf.expand_dims(conditions[:, 0, :], axis=1)
 
         for i in range(self.pred_horizon):
-        # for i in range(5):
             step_condition = self.fc_embedding(step_condition)
             time_stamp = self.get_timeStamp(i, batch_size)
             contex_vector = tf.concat([step_condition, enc_h, time_stamp], axis=2)

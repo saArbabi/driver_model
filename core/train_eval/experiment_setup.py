@@ -2,7 +2,7 @@ from models.core.train_eval import utils
 # from models.core.train_eval.model_evaluation import modelEvaluate
 from models.core.preprocessing.data_obj import DataObj
 import tensorflow as tf
-from models.core.tf_models.cae_model import  Encoder, Decoder, CAE
+from models.core.tf_models.cae_model import CAE
 
 def modelTrain(exp_id, explogs):
     config = utils.loadConfig(exp_id)

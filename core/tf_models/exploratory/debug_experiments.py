@@ -1,4 +1,4 @@
-from models.core.tf_models.cae_model import  Encoder, Decoder, CAE
+from models.core.tf_models.cae_model import CAE
 from models.core.train_eval.utils import loadConfig
 # from models.core.train_eval.model_evaluation import modelEvaluate
 import tensorflow as tf
@@ -51,7 +51,7 @@ config = {
 "exp_id": "NA",
 "Note": "NA"
 }
-# %%
+
 data_objs =  DataObj(config).loadData()
 train_ds = model.batch_data(data_objs[0:3])
 test_ds = model.batch_data(data_objs[3:])
@@ -74,7 +74,7 @@ optimizer = tf.optimizers.Adam(model.learning_rate)
 write_graph = 'False'
 batch_i = 0
 t0 = time.time()
-for epoch in range(2):
+for epoch in range(3):
     for states, targets, conditions in train_ds:
 
         if write_graph == 'True':
