@@ -168,7 +168,7 @@ model = copy.copy(model)
 encoder_inputs = model.input[0]  # input_1
 encoder_outputs, state_h_enc, state_c_enc = model.layers[2].output  # lstm_1
 encoder_states = [state_h_enc, state_c_enc]
-encoder_model = keras.Model(encoder_inputs, encoder_states) # initialize inference_encoder
+enc_model = keras.Model(encoder_inputs, encoder_states) # initialize inference_encoder
 
 decoder_inputs = model.input[1]  # input_2
 decoder_state_input_h = keras.Input(shape=(latent_dim,), name="input_3")
@@ -182,7 +182,7 @@ decoder_states = [state_h_dec, state_c_dec]
 decoder_dense = model.layers[4]
 decoder_outputs = decoder_dense(decoder_outputs)
 
-decoder_model = keras.Model(
+dec_model = keras.Model(
     [decoder_inputs] + decoder_states_inputs, [decoder_outputs] + decoder_states
 )
 model.summary()
@@ -196,7 +196,7 @@ y_feature_n = 3
 target_seq = np.zeros((1, 1, y_feature_n))
 def decode_sequence(input_seq, input_t0, step_n):
     # Encode the input as state vectors.
-    states_value = encoder_model.predict(input_seq)
+    states_value = enc_model.predict(input_seq)
 
     # Generate empty target sequence of length 1.
     target_seq = np.zeros((1, 1, y_feature_n))
@@ -211,7 +211,7 @@ def decode_sequence(input_seq, input_t0, step_n):
     decoded_seq = []
     time_stamp = 0
     for i in range(step_n):
-        output_, h, c = decoder_model.predict([target_seq] + states_value)
+        output_, h, c = dec_model.predict([target_seq] + states_value)
 
         # Sample a token
         decoded_seq.append(output_)
@@ -235,7 +235,7 @@ decoded_seq = decode_sequence(input_seq, ys_input_val[0], step_n)
 np.array(decoded_seq).flatten()
 # %%
 
-# encoder_model.predict(input_seq)
+# enc_model.predict(input_seq)
 len(x_true)
 # plt.plot(range(100),x_true)
 # plt.plot(range(x_len,x_len+y_len),ys_input_val[0])

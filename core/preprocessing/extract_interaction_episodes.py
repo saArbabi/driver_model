@@ -6,9 +6,9 @@ import os
 from models.core.preprocessing import utils
 from math import hypot
 import json
+from importlib import reload
 
 cwd = os.getcwd()
-
 
 # %%
 """
@@ -39,7 +39,7 @@ datasets = {
 col_df_all = ['id','frm','scenario','lane_id','length','x_front','y_front','class']
 
 # %%
-
+feature_set['fr_long'].mean()
 feature_set = pd.read_csv('./datasets/feature_set.txt', delimiter=' ',
                         header=None, names=col).drop(col_drop,axis=1)
 
@@ -105,6 +105,7 @@ def get_lane_cor(scenario, lane_id):
 
     return [xc, yc]
 
+# %%
 # def get_act_lat():
 reload(utils)
 
@@ -128,67 +129,74 @@ for scenario in datasets:
 
             if lc_frms[lane_change]:
                 for lc_frm, lane_id in lc_frms[lane_change]:
-                    y_id, y_class = utils.get_vehInfo(mveh_df, lc_frm, 'bb_id')
                     m_class = mveh_df['e_class'].iloc[0]
-
                     end_frm = utils.lc_completion(mveh_df, lc_frm, lane_change, lane_id)
                     start_frm = utils.lc_initation(mveh_df, lc_frm-1, lane_change, lane_id)
                     frms_n = int(end_frm-start_frm)
                     m_df = utils.frmTrim(mveh_df, end_frm, start_frm)
                     v_min = m_df['vel'].min()
-                    if y_id and y_class == m_class == 2 and frms_n > 20 and \
+
+                    if m_class == 2 and frms_n > 20 and \
                                         start_frm != 0 and end_frm != 0 and v_min > 0:
 
-                        case_info = {
-                                    'scenario':scenario,
-                                    'id':id,
-                                    'frms_n':frms_n,
-                                    'y_id':y_id,
-                                    'lc_frm':lc_frm,
-                                    'start_frm':start_frm,
-                                    'end_frm':end_frm,
-                                    'episode_id': counter,
-                                    'lc_type': lc_type
-                                    }
-
                         try:
+                            y_id, _ = utils.get_vehInfo(mveh_df, lc_frm, 'bb_id')
                             fadj_id, _ = utils.get_vehInfo(mveh_df, lc_frm, 'ff_id')
                             f_id, _ = utils.get_vehInfo(mveh_df, lc_frm-1, 'ff_id')
-                            lane_cor = get_lane_cor(scenario, lane_id)
 
+                            case_info = {
+                                        'scenario':scenario,
+                                        'id':id,
+                                        'frms_n':frms_n,
+                                        'y_id':y_id,
+                                        'lc_frm':lc_frm,
+                                        'start_frm':start_frm,
+                                        'end_frm':end_frm,
+                                        'episode_id': counter,
+                                        'lc_type': lc_type
+                                        }
+                            lane_cor = get_lane_cor(scenario, lane_id)
                             m_df = utils.get_m_features(m_df, case_info)
                             o_df = utils.frmTrim(feat_df, end_frm, start_frm) # other vehicles' df
-
                             glob_pos = get_glob_df(case_info)
 
-                            y_df = utils.get_o_df(o_df, y_id, case_info['episode_id'])
-                            m_df, y_df = utils.get_dxdv(glob_pos, m_df, y_df, lane_cor, 'front')
+                            if y_id:
+                                y_df = utils.get_o_df(o_df, y_id, case_info['episode_id'])
+                                m_df, y_df = utils.get_dxdv(glob_pos, m_df, y_df, lane_cor, 'front')
+                                y_df['exists'] = 1
 
                             if fadj_id:
                                 fadj_df = utils.get_o_df(o_df, fadj_id, case_info['episode_id'])
                                 m_df, fadj_df = utils.get_dxdv(glob_pos, m_df, fadj_df, lane_cor, 'behind')
+                                fadj_df['exists'] = 1
 
                             if f_id:
                                 f_df = utils.get_o_df(o_df, f_id, case_info['episode_id'])
                                 m_df, f_df = utils.get_dxdv(glob_pos, m_df, f_df, lane_cor, 'behind')
+                                f_df['exists'] = 1
 
                             mveh_size = len(m_df)
+
+                            if not y_id:
+                                y_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
+                            else:
+                                y_df = utils.applyCorrections(m_df, y_df, mveh_size)
 
                             if not fadj_id:
                                 fadj_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
                             else:
-                                fadj_df = utils.applyCorrections(m_df, fadj_df, 'na', mveh_size)
+                                fadj_df = utils.applyCorrections(m_df, fadj_df, mveh_size)
 
                             if not f_id:
                                 f_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
                             else:
-                                f_df = utils.applyCorrections(m_df, f_df, 'na', mveh_size)
+                                f_df = utils.applyCorrections(m_df, f_df, mveh_size)
 
-                            y_df = utils.applyCorrections(m_df, y_df, 'yveh', mveh_size)
                             utils.data_saver(m_df, 'm_df')
                             utils.data_saver(y_df, 'y_df')
                             utils.data_saver(f_df, 'f_df')
                             utils.data_saver(fadj_df, 'fadj_df')
+
                             episode_spec[counter] = {'episode_id':counter,'scenario':scenario ,
                                         'lc_frm':lc_frm, 'm_id':int(id), 'y_id':y_id,'fadj_id':fadj_id,
                                         'f_id':f_id, 'frm_n':mveh_size}
@@ -202,8 +210,11 @@ for scenario in datasets:
 
 pd.DataFrame.from_dict(episode_spec, orient='index').to_csv('./datasets/episode_spec.txt',
                                 header=None, index=None, sep=' ', mode='a')
+
 # %%
+counter = 0
 reload(utils)
+episode_spec = {}
 
 scenario = 'i80_3'
 id = 1741
@@ -220,16 +231,18 @@ for lane_change in lc_frms:
 
     if lc_frms[lane_change]:
         for lc_frm, lane_id in lc_frms[lane_change]:
-            y_id, y_class = utils.get_vehInfo(mveh_df, lc_frm, 'bb_id')
             m_class = mveh_df['e_class'].iloc[0]
-
             end_frm = utils.lc_completion(mveh_df, lc_frm, lane_change, lane_id)
             start_frm = utils.lc_initation(mveh_df, lc_frm-1, lane_change, lane_id)
             frms_n = int(end_frm-start_frm)
             m_df = utils.frmTrim(mveh_df, end_frm, start_frm)
             v_min = m_df['vel'].min()
-            if y_id and y_class == m_class == 2 and frms_n > 20 and \
+            if m_class == 2 and frms_n > 20 and \
                                 start_frm != 0 and end_frm != 0 and v_min > 0:
+
+                y_id, _ = utils.get_vehInfo(mveh_df, lc_frm, 'bb_id')
+                fadj_id, _ = utils.get_vehInfo(mveh_df, lc_frm, 'ff_id')
+                f_id, _ = utils.get_vehInfo(mveh_df, lc_frm-1, 'ff_id')
 
                 case_info = {
                             'scenario':scenario,
@@ -243,43 +256,48 @@ for lane_change in lc_frms:
                             'lc_type': lc_type
                             }
 
-                fadj_id, _ = utils.get_vehInfo(mveh_df, lc_frm, 'ff_id')
-                f_id, _ = utils.get_vehInfo(mveh_df, lc_frm-1, 'ff_id')
                 lane_cor = get_lane_cor(scenario, lane_id)
 
                 m_df = utils.get_m_features(m_df, case_info)
                 o_df = utils.frmTrim(feat_df, end_frm, start_frm) # other vehicles' df
-
                 glob_pos = get_glob_df(case_info)
 
-                y_df = utils.get_o_df(o_df, y_id, case_info['episode_id'])
-                m_df, y_df = utils.get_dxdv(glob_pos, m_df, y_df, lane_cor, 'front')
+                if y_id:
+                    y_df = utils.get_o_df(o_df, y_id, case_info['episode_id'])
+                    m_df, y_df = utils.get_dxdv(glob_pos, m_df, y_df, lane_cor, 'front')
+                    y_df['exists'] = 1
 
                 if fadj_id:
                     fadj_df = utils.get_o_df(o_df, fadj_id, case_info['episode_id'])
                     m_df, fadj_df = utils.get_dxdv(glob_pos, m_df, fadj_df, lane_cor, 'behind')
+                    fadj_df['exists'] = 1
 
                 if f_id:
                     f_df = utils.get_o_df(o_df, f_id, case_info['episode_id'])
                     m_df, f_df = utils.get_dxdv(glob_pos, m_df, f_df, lane_cor, 'behind')
+                    f_df['exists'] = 1
 
                 mveh_size = len(m_df)
+
+                if not y_id:
+                    y_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
+                else:
+                    y_df = utils.applyCorrections(m_df, y_df, mveh_size)
 
                 if not fadj_id:
                     fadj_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
                 else:
-                    fadj_df = utils.applyCorrections(m_df, fadj_df, 'na', mveh_size)
+                    fadj_df = utils.applyCorrections(m_df, fadj_df, mveh_size)
 
                 if not f_id:
                     f_df = utils.get_dummyVals(case_info['episode_id'], mveh_size)
                 else:
-                    f_df = utils.applyCorrections(m_df, f_df, 'na', mveh_size)
+                    f_df = utils.applyCorrections(m_df, f_df, mveh_size)
 
-                y_df = utils.applyCorrections(m_df, y_df, 'yveh', mveh_size)
-                utils.data_saver(m_df, 'm_df')
-                utils.data_saver(y_df, 'y_df')
-                utils.data_saver(f_df, 'f_df')
-                utils.data_saver(fadj_df, 'fadj_df')
+                # utils.data_saver(m_df, 'm_df')
+                # utils.data_saver(y_df, 'y_df')
+                # utils.data_saver(f_df, 'f_df')
+                # utils.data_saver(fadj_df, 'fadj_df')
                 episode_spec[counter] = {'episode_id':counter,'scenario':scenario ,
                             'lc_frm':lc_frm, 'm_id':int(id), 'y_id':y_id,'fadj_id':fadj_id,
                             'f_id':f_id, 'frm_n':mveh_size}

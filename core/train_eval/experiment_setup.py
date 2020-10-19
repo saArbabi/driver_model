@@ -1,13 +1,14 @@
-import models.core.tf_models.abstract_model as am
 from models.core.train_eval import utils
 # from models.core.train_eval.model_evaluation import modelEvaluate
 from models.core.preprocessing.data_obj import DataObj
 import tensorflow as tf
-from models.core.tf_models.utils import nll_loss
+from models.core.tf_models.cae_model import CAE
 
 def modelTrain(exp_id, explogs):
     config = utils.loadConfig(exp_id)
-    model = am.FFMDN(config)
+
+    # (1) Load model and setup checkpoints
+    model = CAE(config)
     optimizer = tf.optimizers.Adam(model.learning_rate)
 
     # for more on checkpointing model see: https://www.tensorflow.org/guide/checkpoint
@@ -20,31 +21,36 @@ def modelTrain(exp_id, explogs):
     else:
         print("Initializing from scratch.")
 
-    x_train, y_train, x_val, y_val = DataObj(config).loadData()
-    train_ds = model.batch_data(x_train, y_train)
-    test_ds = model.batch_data(x_val, y_val)
-
-    write_graph = 'True'
     start_epoch = explogs[exp_id]['epoch']
     end_epoch = start_epoch + model.epochs_n
 
+    # (2) Load data
+    data_objs =  DataObj(config).loadData()
+    train_ds = model.batch_data(data_objs[0:3])
+    test_ds = model.batch_data(data_objs[3:])
+
+    # (3) Run experiment
+    write_graph = 'True'
     for epoch in range(start_epoch, end_epoch):
-        for xs, targets in train_ds:
+        for states, targets, conditions in train_ds:
+
             if write_graph == 'True':
-                print(tf.shape(xs))
                 graph_write = tf.summary.create_file_writer(model.exp_dir+'/logs/')
                 tf.summary.trace_on(graph=True, profiler=False)
-                model.train_step(xs, targets, optimizer)
+                model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                            targets[:, :, 4]], conditions, optimizer)
                 with graph_write.as_default():
                     tf.summary.trace_export(name='graph', step=0)
                 write_graph = 'False'
             else:
-                model.train_step(xs, targets, optimizer)
+                model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                            targets[:, :, 4]], conditions, optimizer)
 
-        for xs, targets in test_ds:
-            model.test_step(xs, targets)
+        for states, targets, conditions in test_ds:
+            model.test_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
+                                                        targets[:, :, 4]], conditions)
 
-        model.save_epoch_metrics(xs, targets, epoch)
+        model.save_epoch_metrics(states, conditions, epoch)
         utils.updateExpstate(model, explogs, exp_id, 'in progress')
 
         ckpt.step.assign_add(1)
@@ -53,7 +59,6 @@ def modelTrain(exp_id, explogs):
 
     utils.updateExpstate(model, explogs, exp_id, 'complete')
     # modelEvaluate(model, validation_data, config)
-    # model.save(model.exp_dir+'/model_dir',save_format='tf')
 
 def runSeries(exp_ids=None):
     explogs = utils.loadExplogs()
