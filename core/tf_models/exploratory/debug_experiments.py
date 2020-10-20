@@ -11,8 +11,6 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from importlib import reload
 import time
-
-
 # %%
 """
 Use this script for debugging the following:
@@ -52,9 +50,7 @@ config = {
 "Note": "NA"
 }
 
-data_objs =  DataObj(config).loadData()
-train_ds = model.batch_data(data_objs[0:3])
-test_ds = model.batch_data(data_objs[3:])
+
 
 # %%
 reload(utils)
@@ -64,17 +60,24 @@ from models.core.tf_models import cae_model
 reload(cae_model)
 from models.core.tf_models.cae_model import  Encoder, Decoder, CAE
 
+
+
 # config = loadConfig('series000exp001')
 config['exp_id'] = 'debug_experiment_2'
 train_loss = []
 valid_loss = []
 
 model = CAE(config)
+model.dec_model.pred_horizon = 10
 optimizer = tf.optimizers.Adam(model.learning_rate)
 write_graph = 'False'
-batch_i = 0
+
+data_objs =  DataObj(config).loadData()
+train_ds = model.batch_data(data_objs[0:3])
+test_ds = model.batch_data(data_objs[3:])
+
 t0 = time.time()
-for epoch in range(3):
+for epoch in range(2):
     for states, targets, conditions in train_ds:
 
         if write_graph == 'True':
@@ -105,19 +108,8 @@ plt.grid()
 plt.legend(['valid_loss', 'train_loss'])
 
 # %%
-a = tf.constant([1,2])
-b = tf.constant([3])
-tf.concat([a,b], axis=)
-b = [0,0]
-b[-1] = 1
-b.append(3)
-a = np.zeros([1,1,20])
-type(a)
-np.dtype(1)
-a[1] = 1
-a
-np.zeros(10)
-tf.repeat([[a]], 2, axis=0)
+model.dec_model.time_stamp
+
 # %%
 conditions.shape
 state_obs = tf.reshape(states[0], [1, 20, 10])

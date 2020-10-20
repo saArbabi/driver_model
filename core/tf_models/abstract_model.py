@@ -59,7 +59,7 @@ class AbstractModel(tf.keras.Model):
         self.test_loss(loss)
 
     def batch_data(self, sets):
-        a, b, c = sets
-        a, b, c = a.astype("float32"), b.astype("float32"), c.astype("float32")
-        dataset = tf.data.Dataset.from_tensor_slices((a,b,c)).batch(self.batch_n)
+        st, targ, cond = sets
+        st, targ, cond = st.astype("float32"), targ.astype("float32"), cond.astype("float32")
+        dataset = tf.data.Dataset.from_tensor_slices((st, targ, cond)).batch(self.batch_n)
         return dataset

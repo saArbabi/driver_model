@@ -25,9 +25,9 @@ def modelTrain(exp_id, explogs):
     end_epoch = start_epoch + model.epochs_n
 
     # (2) Load data
-    data_objs =  DataObj(config).loadData()
-    train_ds = model.batch_data(data_objs[0:3])
-    test_ds = model.batch_data(data_objs[3:])
+    data =  DataObj(config).loadData()
+    train_ds = model.batch_data(data[0:3])
+    test_ds = model.batch_data(data[3:])
 
     # (3) Run experiment
     write_graph = 'True'

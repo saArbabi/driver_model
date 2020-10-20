@@ -45,7 +45,6 @@ class Decoder(tf.keras.Model):
         self.dec_units = config['model_config']['dec_units']
         self.pred_horizon = config['data_config']['pred_horizon']
         self.dec_emb_units = config['model_config']['dec_emb_units']
-        self.time_stamp = np.zeros([1,1,self.pred_horizon], dtype='float32')
 
         self.architecture_def()
 
@@ -54,22 +53,12 @@ class Decoder(tf.keras.Model):
         output = self.embedding_layer_2(output)
         return output
 
-    def get_timeStamp(self, step, batch_size):
-        if step == 0:
-            self.time_stamp[0,0,0] = 1
-        else:
-            self.time_stamp[0,0,step-1] = 0
-            self.time_stamp[0,0,step] = 1
-
-        time_stamp = tf.repeat(self.time_stamp, batch_size, axis=0)
-        return time_stamp
-
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
         self.embedding_layer_1 = Dense(self.dec_emb_units)
         self.embedding_layer_2 = Dense(self.dec_emb_units)
         self.lstm_layer = LSTM(self.dec_units, return_sequences=True, return_state=True)
-        self.masking = Masking(mask_value=0., batch_size=(self.pred_horizon, None))
+        self.masking = Masking(mask_value=0., batch_size=(None, None))
         """Merger vehicle
         """
         self.alphas_m = Dense(self.components_n, activation=K.softmax, name="alphas")
@@ -102,18 +91,20 @@ class Decoder(tf.keras.Model):
         vec_fs = []
         vec_fadjs = []
 
-        self.state = inputs[1]
+        self.state = inputs[1] # encoder cell state
         batch_size = inputs[0].shape[0]
         enc_h = tf.reshape(self.state[0], [batch_size, 1, self.dec_units]) # encoder hidden state
         conditions = self.masking(inputs[0])
         step_condition = tf.expand_dims(conditions[:, 0, :], axis=1)
+        self.time_stamp = np.zeros([batch_size, 1, self.pred_horizon], dtype='float32')
+        self.time_stamp[:, 0, 0] = 1
 
         for i in range(self.pred_horizon):
             step_condition = self.fc_embedding(step_condition)
-            time_stamp = self.get_timeStamp(i, batch_size)
-            contex_vector = tf.concat([step_condition, enc_h, time_stamp], axis=2)
-            # contex_vector = tf.concat([step_condition, enc_h], axis=2)
-
+            contex_vector = tf.concat([step_condition, enc_h, \
+                                    tf.convert_to_tensor(self.time_stamp)], axis=2)
+            print(tf.convert_to_tensor(self.time_stamp).shape)
+            print('batch:',batch_size)
             outputs, state_h, state_c = self.lstm_layer(contex_vector, initial_state=self.state)
             self.state_m = [state_h, state_c]
             """Merger vehicle
@@ -148,17 +139,19 @@ class Decoder(tf.keras.Model):
             param_vec_fadj = self.pvector([alphas, mus_long, sigmas_long])
             vec_fadjs.append(param_vec_fadj)
 
-            if i != (self.pred_horizon - 1):
-                gmm_m = get_pdf(param_vec_m, 'merge_vehicle')
-                gmm_y = get_pdf(param_vec_y, 'other_vehicle')
-                gmm_f = get_pdf(param_vec_f, 'other_vehicle')
-                gmm_fadj = get_pdf(param_vec_fadj, 'other_vehicle')
+            gmm_m = get_pdf(param_vec_m, 'merge_vehicle')
+            gmm_y = get_pdf(param_vec_y, 'other_vehicle')
+            gmm_f = get_pdf(param_vec_f, 'other_vehicle')
+            gmm_fadj = get_pdf(param_vec_fadj, 'other_vehicle')
 
-                sample_m = tf.reshape(gmm_m.sample(1), [batch_size, 1, 2])
-                sample_y = tf.reshape(gmm_y.sample(1), [batch_size, 1, 1])
-                sample_f = tf.reshape(gmm_f.sample(1), [batch_size, 1, 1])
-                sample_fadj = tf.reshape(gmm_fadj.sample(1), [batch_size, 1, 1])
-                step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
+            sample_m = tf.reshape(gmm_m.sample(1), [batch_size, 1, 2])
+            sample_y = tf.reshape(gmm_y.sample(1), [batch_size, 1, 1])
+            sample_f = tf.reshape(gmm_f.sample(1), [batch_size, 1, 1])
+            sample_fadj = tf.reshape(gmm_fadj.sample(1), [batch_size, 1, 1])
+            step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
+
+            if i != (self.pred_horizon - 1):
+                self.time_stamp[:, 0, i+1] = 1
 
         vec_ms = tf.concat(vec_ms, axis=1)
         vec_ys = tf.concat(vec_ys, axis=1)

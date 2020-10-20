@@ -15,7 +15,7 @@ def get_CovMatrix(rhos, sigmas_long, sigmas_lat):
 def get_pdf(param_vec, vehicle_type):
     # see https://ericmjl.github.io/blog/2019/5/29/reasoning-about-shapes-and-probability-distributions/
     # for info on shapes
-    if vehicle == 'other_vehicle':
+    if vehicle_type == 'other_vehicle':
         alpha, mus, sigmas = slice_pvector(param_vec, vehicle_type) # Unpack parameter vectors
         mvn = tfd.MixtureSameFamily(
             mixture_distribution=tfd.Categorical(probs=alpha),
@@ -23,7 +23,7 @@ def get_pdf(param_vec, vehicle_type):
                 loc=mus,
                 scale=sigmas))
 
-    if vehicle == 'merge_vehicle':
+    if vehicle_type == 'merge_vehicle':
         alphas, mus_long, sigmas_long, mus_lat, \
                             sigmas_lat, rhos = slice_pvector(param_vec, vehicle_type)
 
@@ -42,9 +42,9 @@ def get_pdf(param_vec, vehicle_type):
 def slice_pvector(param_vec, vehicle_type):
     """ Returns an unpacked list of paramter vectors.
     """
-    if vehicle == 'other_vehicle':
+    if vehicle_type == 'other_vehicle':
         n_params = 3 # number of parameters being learned per GMM compnent
-    if vehicle == 'merge_vehicle':
+    if vehicle_type == 'merge_vehicle':
         n_params = 6
 
     if tf.is_tensor(param_vec):
