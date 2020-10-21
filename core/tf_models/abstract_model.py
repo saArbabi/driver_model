@@ -11,8 +11,9 @@ class AbstractModel(tf.keras.Model):
         super(AbstractModel, self).__init__(name="AbstractModel")
         self.config = config['model_config']
         self.exp_dir = './models/experiments/'+config['exp_id']
-        self.learning_rate = self.config['learning_rate']
+        self.optimizer = tf.optimizers.Adam(self.config['learning_rate'])
         self.batch_size = config['data_config']['batch_size']
+        self.pred_horizon = config['data_config']['pred_horizon']
         self.callback_def()
 
     def architecture_def(self):
@@ -38,8 +39,8 @@ class AbstractModel(tf.keras.Model):
             tf.summary.scalar('covdet_min', covdet_min, step=epoch)
         self.writer_2.flush()
 
-    def train()
-        for seq_len in range(3, 5):
+    def train_loop(self, data_objs):
+        for seq_len in range(3, self.pred_horizon): # 3 is minimum step_n
             train_seq_data = [data_objs[0][seq_len], data_objs[1][seq_len], data_objs[2][seq_len]]
             train_ds = self.batch_data(train_seq_data)
 
@@ -47,25 +48,11 @@ class AbstractModel(tf.keras.Model):
                 targs = [targets[:, :, :2], targets[:, :, 2], \
                                                 targets[:, :, 3], targets[:, :, 4]]
 
+                self.train_batch_shape = conditions.shape
+                self.train_step(states, targs, conditions)
 
-    @tf.function
-    def train_step(self, data_objs, optimizer):
-
-        with tf.GradientTape() as tape:
-            gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=True)
-            loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
-                            + loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
-
-        gradients = tape.gradient(loss, self.trainable_variables)
-        optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        tf.print(loss)
-
-        self.train_loss.reset_states()
-        self.train_loss(loss)
-
-    @tf.function
-    def test_step(self, data_objs):
-        for seq_len in range(3, 5):
+    def test_loop(self, data_objs):
+        for seq_len in range(3, self.pred_horizon):
             test_seq_data = [data_objs[0][seq_len], data_objs[1][seq_len], data_objs[2][seq_len]]
             test_ds = self.batch_data(test_seq_data)
 
@@ -73,14 +60,36 @@ class AbstractModel(tf.keras.Model):
                 targs = [targets[:, :, :2], targets[:, :, 2], \
                                                 targets[:, :, 3], targets[:, :, 4]]
 
-                gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=False)
-                loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
-                                + loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
+                self.test_batch_shape = conditions.shape
+                self.test_step(states, targs, conditions)
 
-                self.test_loss.reset_states()
-                self.test_loss(loss)
+    @tf.function(experimental_relax_shapes=True)
+    def train_step(self, states, targs, conditions):
+        self.batch_shape = self.train_batch_shape
 
+        with tf.GradientTape() as tape:
+            gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=True)
+            loss = loss_merge(targs[0], gmm_m, self.batch_shape) + \
+                    loss_other(targs[1], gmm_y, self.batch_shape) + \
+                    loss_other(targs[2], gmm_f, self.batch_shape) + \
+                    loss_other(targs[3], gmm_fadj, self.batch_shape)
 
+        gradients = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        self.train_loss.reset_states()
+        self.train_loss(loss)
+
+    @tf.function(experimental_relax_shapes=True)
+    def test_step(self, states, targs, conditions):
+        self.batch_shape = self.test_batch_shape
+        gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=False)
+        loss = loss_merge(targs[0], gmm_m, self.batch_shape) + \
+                loss_other(targs[1], gmm_y, self.batch_shape) + \
+                loss_other(targs[2], gmm_f, self.batch_shape) + \
+                loss_other(targs[3], gmm_fadj, self.batch_shape)
+
+        self.test_loss.reset_states()
+        self.test_loss(loss)
 
     def batch_data(self, sets):
         st, targ, cond = [tf.cast(set, dtype='float32') for set in sets]

@@ -90,16 +90,18 @@ class Decoder(tf.keras.Model):
         vec_fs = []
         vec_fadjs = []
 
-        self.state = inputs[1] # encoder cell state
         conditions = inputs[0]
+        self.state = inputs[1] # encoder cell state
+        batch_shape = inputs[2]
+        batch_size = batch_shape[0]
         # print(conditions.shape)
         if self.model_use == 'training':
-            self.steps_n = conditions.shape[1]
+            self.steps_n = batch_shape[1]
 
         elif self.model_use == 'inference' and not self.steps_n:
             raise AttributeError("The prediciton horizon must be set.")
 
-        enc_h = tf.reshape(self.state[0], [self.batch_size, 1, self.dec_units]) # encoder hidden state
+        enc_h = tf.reshape(self.state[0], [batch_size, 1, self.dec_units]) # encoder hidden state
         step_condition = tf.expand_dims(conditions[:, 0, :], axis=1)
         self.time_stamp = np.zeros([1, 1, self.pred_horizon], dtype='float32')
         self.time_stamp[0, 0, 0] = 1
@@ -108,7 +110,7 @@ class Decoder(tf.keras.Model):
         for i in range(self.steps_n):
             step_condition = self.fc_embedding(step_condition)
             contex_vector = tf.concat([step_condition, enc_h, \
-                        tf.repeat(self.time_stamp, self.batch_size, axis=0)], axis=2)
+                        tf.repeat(self.time_stamp, batch_size, axis=0)], axis=2)
             outputs, state_h, state_c = self.lstm_layer(contex_vector, \
                                                             initial_state=self.state)
             self.state_m = [state_h, state_c]
@@ -149,10 +151,10 @@ class Decoder(tf.keras.Model):
             gmm_f = get_pdf(param_vec_f, 'other_vehicle')
             gmm_fadj = get_pdf(param_vec_fadj, 'other_vehicle')
 
-            sample_m = tf.reshape(gmm_m.sample(1), [self.batch_size, 1, 2])
-            sample_y = tf.reshape(gmm_y.sample(1), [self.batch_size, 1, 1])
-            sample_f = tf.reshape(gmm_f.sample(1), [self.batch_size, 1, 1])
-            sample_fadj = tf.reshape(gmm_fadj.sample(1), [self.batch_size, 1, 1])
+            sample_m = tf.reshape(gmm_m.sample(1), [batch_size, 1, 2])
+            sample_y = tf.reshape(gmm_y.sample(1), [batch_size, 1, 1])
+            sample_f = tf.reshape(gmm_f.sample(1), [batch_size, 1, 1])
+            sample_fadj = tf.reshape(gmm_fadj.sample(1), [batch_size, 1, 1])
             step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
 
             if i != (self.steps_n - 1):
@@ -182,6 +184,5 @@ class CAE(abstract_model.AbstractModel):
         # Defines the computation from inputs to outputs
         # input[0] = state obs
         # input[1] = conditions
-        self.dec_model.batch_size = tf.shape(inputs[0])[0]
         encoder_states = self.enc_model(inputs[0])
-        return self.dec_model([inputs[1], encoder_states])
+        return self.dec_model([inputs[1], encoder_states, self.batch_shape])

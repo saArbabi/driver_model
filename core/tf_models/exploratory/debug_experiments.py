@@ -19,11 +19,11 @@ Use this script for debugging the following:
 
 Particularly ensure:
 [] Distribution shapes are reasonable.
-    See print('Distribution description: ',str(mvn))
-    see print('covariance shape: ', cov.shape)
-    see print('mu shape: ', mu.shape)
+    See range(3, config['data_config']['pred_horizon'])('Distribution description: ',str(mvn))
+    see range(3, config['data_config']['pred_horizon'])('covariance shape: ', cov.shape)
+    see range(3, config['data_config']['pred_horizon'])('mu shape: ', mu.shape)
 [] Shape of log_likelihood is reasonable
-    See print('log_likelihood shape: ', log_likelihood.shape)
+    See range(3, config['data_config']['pred_horizon'])('log_likelihood shape: ', log_likelihood.shape)
 
 See:
 https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distributions_Shapes
@@ -66,25 +66,49 @@ train_loss = []
 valid_loss = []
 
 model = CAE(config, model_use='training')
-optimizer = tf.optimizers.Adam(model.learning_rate)
 write_graph = 'False'
-data_objs =  DataObj(config).loadData()
+data_objs = DataObj(config).loadData()
 
 t0 = time.time()
 for epoch in range(2):
-    ll = model.train_step(data_objs[0:3], optimizer)
-    model.test_step(data_objs[3:])
+    model.train_loop(data_objs[0:3])
+    model.test_loop(data_objs[3:])
     train_loss.append(round(model.train_loss.result().numpy().item(), 2))
     valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
     # modelEvaluate(model, validation_data, config)
-    print(epoch+1, ' complete')
-print('experiment duration ', time.time() - t0)
+    range(3, config['data_config']['pred_horizon'])(epoch+1, ' complete')
+range(3, config['data_config']['pred_horizon'])('experiment duration ', time.time() - t0)
 plt.plot(valid_loss)
 plt.plot(train_loss)
 plt.grid()
 plt.legend(['valid_loss', 'train_loss'])
 
 # %%')
+
+# build a lookup table
+table = tf.lookup.StaticHashTable(
+    initializer=tf.lookup.KeyValueTensorInitializer(
+        keys=tf.constant([[0, 1], [2, 3]]),
+        values=tf.constant(list(b.values())),
+    ),
+    default_value=tf.constant(-1),
+    name="class_weight"
+)
+
+# now let us do a lookup
+input_tensor = tf.constant([0, 1])
+out = table.lookup(input_tensor)
+range(3, config['data_config']['pred_horizon'])(out)
+
+# %%
+table = tf.lookup.StaticHashTable(b)
+z = b.values()
+list(z)
+b = {1:[3,3], 2:[4,4]}
+for a in tf.range(1,3):
+    tf.
+    range(3, config['data_config']['pred_horizon'])(b[a.ref()])
+# %%
 a = tf.constant([3,10], dtype='float
 
 tf.reduce_mean(a, axis=0).numpy()
@@ -95,8 +119,8 @@ ll.numpy()
 @tf.function
 def hi(num):
     a = tf.constant(num)
-    tf.print([2])
-    print(type(a))
+    tf.range(3, config['data_config']['pred_horizon'])([2])
+    range(3, config['data_config']['pred_horizon'])(type(a))
     raise
     return a
 hi(2)
@@ -136,7 +160,7 @@ def decode_sequence(state_obs, condition, step_n):
         for i in range(20):
 
             param_vec = dec_model([conditioning , states_value])
-            # print(output_.stddev())
+            # range(3, config['data_config']['pred_horizon'])(output_.stddev())
             output_ = utils.get_pdf_samples(samples_n=1, param_vec=param_vec, model_type='merge_policy')
             output_ = tf.reshape(output_, [2])
             decoded_seq.append(output_)

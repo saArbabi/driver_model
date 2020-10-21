@@ -57,21 +57,20 @@ def covDet_min(mvn):
     """
     return tf.math.reduce_min(tf.linalg.det(mvn.covariance()))
 
-def loss_merge(y, mvn):
+def loss_merge(y, mvn, y_shape):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
         Loss for the merge vehicle
     """
-    y_shape = tf.shape(y)
+    print(y_shape)
     log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1], 2]))
 
     # shape: [sample_shape, batch_shape, event_shape]
     return -tf.reduce_mean(log_likelihood)
 
-def loss_other(y, mvn):
+def loss_other(y, mvn, y_shape):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
         Loss for the yield vehicle
     """
-    y_shape = tf.shape(y)
     log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1]]))
     # shape: [sample_shape, batch_shape]
 
