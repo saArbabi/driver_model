@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from importlib import reload
 import time
+
 # %%
 """
 Use this script for debugging the following:
@@ -38,21 +39,18 @@ config = {
      "dec_emb_units": 5,
      "layers_n": 2,
      "epochs_n": 50,
-     "batch_n": 1124,
      "components_n": 5
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
+                "batch_size": 1124,
                 "Note": ""
 },
 "exp_id": "NA",
 "Note": "NA"
 }
 
-
-
-# %%
 reload(utils)
 from models.core.tf_models import utils
 
@@ -67,45 +65,41 @@ config['exp_id'] = 'debug_experiment_2'
 train_loss = []
 valid_loss = []
 
-model = CAE(config)
-model.dec_model.pred_horizon = 10
+model = CAE(config, model_use='training')
 optimizer = tf.optimizers.Adam(model.learning_rate)
 write_graph = 'False'
-
 data_objs =  DataObj(config).loadData()
-train_ds = model.batch_data(data_objs[0:3])
-test_ds = model.batch_data(data_objs[3:])
 
 t0 = time.time()
 for epoch in range(2):
-    for states, targets, conditions in train_ds:
-
-        if write_graph == 'True':
-            graph_write = tf.summary.create_file_writer(model.exp_dir+'/logs/')
-            tf.summary.trace_on(graph=True, profiler=False)
-            model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
-                                        targets[:, :, 4]], conditions, optimizer)
-            with graph_write.as_default():
-                tf.summary.trace_export(name='graph', step=0)
-            write_graph = 'False'
-        else:
-            model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
-                                        targets[:, :, 4]], conditions, optimizer)
-
-    for states, targets, conditions in test_ds:
-        model.test_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
-                                                    targets[:, :, 4]], conditions)
-
+    ll = model.train_step(data_objs[0:3], optimizer)
+    model.test_step(data_objs[3:])
     train_loss.append(round(model.train_loss.result().numpy().item(), 2))
     valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
-# modelEvaluate(model, validation_data, config)
+    # modelEvaluate(model, validation_data, config)
+    print(epoch+1, ' complete')
 print('experiment duration ', time.time() - t0)
-
-
 plt.plot(valid_loss)
 plt.plot(train_loss)
 plt.grid()
 plt.legend(['valid_loss', 'train_loss'])
+
+# %%')
+a = tf.constant([3,10], dtype='float
+
+tf.reduce_mean(a, axis=0).numpy()
+# %%
+ll.numpy()
+# %%
+
+@tf.function
+def hi(num):
+    a = tf.constant(num)
+    tf.print([2])
+    print(type(a))
+    raise
+    return a
+hi(2)
 
 # %%
 model.dec_model.time_stamp

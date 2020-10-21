@@ -42,28 +42,32 @@ class DataPrep():
         os.mkdir(dirName)
 
     def obsSequence(self, state_arr, target_arr, condition_arr):
-        state_seq = []
-        target_seq = []
-        condition_seq = []
-
-        step_size = 1
         i_reset = 0
         i = 0
-        for chunks in range(step_size):
+        for chunks in range(self.step_size):
             prev_states = deque(maxlen=self.obsSequence_n)
             while i < (len(state_arr)-2):
                 # 2 is minimum prediction horizon
                 prev_states.append(state_arr[i])
                 if len(prev_states) == self.obsSequence_n:
-                    state_seq.append(np.array(prev_states))
-                    target_seq.append(target_arr[i:i+self.pred_horizon].tolist())
-                    condition_seq.append(condition_arr[i:i+self.pred_horizon].tolist())
+                    state_seq = np.array(prev_states)
+                    target_seq = target_arr[i:i+self.pred_horizon]
+                    condition_seq = condition_arr[i:i+self.pred_horizon]
+                    seq_len = len(target_seq)
 
-                i += step_size
+                    if seq_len not in self.states:
+                        self.states[seq_len] = [state_seq]
+                        self.targets[seq_len] = [target_seq]
+                        self.conditions[seq_len] = [condition_seq]
+
+                    else:
+                        self.states[seq_len].append(state_seq)
+                        self.targets[seq_len].append(target_seq)
+                        self.conditions[seq_len].append(condition_seq)
+
+                i += self.step_size
             i_reset += 1
             i = i_reset
-
-        return state_seq, target_seq, condition_seq
 
     def mask_history(self, v_x_arr):
         pass
@@ -119,24 +123,23 @@ class DataPrep():
         state_arr = self.applystateScaler(state_arr)
         target_arr = self.applytargetScaler(target_arr)
         condition_arr = self.applyconditionScaler(condition_arr)
-        state_seq, target_seq, condition_seq = self.obsSequence(state_arr, target_arr, condition_arr)
+        self.obsSequence(state_arr, target_arr, condition_arr)
         # self.mask_history(x_df)
-        self.states.extend(state_seq)
-        self.targets.extend(target_seq)
-        self.conditions.extend(condition_seq)
 
-    def padArr(self, arr):
-        padded_inputs = tf.keras.preprocessing.sequence.pad_sequences(
-                    arr, padding="post", maxlen=self.pred_horizon, dtype='float')
-        return padded_inputs
+    def shuffle(self, dict_list):
+        dict_list_shuffled = []
+        for data_dict in dict_list:
+            for item in data_dict:
+                data_dict[item] = np.array(shuffle(data_dict[item], random_state=2020))
+
+            dict_list_shuffled.append(data_dict)
+
+        return dict_list_shuffled
 
     def pickler(self, episode_type):
-        self.targets = self.padArr(self.targets)
-        self.conditions = self.padArr(self.conditions)
-
-        self.states = np.array(self.states)
-        self.states, self.targets, self.conditions = shuffle(self.states,
-                                                    self.targets, self.conditions)
+        # self.states = np.array(self.states)
+        self.states, self.targets, self.conditions = self.shuffle([self.states,
+                                        self.targets, self.conditions])
 
         if episode_type == 'validation_episodes':
             with open(self.dirName+'/states_val', "wb") as f:
@@ -185,9 +188,9 @@ class DataPrep():
     def data_prep(self, episode_type=None):
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
-        self.states = []
-        self.targets = []
-        self.conditions = []
+        self.states = {}
+        self.targets = {}
+        self.conditions = {}
 
         if episode_type == 'training_episodes':
             for episode_id in training_episodes:

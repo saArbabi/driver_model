@@ -18,12 +18,12 @@ config = {
      "neurons_n": 50,
      "layers_n": 2,
      "epochs_n": 50,
-     "batch_n": 1124,
      "components_n": 5
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
+                "batch_size": 1124,
                 "Note": ""
 },
 "exp_id": "NA",
@@ -32,6 +32,18 @@ config = {
 data_objs =  DataObj(config).loadData()
 states_train, targets_train, conditions_train, \
                             states_val, targets_val, conditions_val = data_objs
+
+len(states_train[16])
+states_train[16].shape
+targets_train[16].shape
+targets_train.keys()
+
+# %%
+states_train[16][0][-1]
+targets_train[16][0][0]
+conditions_train[16][0][0]
+
+
 
 states_train[5][-1]
 targets_train[5][0]

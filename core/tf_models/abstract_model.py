@@ -1,9 +1,10 @@
-from numpy.random import seed # keep this at top
-seed(2020)
+import numpy as np
+np.random.seed(2020)
 import tensorflow as tf
 tf.random.set_seed(2020)
 from datetime import datetime
 from models.core.tf_models.utils import loss_merge, loss_other, covDet_min
+from tensorflow.keras.layers import Masking
 
 class AbstractModel(tf.keras.Model):
     def __init__(self, config):
@@ -11,9 +12,8 @@ class AbstractModel(tf.keras.Model):
         self.config = config['model_config']
         self.exp_dir = './models/experiments/'+config['exp_id']
         self.learning_rate = self.config['learning_rate']
-        self.epochs_n = self.config['epochs_n']
-        self.batch_n = self.config['batch_n']
-        self.callback = self.callback_def()
+        self.batch_size = config['data_config']['batch_size']
+        self.callback_def()
 
     def architecture_def(self):
         raise NotImplementedError()
@@ -38,8 +38,19 @@ class AbstractModel(tf.keras.Model):
             tf.summary.scalar('covdet_min', covdet_min, step=epoch)
         self.writer_2.flush()
 
+    def train()
+        for seq_len in range(3, 5):
+            train_seq_data = [data_objs[0][seq_len], data_objs[1][seq_len], data_objs[2][seq_len]]
+            train_ds = self.batch_data(train_seq_data)
+
+            for states, targets, conditions in train_ds:
+                targs = [targets[:, :, :2], targets[:, :, 2], \
+                                                targets[:, :, 3], targets[:, :, 4]]
+
+
     @tf.function
-    def train_step(self, states, targs, conditions, optimizer):
+    def train_step(self, data_objs, optimizer):
+
         with tf.GradientTape() as tape:
             gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=True)
             loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
@@ -47,19 +58,31 @@ class AbstractModel(tf.keras.Model):
 
         gradients = tape.gradient(loss, self.trainable_variables)
         optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+        tf.print(loss)
+
         self.train_loss.reset_states()
         self.train_loss(loss)
 
     @tf.function
-    def test_step(self, states, targs, conditions):
-        gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=False)
-        loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
-                        + loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
-        self.test_loss.reset_states()
-        self.test_loss(loss)
+    def test_step(self, data_objs):
+        for seq_len in range(3, 5):
+            test_seq_data = [data_objs[0][seq_len], data_objs[1][seq_len], data_objs[2][seq_len]]
+            test_ds = self.batch_data(test_seq_data)
+
+            for states, targets, conditions in test_ds:
+                targs = [targets[:, :, :2], targets[:, :, 2], \
+                                                targets[:, :, 3], targets[:, :, 4]]
+
+                gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=False)
+                loss = loss_merge(targs[0], gmm_m) + loss_other(targs[1], gmm_y) \
+                                + loss_other(targs[2], gmm_f) + loss_other(targs[3], gmm_fadj)
+
+                self.test_loss.reset_states()
+                self.test_loss(loss)
+
+
 
     def batch_data(self, sets):
-        st, targ, cond = sets
-        st, targ, cond = st.astype("float32"), targ.astype("float32"), cond.astype("float32")
-        dataset = tf.data.Dataset.from_tensor_slices((st, targ, cond)).batch(self.batch_n)
+        st, targ, cond = [tf.cast(set, dtype='float32') for set in sets]
+        dataset = tf.data.Dataset.from_tensor_slices((st, targ, cond)).batch(self.batch_size)
         return dataset

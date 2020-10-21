@@ -61,7 +61,7 @@ def loss_merge(y, mvn):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
         Loss for the merge vehicle
     """
-    y_shape = y.shape
+    y_shape = tf.shape(y)
     log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1], 2]))
 
     # shape: [sample_shape, batch_shape, event_shape]
@@ -71,7 +71,7 @@ def loss_other(y, mvn):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
         Loss for the yield vehicle
     """
-    y_shape = y.shape
+    y_shape = tf.shape(y)
     log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1]]))
     # shape: [sample_shape, batch_shape]
 

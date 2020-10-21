@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 tf.random.set_seed(2020)
 from keras import backend as K
-from tensorflow.keras.layers import Dense, Concatenate, LSTM, Masking, TimeDistributed
+from tensorflow.keras.layers import Dense, Concatenate, LSTM, TimeDistributed
 from models.core.tf_models.utils import get_pdf
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], enable=True)
@@ -26,7 +26,6 @@ class Encoder(tf.keras.Model):
         output = self.embedding_layer_2(output)
         return output
 
-
     def architecture_def(self):
         self.embedding_layer_1 = TimeDistributed(Dense(self.enc_emb_units))
         self.embedding_layer_2 = TimeDistributed(Dense(self.enc_emb_units))
@@ -39,13 +38,14 @@ class Encoder(tf.keras.Model):
         return [state_h, state_c]
 
 class Decoder(tf.keras.Model):
-    def __init__(self, config):
+    def __init__(self, config, model_use):
         super(Decoder, self).__init__(name="Decoder")
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
-        self.pred_horizon = config['data_config']['pred_horizon']
         self.dec_emb_units = config['model_config']['dec_emb_units']
-
+        self.pred_horizon = config['data_config']['pred_horizon']
+        self.steps_n = None # note self.steps_n =< self.pred_horizon
+        self.model_use = model_use # can be training or inference
         self.architecture_def()
 
     def fc_embedding(self, inputs):
@@ -58,7 +58,6 @@ class Decoder(tf.keras.Model):
         self.embedding_layer_1 = Dense(self.dec_emb_units)
         self.embedding_layer_2 = Dense(self.dec_emb_units)
         self.lstm_layer = LSTM(self.dec_units, return_sequences=True, return_state=True)
-        self.masking = Masking(mask_value=0., batch_size=(None, None))
         """Merger vehicle
         """
         self.alphas_m = Dense(self.components_n, activation=K.softmax, name="alphas")
@@ -92,20 +91,26 @@ class Decoder(tf.keras.Model):
         vec_fadjs = []
 
         self.state = inputs[1] # encoder cell state
-        batch_size = inputs[0].shape[0]
-        enc_h = tf.reshape(self.state[0], [batch_size, 1, self.dec_units]) # encoder hidden state
-        conditions = self.masking(inputs[0])
-        step_condition = tf.expand_dims(conditions[:, 0, :], axis=1)
-        self.time_stamp = np.zeros([batch_size, 1, self.pred_horizon], dtype='float32')
-        self.time_stamp[:, 0, 0] = 1
+        conditions = inputs[0]
+        # print(conditions.shape)
+        if self.model_use == 'training':
+            self.steps_n = conditions.shape[1]
 
-        for i in range(self.pred_horizon):
+        elif self.model_use == 'inference' and not self.steps_n:
+            raise AttributeError("The prediciton horizon must be set.")
+
+        enc_h = tf.reshape(self.state[0], [self.batch_size, 1, self.dec_units]) # encoder hidden state
+        step_condition = tf.expand_dims(conditions[:, 0, :], axis=1)
+        self.time_stamp = np.zeros([1, 1, self.pred_horizon], dtype='float32')
+        self.time_stamp[0, 0, 0] = 1
+
+
+        for i in range(self.steps_n):
             step_condition = self.fc_embedding(step_condition)
             contex_vector = tf.concat([step_condition, enc_h, \
-                                    tf.convert_to_tensor(self.time_stamp)], axis=2)
-            print(tf.convert_to_tensor(self.time_stamp).shape)
-            print('batch:',batch_size)
-            outputs, state_h, state_c = self.lstm_layer(contex_vector, initial_state=self.state)
+                        tf.repeat(self.time_stamp, self.batch_size, axis=0)], axis=2)
+            outputs, state_h, state_c = self.lstm_layer(contex_vector, \
+                                                            initial_state=self.state)
             self.state_m = [state_h, state_c]
             """Merger vehicle
             """
@@ -144,14 +149,14 @@ class Decoder(tf.keras.Model):
             gmm_f = get_pdf(param_vec_f, 'other_vehicle')
             gmm_fadj = get_pdf(param_vec_fadj, 'other_vehicle')
 
-            sample_m = tf.reshape(gmm_m.sample(1), [batch_size, 1, 2])
-            sample_y = tf.reshape(gmm_y.sample(1), [batch_size, 1, 1])
-            sample_f = tf.reshape(gmm_f.sample(1), [batch_size, 1, 1])
-            sample_fadj = tf.reshape(gmm_fadj.sample(1), [batch_size, 1, 1])
+            sample_m = tf.reshape(gmm_m.sample(1), [self.batch_size, 1, 2])
+            sample_y = tf.reshape(gmm_y.sample(1), [self.batch_size, 1, 1])
+            sample_f = tf.reshape(gmm_f.sample(1), [self.batch_size, 1, 1])
+            sample_fadj = tf.reshape(gmm_fadj.sample(1), [self.batch_size, 1, 1])
             step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
 
-            if i != (self.pred_horizon - 1):
-                self.time_stamp[:, 0, i+1] = 1
+            if i != (self.steps_n - 1):
+                self.time_stamp[0, 0, i+1] = 1
 
         vec_ms = tf.concat(vec_ms, axis=1)
         vec_ys = tf.concat(vec_ys, axis=1)
@@ -165,17 +170,18 @@ class Decoder(tf.keras.Model):
         return gmm_m, gmm_y, gmm_f, gmm_fadj
 
 class CAE(abstract_model.AbstractModel):
-    def __init__(self, config):
+    def __init__(self, config, model_use):
         super(CAE, self).__init__(config)
         self.enc_model = Encoder(config)
-        self.dec_model = Decoder(config)
+        self.dec_model = Decoder(config, model_use)
 
-    def architecture_def(self, X):
+    def architecture_def(self):
         pass
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
         # input[0] = state obs
         # input[1] = conditions
+        self.dec_model.batch_size = tf.shape(inputs[0])[0]
         encoder_states = self.enc_model(inputs[0])
         return self.dec_model([inputs[1], encoder_states])

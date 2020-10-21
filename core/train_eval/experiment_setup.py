@@ -8,7 +8,7 @@ def modelTrain(exp_id, explogs):
     config = utils.loadConfig(exp_id)
 
     # (1) Load model and setup checkpoints
-    model = CAE(config)
+    model = CAE(config, model_use='training')
     optimizer = tf.optimizers.Adam(model.learning_rate)
 
     # for more on checkpointing model see: https://www.tensorflow.org/guide/checkpoint
