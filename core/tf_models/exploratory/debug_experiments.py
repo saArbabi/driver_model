@@ -72,7 +72,7 @@ data_objs = DataObj(config).loadData()
 t0 = time.time()
 for epoch in range(2):
     model.train_loop(data_objs[0:3])
-    model.test_loop(data_objs[3:])
+    model.test_loop(data_objs[3:], epoch)
     train_loss.append(round(model.train_loss.result().numpy().item(), 2))
     valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
     # modelEvaluate(model, validation_data, config)
@@ -84,6 +84,7 @@ plt.grid()
 plt.legend(['valid_loss', 'train_loss'])
 
 # %%
+ 
 
 # %%
 conditions.shape

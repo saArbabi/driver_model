@@ -52,24 +52,26 @@ def slice_pvector(param_vec, vehicle_type):
     else:
         return tf.split(param_vec, n_params, axis=1)
 
-def covDet_min(mvn):
+def covDet_mean(mvn):
     """Use as a metric
     """
-    return tf.math.reduce_min(tf.linalg.det(mvn.covariance()))
+    return tf.math.reduce_mean(tf.linalg.det(mvn.covariance()))
 
-def loss_merge(y, mvn, y_shape):
+def loss_merge(y, mvn):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
         Loss for the merge vehicle
     """
+    y_shape = tf.shape(y)
     log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1], 2]))
 
     # shape: [sample_shape, batch_shape, event_shape]
     return -tf.reduce_mean(log_likelihood)
 
-def loss_other(y, mvn, y_shape):
+def loss_other(y, mvn):
     """ Computes the mean negative log-likelihood loss of y given the mixture parameters.
         Loss for the yield vehicle
     """
+    y_shape = tf.shape(y)
     log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1]]))
     # shape: [sample_shape, batch_shape]
 

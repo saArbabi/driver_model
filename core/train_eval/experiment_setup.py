@@ -9,7 +9,6 @@ def modelTrain(exp_id, explogs):
 
     # (1) Load model and setup checkpoints
     model = CAE(config, model_use='training')
-    optimizer = tf.optimizers.Adam(model.learning_rate)
 
     # for more on checkpointing model see: https://www.tensorflow.org/guide/checkpoint
     ckpt = tf.train.Checkpoint(step=tf.Variable(1), net=model) # no need for optimizer for now
@@ -22,35 +21,16 @@ def modelTrain(exp_id, explogs):
         print("Initializing from scratch.")
 
     start_epoch = explogs[exp_id]['epoch']
-    end_epoch = start_epoch + model.epochs_n
+    end_epoch = start_epoch + config['model_config']['epochs_n']
 
     # (2) Load data
-    data =  DataObj(config).loadData()
-    train_ds = model.batch_data(data[0:3])
-    test_ds = model.batch_data(data[3:])
+    data_objs = DataObj(config).loadData()
 
     # (3) Run experiment
     write_graph = 'True'
     for epoch in range(start_epoch, end_epoch):
-        for states, targets, conditions in train_ds:
-
-            if write_graph == 'True':
-                graph_write = tf.summary.create_file_writer(model.exp_dir+'/logs/')
-                tf.summary.trace_on(graph=True, profiler=False)
-                model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
-                                            targets[:, :, 4]], conditions, optimizer)
-                with graph_write.as_default():
-                    tf.summary.trace_export(name='graph', step=0)
-                write_graph = 'False'
-            else:
-                model.train_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
-                                            targets[:, :, 4]], conditions, optimizer)
-
-        for states, targets, conditions in test_ds:
-            model.test_step(states, [targets[:, :, :2], targets[:, :, 2], targets[:, :, 3],
-                                                        targets[:, :, 4]], conditions)
-
-        model.save_epoch_metrics(states, conditions, epoch)
+        model.train_loop(data_objs[0:3])
+        model.test_loop(data_objs[3:], epoch)
         utils.updateExpstate(model, explogs, exp_id, 'in progress')
 
         ckpt.step.assign_add(1)

@@ -98,31 +98,50 @@ class Decoder(tf.keras.Model):
 
         return contex_vector
 
+    def concat_param_vecs(self, step_param_vec, veh_param_vec, step):
+        """Use for concatinating gmm parameters across time-steps
+        """
+        if step == 0:
+            return step_param_vec
+        else:
+            veh_param_vec = tf.concat([veh_param_vec, step_param_vec], axis=1)
+            return veh_param_vec
+
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
-        vec_ms = tf.TensorArray(tf.float32, size=0, dynamic_size=True) # parameter vectors for all the steps
-        vec_ys = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
-        vec_fs = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
-        vec_fadjs = tf.TensorArray(tf.float32, size=0, dynamic_size=True)
-
         conditions = inputs[0]
         state_h, state_c = inputs[1] # encoder cell state
 
         if self.model_use == 'training':
             batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
-            self.steps_n = tf.shape(conditions)[1] # dynamiclaly assigned
+            steps_n = tf.shape(conditions)[1] # dynamiclaly assigned
 
-        elif self.model_use == 'inference' and not self.steps_n:
-            raise AttributeError("The prediciton horizon must be set.")
+        elif self.model_use == 'inference':
+            batch_size = tf.constant(self.traj_n)
+            steps_n = tf.constant(self.steps_n)
+
+        # Initialize param vector
+        param_m = tf.zeros([batch_size,0,30])
+        param_y = tf.zeros([batch_size,0,15])
+        param_f = tf.zeros([batch_size,0,15])
+        param_fadj = tf.zeros([batch_size,0,15])
 
         enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
         step_condition = conditions[:, 0:1, :]
 
-        for step in tf.range(self.steps_n):
+        for step in tf.range(steps_n):
+            tf.autograph.experimental.set_loop_options(shape_invariants=[
+                        (param_m, tf.TensorShape([None,None,None])),
+                        (param_y, tf.TensorShape([None,None,None])),
+                        (param_f, tf.TensorShape([None,None,None])),
+                        (param_fadj, tf.TensorShape([None,None,None]))])
+
             contex_vector = self.create_context_vec(enc_h, step_condition, batch_size, step)
             outputs, state_h, state_c = self.lstm_layer(contex_vector, \
                                                             initial_state=[state_h, state_c])
+
+
             """Merger vehicle
             """
             alphas = self.alphas_m(outputs)
@@ -134,8 +153,7 @@ class Decoder(tf.keras.Model):
             param_vec = self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
             gmm = get_pdf(param_vec, 'merge_vehicle')
             sample_m = tf.reshape(gmm.sample(1), [batch_size, 1, 2])
-
-            vec_ms = vec_ms.write(vec_ms.size(), param_vec)
+            param_m = self.concat_param_vecs(param_vec, param_m, step)
             """Yielder vehicle
             """
             alphas = self.alphas_y(outputs)
@@ -144,8 +162,7 @@ class Decoder(tf.keras.Model):
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_y = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
-
-            vec_ys = vec_ys.write(vec_ys.size(), param_vec)
+            param_y = self.concat_param_vecs(param_vec, param_y, step)
             """F vehicle
             """
             alphas = self.alphas_f(outputs)
@@ -154,8 +171,7 @@ class Decoder(tf.keras.Model):
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_f = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
-
-            vec_fs = vec_fs.write(vec_fs.size(), param_vec)
+            param_f = self.concat_param_vecs(param_vec, param_f, step)
             """Fadj vehicle
             """
             alphas = self.alphas_fadj(outputs)
@@ -164,16 +180,15 @@ class Decoder(tf.keras.Model):
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_fadj = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
-
-            vec_fadjs = vec_fadjs.write(vec_fadjs.size(), param_vec)
+            param_fadj = self.concat_param_vecs(param_vec, param_fadj, step)
             """Conditioning
             """
             step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
 
-        gmm_m = get_pdf(vec_ms.stack()[0], 'merge_vehicle')
-        gmm_y = get_pdf(vec_ys.stack()[0], 'other_vehicle')
-        gmm_f = get_pdf(vec_fs.stack()[0], 'other_vehicle')
-        gmm_fadj = get_pdf(vec_fadjs.stack()[0], 'other_vehicle')
+        gmm_m = get_pdf(param_m, 'merge_vehicle')
+        gmm_y = get_pdf(param_y, 'other_vehicle')
+        gmm_f = get_pdf(param_f, 'other_vehicle')
+        gmm_fadj = get_pdf(param_fadj, 'other_vehicle')
 
         return gmm_m, gmm_y, gmm_f, gmm_fadj
 
