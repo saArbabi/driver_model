@@ -76,57 +76,14 @@ for epoch in range(2):
     train_loss.append(round(model.train_loss.result().numpy().item(), 2))
     valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
     # modelEvaluate(model, validation_data, config)
-    range(3, config['data_config']['pred_horizon'])(epoch+1, ' complete')
-range(3, config['data_config']['pred_horizon'])('experiment duration ', time.time() - t0)
+
+print(time.time() - t0)
 plt.plot(valid_loss)
 plt.plot(train_loss)
 plt.grid()
 plt.legend(['valid_loss', 'train_loss'])
 
-# %%')
-
-# build a lookup table
-table = tf.lookup.StaticHashTable(
-    initializer=tf.lookup.KeyValueTensorInitializer(
-        keys=tf.constant([[0, 1], [2, 3]]),
-        values=tf.constant(list(b.values())),
-    ),
-    default_value=tf.constant(-1),
-    name="class_weight"
-)
-
-# now let us do a lookup
-input_tensor = tf.constant([0, 1])
-out = table.lookup(input_tensor)
-range(3, config['data_config']['pred_horizon'])(out)
-
 # %%
-table = tf.lookup.StaticHashTable(b)
-z = b.values()
-list(z)
-b = {1:[3,3], 2:[4,4]}
-for a in tf.range(1,3):
-    tf.
-    range(3, config['data_config']['pred_horizon'])(b[a.ref()])
-# %%
-a = tf.constant([3,10], dtype='float
-
-tf.reduce_mean(a, axis=0).numpy()
-# %%
-ll.numpy()
-# %%
-
-@tf.function
-def hi(num):
-    a = tf.constant(num)
-    tf.range(3, config['data_config']['pred_horizon'])([2])
-    range(3, config['data_config']['pred_horizon'])(type(a))
-    raise
-    return a
-hi(2)
-
-# %%
-model.dec_model.time_stamp
 
 # %%
 conditions.shape

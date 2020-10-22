@@ -48,7 +48,6 @@ class AbstractModel(tf.keras.Model):
                 targs = [targets[:, :, :2], targets[:, :, 2], \
                                                 targets[:, :, 3], targets[:, :, 4]]
 
-                self.train_batch_shape = conditions.shape
                 self.train_step(states, targs, conditions)
 
     def test_loop(self, data_objs):
@@ -60,19 +59,18 @@ class AbstractModel(tf.keras.Model):
                 targs = [targets[:, :, :2], targets[:, :, 2], \
                                                 targets[:, :, 3], targets[:, :, 4]]
 
-                self.test_batch_shape = conditions.shape
                 self.test_step(states, targs, conditions)
+
 
     @tf.function(experimental_relax_shapes=True)
     def train_step(self, states, targs, conditions):
-        self.batch_shape = self.train_batch_shape
-
+        batch_shape = tf.shape(conditions)
         with tf.GradientTape() as tape:
             gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=True)
-            loss = loss_merge(targs[0], gmm_m, self.batch_shape) + \
-                    loss_other(targs[1], gmm_y, self.batch_shape) + \
-                    loss_other(targs[2], gmm_f, self.batch_shape) + \
-                    loss_other(targs[3], gmm_fadj, self.batch_shape)
+            loss = loss_merge(targs[0], gmm_m, batch_shape) + \
+                    loss_other(targs[1], gmm_y, batch_shape) + \
+                    loss_other(targs[2], gmm_f, batch_shape) + \
+                    loss_other(targs[3], gmm_fadj, batch_shape)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
@@ -81,12 +79,12 @@ class AbstractModel(tf.keras.Model):
 
     @tf.function(experimental_relax_shapes=True)
     def test_step(self, states, targs, conditions):
-        self.batch_shape = self.test_batch_shape
+        batch_shape = tf.shape(conditions)
         gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=False)
-        loss = loss_merge(targs[0], gmm_m, self.batch_shape) + \
-                loss_other(targs[1], gmm_y, self.batch_shape) + \
-                loss_other(targs[2], gmm_f, self.batch_shape) + \
-                loss_other(targs[3], gmm_fadj, self.batch_shape)
+        loss = loss_merge(targs[0], gmm_m, batch_shape) + \
+                loss_other(targs[1], gmm_y, batch_shape) + \
+                loss_other(targs[2], gmm_f, batch_shape) + \
+                loss_other(targs[3], gmm_fadj, batch_shape)
 
         self.test_loss.reset_states()
         self.test_loss(loss)
