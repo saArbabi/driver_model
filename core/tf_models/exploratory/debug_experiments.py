@@ -37,13 +37,12 @@ config = {
      "dec_units": 200,
      "enc_emb_units": 20,
      "dec_emb_units": 5,
-     "layers_n": 2,
      "epochs_n": 50,
      "components_n": 5
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 20,
+                "pred_horizon": 50,
                 "batch_size": 1124,
                 "Note": ""
 },
@@ -84,7 +83,7 @@ plt.grid()
 plt.legend(['valid_loss', 'train_loss'])
 
 # %%
- 
+
 
 # %%
 conditions.shape

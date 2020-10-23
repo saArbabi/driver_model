@@ -22,7 +22,7 @@ config = {
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 20,
+                "pred_horizon": 50,
                 "batch_size": 1124,
                 "Note": ""
 },
