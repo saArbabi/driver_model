@@ -62,7 +62,6 @@ class AbstractModel(tf.keras.Model):
                                                 targets[:, :, 3], targets[:, :, 4]]
 
                 self.test_step(states, targs, conditions)
-
         self.save_epoch_metrics(states, conditions, epoch)
 
     @tf.function(experimental_relax_shapes=True)

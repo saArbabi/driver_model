@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from importlib import reload
 import time
 
+exp_trains = {}
+exp_vals = {}
 # %%
 """
 Use this script for debugging the following:
@@ -29,20 +31,19 @@ See:
 https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distributions_Shapes
 """
 # %%
-
 config = {
  "model_config": {
      "learning_rate": 1e-3,
      "enc_units": 200,
      "dec_units": 200,
-     "enc_emb_units": 20,
-     "dec_emb_units": 5,
+     "enc_emb_units": 200,
+     "dec_emb_units": 200,
      "epochs_n": 50,
      "components_n": 5
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 50,
+                "pred_horizon": 20,
                 "batch_size": 1124,
                 "Note": ""
 },
@@ -58,32 +59,82 @@ reload(cae_model)
 from models.core.tf_models.cae_model import  Encoder, Decoder, CAE
 
 
-
 # config = loadConfig('series000exp001')
 config['exp_id'] = 'debug_experiment_2'
-train_loss = []
-valid_loss = []
 
-model = CAE(config, model_use='training')
-write_graph = 'False'
-data_objs = DataObj(config).loadData()
+def train_debugger():
+    model = CAE(config, model_use='training')
+    data_objs = DataObj(config).loadData()
 
-t0 = time.time()
-for epoch in range(2):
-    model.train_loop(data_objs[0:3])
-    model.test_loop(data_objs[3:], epoch)
-    train_loss.append(round(model.train_loss.result().numpy().item(), 2))
-    valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
-    # modelEvaluate(model, validation_data, config)
+    t0 = time.time()
+    for epoch in range(1):
+        model.train_loop(data_objs[0:3])
+        model.test_loop(data_objs[3:], epoch)
+        print(epoch, 'epochs completed')
 
-print(time.time() - t0)
-plt.plot(valid_loss)
-plt.plot(train_loss)
+    print(time.time() - t0)
+
+
+def train_exp(exp_trains, exp_vals, config, exp_name):
+
+    if exp_name in (exp_trains or exp_vals):
+        raise  KeyError("Experiment already completed")
+
+    train_loss = []
+    valid_loss = []
+
+    model = CAE(config, model_use='training')
+    data_objs = DataObj(config).loadData()
+
+    t0 = time.time()
+    for epoch in range(10):
+        model.train_loop(data_objs[0:3])
+        model.test_loop(data_objs[3:], epoch)
+        train_loss.append(round(model.train_loss.result().numpy().item(), 2))
+        valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
+        # modelEvaluate(model, validation_data, config)
+        print(epoch, 'epochs completed')
+        print('train_loss', train_loss[-1])
+        print('valid_loss', valid_loss[-1])
+
+    print(time.time() - t0)
+    exp_trains[exp_name] = train_loss
+    exp_vals[exp_name] = valid_loss
+
+    return exp_trains, exp_vals
+
+# train_debugger()
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp007')
+# del exp_trains['exp004']
+# del exp_vals['exp007']
+# del exp_trains['exp007']
+legend = [
+        'no feature embedding',
+        'single layer feature embedding',
+        'two layer feature embedding',
+        'two layer feature embedding - activated',
+        'two layer feature embedding - large',
+        'two layer feature embedding - large-not-active',
+        'two layer feature embedding - massive-active'
+        ]
+# %%
+for item in exp_vals:
+# for item in ['exp005', 'exp003']:
+    plt.plot(exp_vals[item])
+    # plt.plot(exp_trains[item], '_')
+
 plt.grid()
-plt.legend(['valid_loss', 'train_loss'])
+plt.xticks(np.arange(10))
 
+
+plt.legend(legend)
 # %%
 
+for item in exp_trains:
+    plt.plot(exp_trains[item])
+
+plt.grid()
+plt.legend(legend)
 
 # %%
 conditions.shape

@@ -17,7 +17,6 @@ class Encoder(tf.keras.Model):
     def __init__(self, config):
         super(Encoder, self).__init__(name="Encoder")
         self.enc_units = config['model_config']['enc_units']
-        # self.enc_emb_units = config['model_config']['enc_emb_units']
         self.enc_emb_units = config['model_config']['enc_emb_units']
         self.architecture_def()
 
@@ -28,13 +27,12 @@ class Encoder(tf.keras.Model):
 
     def architecture_def(self):
         self.embedding_layer_1 = TimeDistributed(Dense(self.enc_emb_units))
-        self.embedding_layer_2 = TimeDistributed(Dense(self.enc_emb_units))
+        self.embedding_layer_2 = TimeDistributed(Dense(30))
         self.lstm_layers = LSTM(self.enc_units, return_state=True)
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-        inputs = self.fc_embedding(inputs)
-        _, state_h, state_c = self.lstm_layers(inputs)
+        _, state_h, state_c = self.lstm_layers(self.fc_embedding(inputs))
         return [state_h, state_c]
 
 class Decoder(tf.keras.Model):
@@ -51,13 +49,11 @@ class Decoder(tf.keras.Model):
 
     def fc_embedding(self, inputs):
         output = self.embedding_layer_1(inputs)
-        output = self.embedding_layer_2(output)
         return output
 
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
         self.embedding_layer_1 = Dense(self.dec_emb_units)
-        self.embedding_layer_2 = Dense(self.dec_emb_units)
         self.lstm_layer = LSTM(self.dec_units, return_sequences=True, return_state=True)
         """Merger vehicle
         """
@@ -90,13 +86,19 @@ class Decoder(tf.keras.Model):
 
         self.time_stamp = tf.constant(ts, dtype='float32')
 
-    def create_context_vec(self, enc_h, step_condition, batch_size, step):
-        ts = self.time_stamp[:, step:step+1, :]
-        step_condition = self.fc_embedding(step_condition)
-        contex_vector = tf.concat([step_condition, enc_h, \
-                                    tf.repeat(ts, batch_size, axis=0)], axis=2)
+    # def create_context_vec(self, enc_h, step_condition, batch_size, step):
+    #     ts = self.time_stamp[:, step:step+1, :]
+    #
+    #     contex_vector = tf.concat([step_condition, enc_h, \
+    #                                 tf.repeat(ts, batch_size, axis=0)], axis=2)
+    #
+    #     return self.fc_embedding(contex_vector)
 
-        return contex_vector
+    def create_context_vec(self, enc_h, step_condition, ts):
+        contex_vector = tf.concat([enc_h, step_condition, ts], axis=2)
+
+        return self.fc_embedding(contex_vector)
+
 
     def concat_param_vecs(self, step_param_vec, veh_param_vec, step):
         """Use for concatinating gmm parameters across time-steps
@@ -129,54 +131,64 @@ class Decoder(tf.keras.Model):
 
         enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
         step_condition = conditions[:, 0:1, :]
-
         for step in tf.range(steps_n):
+        # for step in tf.range(3):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
                         (param_m, tf.TensorShape([None,None,None])),
                         (param_y, tf.TensorShape([None,None,None])),
                         (param_f, tf.TensorShape([None,None,None])),
-                        (param_fadj, tf.TensorShape([None,None,None]))])
+                        (param_fadj, tf.TensorShape([None,None,None])),
+                        (step_condition, tf.TensorShape([None,None,5])),
+                        ])
 
-            contex_vector = self.create_context_vec(enc_h, step_condition, batch_size, step)
-            outputs, state_h, state_c = self.lstm_layer(contex_vector, \
-                                                            initial_state=[state_h, state_c])
+            # tf.print(self.fc_embedding(step_condition).shape)
+            ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
 
+            contex_vector = self.create_context_vec(enc_h, step_condition, ts)
+            outputs, state_h, state_c = self.lstm_layer(contex_vector,
+                                                        initial_state=[state_h, state_c])
+
+
+            # gmm_inputs = outputs
+            gmm_inputs = tf.concat([ts, outputs], axis=2)
+            # tf.print(enc_h.shape)
+            # tf.print(state_h.shape)
 
             """Merger vehicle
             """
-            alphas = self.alphas_m(outputs)
-            mus_long = self.mus_long_m(outputs)
-            sigmas_long = self.sigmas_long_m(outputs)
-            mus_lat = self.mus_lat_m(outputs)
-            sigmas_lat = self.sigmas_lat_m(outputs)
-            rhos = self.rhos_m(outputs)
+            alphas = self.alphas_m(gmm_inputs)
+            mus_long = self.mus_long_m(gmm_inputs)
+            sigmas_long = self.sigmas_long_m(gmm_inputs)
+            mus_lat = self.mus_lat_m(gmm_inputs)
+            sigmas_lat = self.sigmas_lat_m(gmm_inputs)
+            rhos = self.rhos_m(gmm_inputs)
             param_vec = self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
             gmm = get_pdf(param_vec, 'merge_vehicle')
             sample_m = tf.reshape(gmm.sample(1), [batch_size, 1, 2])
             param_m = self.concat_param_vecs(param_vec, param_m, step)
             """Yielder vehicle
             """
-            alphas = self.alphas_y(outputs)
-            mus_long = self.mus_long_y(outputs)
-            sigmas_long = self.sigmas_long_y(outputs)
+            alphas = self.alphas_y(gmm_inputs)
+            mus_long = self.mus_long_y(gmm_inputs)
+            sigmas_long = self.sigmas_long_y(gmm_inputs)
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_y = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
             param_y = self.concat_param_vecs(param_vec, param_y, step)
             """F vehicle
             """
-            alphas = self.alphas_f(outputs)
-            mus_long = self.mus_long_f(outputs)
-            sigmas_long = self.sigmas_long_f(outputs)
+            alphas = self.alphas_f(gmm_inputs)
+            mus_long = self.mus_long_f(gmm_inputs)
+            sigmas_long = self.sigmas_long_f(gmm_inputs)
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_f = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
             param_f = self.concat_param_vecs(param_vec, param_f, step)
             """Fadj vehicle
             """
-            alphas = self.alphas_fadj(outputs)
-            mus_long = self.mus_long_fadj(outputs)
-            sigmas_long = self.sigmas_long_fadj(outputs)
+            alphas = self.alphas_fadj(gmm_inputs)
+            mus_long = self.mus_long_fadj(gmm_inputs)
+            sigmas_long = self.sigmas_long_fadj(gmm_inputs)
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_fadj = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
