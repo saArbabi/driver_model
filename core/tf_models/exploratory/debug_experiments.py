@@ -34,10 +34,11 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 50,
-     "dec_units": 50,
-     "enc_emb_units": 200,
-     "dec_emb_units": 200,
+     "enc_units": 200,
+     "dec_units": 200,
+     "enc_in_linear_units": 200,
+     "dec_in_linear_units": 250,
+     "dec_out_linear_units": 250,
      "epochs_n": 50,
      "components_n": 5
 },
@@ -104,15 +105,19 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp001')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp004']
-# del exp_vals['exp007']
-# del exp_trains['exp007']
+# del exp_vals['exp001']
+# del exp_trains['exp001']
+
 legend = [
-        'multi-head 200unit',
-        'multi-head 50unit',
+        'multi-head 200unit - no ts',
+        'multi-head 200unit - ts[linear]',
+        'multi-head 200unit - ts[linear+rnn]',
+        # 'multi-head 200unit - ts[both]',
         ]
 # %%
+
 for item in exp_vals:
 # for item in ['exp005', 'exp003']:
     plt.plot(exp_vals[item])
