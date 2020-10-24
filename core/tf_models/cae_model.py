@@ -17,22 +17,22 @@ class Encoder(tf.keras.Model):
     def __init__(self, config):
         super(Encoder, self).__init__(name="Encoder")
         self.enc_units = config['model_config']['enc_units']
-        self.enc_emb_units = config['model_config']['enc_emb_units']
+        self.enc_in_linear_units = config['model_config']['enc_in_linear_units']
         self.architecture_def()
 
-    def fc_embedding(self, inputs):
-        output = self.embedding_layer_1(inputs)
-        output = self.embedding_layer_2(output)
+    def in_linear(self, inputs):
+        output = self.linear_layer_1(inputs)
+        output = self.linear_layer_2(output)
         return output
 
     def architecture_def(self):
-        self.embedding_layer_1 = TimeDistributed(Dense(self.enc_emb_units))
-        self.embedding_layer_2 = TimeDistributed(Dense(30))
+        self.linear_layer_1 = TimeDistributed(Dense(self.enc_in_linear_units))
+        self.linear_layer_2 = TimeDistributed(Dense(30))
         self.lstm_layers = LSTM(self.enc_units, return_state=True)
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-        _, state_h, state_c = self.lstm_layers(self.fc_embedding(inputs))
+        _, state_h, state_c = self.lstm_layers(self.in_linear(inputs))
         return [state_h, state_c]
 
 class Decoder(tf.keras.Model):
@@ -40,23 +40,25 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__(name="Decoder")
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
-        self.dec_emb_units = config['model_config']['dec_emb_units']
+        self.dec_in_linear_units = config['model_config']['dec_in_linear_units']
+        self.dec_out_linear_units = config['model_config']['dec_out_linear_units']
         self.pred_horizon = config['data_config']['pred_horizon']
         self.steps_n = None # note self.steps_n =< self.pred_horizon
         self.model_use = model_use # can be training or inference
         self.architecture_def()
         self.create_tf_time_stamp(self.pred_horizon)
 
-    def fc_embedding(self, inputs):
-        output = self.embedding_layer_1(inputs)
+    def in_linear(self, inputs):
+        output = self.in_linear_layer(inputs)
         return output
 
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
-        self.embedding_layer_1 = Dense(self.dec_emb_units)
-        self.lstm_layer = LSTM(self.dec_units, return_sequences=True, return_state=True)
+        self.in_linear_layer = Dense(self.dec_in_linear_units)
         """Merger vehicle
         """
+        self.out_linear_layer_m = Dense(self.dec_out_linear_units)
+        self.lstm_layer_m = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.alphas_m = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_m = Dense(self.components_n, name="mus_long")
         self.sigmas_long_m = Dense(self.components_n, activation=K.exp, name="sigmas_long")
@@ -65,19 +67,26 @@ class Decoder(tf.keras.Model):
         self.rhos_m = Dense(self.components_n, activation=K.tanh, name="rhos")
         """Yielder vehicle
         """
+        self.out_linear_layer_y = Dense(self.dec_out_linear_units)
+        self.lstm_layer_y = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.alphas_y = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_y = Dense(self.components_n, name="mus_long")
         self.sigmas_long_y = Dense(self.components_n, activation=K.exp, name="sigmas_long")
         """F vehicle
         """
+        self.out_linear_layer_f = Dense(self.dec_out_linear_units)
+        self.lstm_layer_f = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.alphas_f = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_f = Dense(self.components_n, name="mus_long")
         self.sigmas_long_f = Dense(self.components_n, activation=K.exp, name="sigmas_long")
         """Fadj vehicle
         """
+        self.out_linear_layer_fadj = Dense(self.dec_out_linear_units)
+        self.lstm_layer_fadj = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.alphas_fadj = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_fadj = Dense(self.components_n, name="mus_long")
         self.sigmas_long_fadj = Dense(self.components_n, activation=K.exp, name="sigmas_long")
+
 
     def create_tf_time_stamp(self, pred_horizon):
         ts = np.zeros([1, pred_horizon, pred_horizon])
@@ -86,18 +95,11 @@ class Decoder(tf.keras.Model):
 
         self.time_stamp = tf.constant(ts, dtype='float32')
 
-    # def create_context_vec(self, enc_h, step_condition, batch_size, step):
-    #     ts = self.time_stamp[:, step:step+1, :]
-    #
-    #     contex_vector = tf.concat([step_condition, enc_h, \
-    #                                 tf.repeat(ts, batch_size, axis=0)], axis=2)
-    #
-    #     return self.fc_embedding(contex_vector)
+    def create_context_vec(self, enc_h, step_condition):
+        contex_vector = tf.concat([enc_h, step_condition], axis=2)
+        # contex_vector = tf.concat([enc_h, step_condition], axis=2)
 
-    def create_context_vec(self, enc_h, step_condition, ts):
-        contex_vector = tf.concat([enc_h, step_condition, ts], axis=2)
-
-        return self.fc_embedding(contex_vector)
+        return self.in_linear(contex_vector)
 
 
     def concat_param_vecs(self, step_param_vec, veh_param_vec, step):
@@ -130,7 +132,19 @@ class Decoder(tf.keras.Model):
         param_fadj = tf.zeros([batch_size,0,15])
 
         enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
+
+        state_h_m = state_h
+        state_h_y = state_h
+        state_h_f = state_h
+        state_h_fadj = state_h
+
+        state_c_m = state_c
+        state_c_y = state_c
+        state_c_f = state_c
+        state_c_fadj = state_c
+
         step_condition = conditions[:, 0:1, :]
+
         for step in tf.range(steps_n):
         # for step in tf.range(3):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
@@ -141,54 +155,61 @@ class Decoder(tf.keras.Model):
                         (step_condition, tf.TensorShape([None,None,5])),
                         ])
 
-            # tf.print(self.fc_embedding(step_condition).shape)
             ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
+            contex_vector = self.create_context_vec(enc_h, step_condition)
 
-            contex_vector = self.create_context_vec(enc_h, step_condition, ts)
-            outputs, state_h, state_c = self.lstm_layer(contex_vector,
-                                                        initial_state=[state_h, state_c])
-
-
-            gmm_inputs = outputs
+            # gmm_inputs = outputs
             # gmm_inputs = tf.concat([ts, outputs], axis=2)
             # tf.print(enc_h.shape)
             # tf.print(state_h.shape)
 
             """Merger vehicle
             """
-            alphas = self.alphas_m(gmm_inputs)
-            mus_long = self.mus_long_m(gmm_inputs)
-            sigmas_long = self.sigmas_long_m(gmm_inputs)
-            mus_lat = self.mus_lat_m(gmm_inputs)
-            sigmas_lat = self.sigmas_lat_m(gmm_inputs)
-            rhos = self.rhos_m(gmm_inputs)
+            outputs, state_h_m, state_c_m = self.lstm_layer_m(contex_vector, \
+                                                            initial_state=[state_h_m, state_c_m])
+            outputs = self.out_linear_layer_m(tf.concat([outputs, ts], axis=2))
+            alphas = self.alphas_m(outputs)
+            mus_long = self.mus_long_m(outputs)
+            sigmas_long = self.sigmas_long_m(outputs)
+            mus_lat = self.mus_lat_m(outputs)
+            sigmas_lat = self.sigmas_lat_m(outputs)
+            rhos = self.rhos_m(outputs)
             param_vec = self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
             gmm = get_pdf(param_vec, 'merge_vehicle')
             sample_m = tf.reshape(gmm.sample(1), [batch_size, 1, 2])
             param_m = self.concat_param_vecs(param_vec, param_m, step)
             """Yielder vehicle
             """
-            alphas = self.alphas_y(gmm_inputs)
-            mus_long = self.mus_long_y(gmm_inputs)
-            sigmas_long = self.sigmas_long_y(gmm_inputs)
+            outputs, state_h_y, state_c_y = self.lstm_layer_y(contex_vector, \
+                                                            initial_state=[state_h_y, state_c_y])
+            outputs = self.out_linear_layer_y(tf.concat([outputs, ts], axis=2))
+            alphas = self.alphas_y(outputs)
+            mus_long = self.mus_long_y(outputs)
+            sigmas_long = self.sigmas_long_y(outputs)
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_y = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
             param_y = self.concat_param_vecs(param_vec, param_y, step)
             """F vehicle
             """
-            alphas = self.alphas_f(gmm_inputs)
-            mus_long = self.mus_long_f(gmm_inputs)
-            sigmas_long = self.sigmas_long_f(gmm_inputs)
+            outputs, state_h_f, state_c_f = self.lstm_layer_f(contex_vector, \
+                                                            initial_state=[state_h_f, state_c_f])
+            outputs = self.out_linear_layer_f(tf.concat([outputs, ts], axis=2))
+            alphas = self.alphas_f(outputs)
+            mus_long = self.mus_long_f(outputs)
+            sigmas_long = self.sigmas_long_f(outputs)
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_f = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
             param_f = self.concat_param_vecs(param_vec, param_f, step)
             """Fadj vehicle
             """
-            alphas = self.alphas_fadj(gmm_inputs)
-            mus_long = self.mus_long_fadj(gmm_inputs)
-            sigmas_long = self.sigmas_long_fadj(gmm_inputs)
+            outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(contex_vector, \
+                                                            initial_state=[state_h_fadj, state_c_fadj])
+            outputs = self.out_linear_layer_fadj(tf.concat([outputs, ts], axis=2))
+            alphas = self.alphas_fadj(outputs)
+            mus_long = self.mus_long_fadj(outputs)
+            sigmas_long = self.sigmas_long_fadj(outputs)
             param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_fadj = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
