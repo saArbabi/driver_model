@@ -38,7 +38,7 @@ config = {
      "dec_units": 200,
      "enc_in_linear_units": 200,
      "dec_in_linear_units": 250,
-     "dec_out_linear_units": 250,
+     "dec_out_linear_units": 500,
      "epochs_n": 50,
      "components_n": 5
 },
@@ -105,16 +105,21 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp004')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp001')
 # del exp_trains['exp004']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 legend = [
-        'multi-head 200unit - no ts',
-        'multi-head 200unit - ts[linear]',
+        'single-head double-dec-layer',
         # 'multi-head 200unit - ts[both]',
         ]
+
+# legend = [
+#         'context[rnn]',
+#         'context[rnn+linear]',
+#         # 'multi-head 200unit - ts[both]',
+#         ]
 # %%
 
 for item in exp_vals:
