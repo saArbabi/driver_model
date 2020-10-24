@@ -34,8 +34,8 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 200,
-     "dec_units": 200,
+     "enc_units": 50,
+     "dec_units": 50,
      "enc_emb_units": 200,
      "dec_emb_units": 200,
      "epochs_n": 50,
@@ -104,18 +104,13 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp007')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp001')
 # del exp_trains['exp004']
 # del exp_vals['exp007']
 # del exp_trains['exp007']
 legend = [
-        'no feature embedding',
-        'single layer feature embedding',
-        'two layer feature embedding',
-        'two layer feature embedding - activated',
-        'two layer feature embedding - large',
-        'two layer feature embedding - large-not-active',
-        'two layer feature embedding - massive-active'
+        'multi-head 200unit',
+        'multi-head 50unit',
         ]
 # %%
 for item in exp_vals:
