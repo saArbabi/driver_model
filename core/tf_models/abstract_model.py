@@ -23,20 +23,24 @@ class AbstractModel(tf.keras.Model):
         current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
         log_dir = self.exp_dir+'/logs/'
         self.writer_1 = tf.summary.create_file_writer(log_dir+'epoch_loss')
-        self.writer_2 = tf.summary.create_file_writer(log_dir+'covdet')
+        self.writer_2 = tf.summary.create_file_writer(log_dir+'epoch_metrics')
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    def save_epoch_metrics(self, states, conditions, epoch):
+    def save_epoch_metrics(self, states, targs, conditions, epoch):
         with self.writer_1.as_default():
             tf.summary.scalar('_train', self.train_loss.result(), step=epoch)
             tf.summary.scalar('_val', self.test_loss.result(), step=epoch)
         self.writer_1.flush()
 
         with self.writer_2.as_default():
-            gmm_m, _, _, _ = self([states, conditions], training=True)
+            gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=True)
             covDet = covDet_mean(gmm_m)
             tf.summary.scalar('covDet_mean', covDet, step=epoch)
+            tf.summary.scalar('loss_m', loss_merge(targs[0], gmm_m), step=epoch)
+            tf.summary.scalar('loss_y', loss_other(targs[1], gmm_y), step=epoch)
+            tf.summary.scalar('loss_f', loss_other(targs[2], gmm_f), step=epoch)
+            tf.summary.scalar('loss_fadj', loss_other(targs[3], gmm_fadj), step=epoch)
         self.writer_2.flush()
 
     def train_loop(self, data_objs):
@@ -62,7 +66,7 @@ class AbstractModel(tf.keras.Model):
                                                 targets[:, :, 3], targets[:, :, 4]]
 
                 self.test_step(states, targs, conditions)
-        self.save_epoch_metrics(states, conditions, epoch)
+        self.save_epoch_metrics(states, targs, conditions, epoch)
 
     @tf.function(experimental_relax_shapes=True)
     def train_step(self, states, targs, conditions):

@@ -22,8 +22,7 @@ class Encoder(tf.keras.Model):
 
     def in_linear(self, inputs):
         output = self.linear_layer_1(inputs)
-        output = self.linear_layer_2(output)
-        return output
+        return self.linear_layer_2(output)
 
     def architecture_def(self):
         self.linear_layer_1 = TimeDistributed(Dense(self.enc_in_linear_units))
@@ -97,10 +96,7 @@ class Decoder(tf.keras.Model):
 
     def create_context_vec(self, enc_h, step_condition):
         contex_vector = tf.concat([enc_h, step_condition], axis=2)
-        # contex_vector = tf.concat([enc_h, step_condition], axis=2)
-
         return self.in_linear(contex_vector)
-
 
     def concat_param_vecs(self, step_param_vec, veh_param_vec, step):
         """Use for concatinating gmm parameters across time-steps
@@ -157,12 +153,6 @@ class Decoder(tf.keras.Model):
 
             ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
             contex_vector = self.create_context_vec(enc_h, step_condition)
-
-            # gmm_inputs = outputs
-            # gmm_inputs = tf.concat([ts, outputs], axis=2)
-            # tf.print(enc_h.shape)
-            # tf.print(state_h.shape)
-
             """Merger vehicle
             """
             outputs, state_h_m, state_c_m = self.lstm_layer_m(contex_vector, \
