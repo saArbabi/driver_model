@@ -149,8 +149,8 @@ class Decoder(tf.keras.Model):
                                                         initial_state=[state_h, state_c])
 
 
-            # gmm_inputs = outputs
-            gmm_inputs = tf.concat([ts, outputs], axis=2)
+            gmm_inputs = outputs
+            # gmm_inputs = tf.concat([ts, outputs], axis=2)
             # tf.print(enc_h.shape)
             # tf.print(state_h.shape)
 

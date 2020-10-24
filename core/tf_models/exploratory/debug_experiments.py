@@ -104,20 +104,17 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp007')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp001')
 # del exp_trains['exp004']
-# del exp_vals['exp007']
-# del exp_trains['exp007']
+# del exp_vals['exp001']
+# del exp_trains['exp001']
+
 legend = [
-        'no feature embedding',
-        'single layer feature embedding',
-        'two layer feature embedding',
-        'two layer feature embedding - activated',
-        'two layer feature embedding - large',
-        'two layer feature embedding - large-not-active',
-        'two layer feature embedding - massive-active'
+        'sinlge-head 200unit',
+        'multi-head 80unit',
         ]
 # %%
+
 for item in exp_vals:
 # for item in ['exp005', 'exp003']:
     plt.plot(exp_vals[item])
