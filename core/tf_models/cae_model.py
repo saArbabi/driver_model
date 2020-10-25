@@ -142,12 +142,14 @@ class Decoder(tf.keras.Model):
                         ])
 
             ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
+
             # contex_vector = self.create_context_vec(enc_h, step_condition, ts)
-            contex_vector = tf.zeros([batch_size,1,5], dtype=tf.float32)
+            contex_vector = self.in_linear(step_condition)
             outputs, state_h1, state_c1 = self.dec_lstms(contex_vector,
                                                             [state_h1, state_c1])
 
-            outputs = self.out_linear_layer(tf.concat([contex_vector, outputs], axis=2))
+            # outputs = self.out_linear_layer(tf.concat([contex_vector, outputs], axis=2))
+            outputs = self.out_linear_layer(outputs)
             """Merger vehicle
             """
             alphas = self.alphas_m(outputs)
