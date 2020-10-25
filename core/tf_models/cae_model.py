@@ -51,17 +51,17 @@ class Decoder(tf.keras.Model):
         output = self.in_linear_layer(inputs)
         return output
 
-    def dec_lstms(self, inputs, initial_state1, initial_state2):
+    def dec_lstms(self, inputs, initial_state1):
         output1, state_h1, state_c1 = self.lstm_layer_1(inputs, initial_state=initial_state1)
-        output2, state_h2, state_c2 = self.lstm_layer_2(output1, initial_state=initial_state2)
-        return output2, state_h1, state_c1, state_h2, state_c2
+        # output2, state_h2, state_c2 = self.lstm_layer_2(output1, initial_state=initial_state2)
+        return output1, state_h1, state_c1
 
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
         self.in_linear_layer = Dense(self.dec_in_linear_units)
         self.out_linear_layer = Dense(self.dec_out_linear_units)
         self.lstm_layer_1 = LSTM(self.dec_units, return_sequences=True, return_state=True)
-        self.lstm_layer_2 = LSTM(self.dec_units, return_sequences=True, return_state=True)
+        # self.lstm_layer_2 = LSTM(self.dec_units, return_sequences=True, return_state=True)
 
         """Merger vehicle
         """
@@ -96,8 +96,8 @@ class Decoder(tf.keras.Model):
         self.time_stamp = tf.constant(ts, dtype='float32')
 
     def create_context_vec(self, enc_h, step_condition, ts):
-        contex_vector = tf.concat([enc_h, step_condition, ts], axis=2)
-        return self.in_linear(contex_vector)
+        # contex_vector = tf.concat([enc_h, step_condition, ts], axis=2)
+        return self.in_linear(step_condition)
 
     def concat_param_vecs(self, step_param_vec, veh_param_vec, step):
         """Use for concatinating gmm parameters across time-steps
@@ -112,7 +112,7 @@ class Decoder(tf.keras.Model):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
         conditions = inputs[0]
-        state_h, state_c = inputs[1] # encoder cell state
+        state_h1, state_c1 = inputs[1] # encoder cell state
 
         if self.model_use == 'training':
             batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
@@ -128,11 +128,8 @@ class Decoder(tf.keras.Model):
         param_f = tf.zeros([batch_size,0,15], dtype=tf.float32)
         param_fadj = tf.zeros([batch_size,0,15], dtype=tf.float32)
 
-        enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
+        # enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
         step_condition = conditions[:, 0:1, :]
-
-        state_h1, state_c1 = inputs[1]
-        state_h2, state_c2 = inputs[1]
 
         for step in tf.range(steps_n):
         # for step in tf.range(3):
@@ -145,11 +142,10 @@ class Decoder(tf.keras.Model):
                         ])
 
             ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
-            contex_vector = self.create_context_vec(enc_h, step_condition, ts)
-            outputs, state_h1, state_c1, state_h2, state_c2 = self.dec_lstms(
-                                                                    contex_vector,
-                                                                    [state_h1, state_c1],
-                                                                    [state_h2, state_c2])
+            # contex_vector = self.create_context_vec(enc_h, step_condition, ts)
+            contex_vector = tf.zeros([batch_size,1,5], dtype=tf.float32)
+            outputs, state_h1, state_c1 = self.dec_lstms(contex_vector,
+                                                            [state_h1, state_c1])
 
             outputs = self.out_linear_layer(tf.concat([contex_vector, outputs], axis=2))
             """Merger vehicle
