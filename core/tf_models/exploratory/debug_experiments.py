@@ -45,7 +45,7 @@ config = {
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
-                "batch_size": 1124,
+                "batch_size": 512,
                 "Note": ""
 },
 "exp_id": "NA",
@@ -88,7 +88,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(10):
+    for epoch in range(2):
         model.train_loop(data_objs[0:3])
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
@@ -105,7 +105,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp001')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp002')
 # del exp_trains['exp004']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
@@ -139,6 +139,9 @@ for item in exp_trains:
 
 plt.grid()
 plt.legend(legend)
+
+# %%
+np.zeros([10,0,5])
 
 # %%
 conditions.shape
