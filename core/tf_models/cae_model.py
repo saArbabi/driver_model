@@ -54,7 +54,7 @@ class Decoder(tf.keras.Model):
     def dec_lstms(self, inputs, initial_state1, initial_state2):
         output1, state_h1, state_c1 = self.lstm_layer_1(inputs, initial_state=initial_state1)
         output2, state_h2, state_c2 = self.lstm_layer_2(output1, initial_state=initial_state2)
-        return output2, [state_h1, state_c1], [state_h2, state_c2]
+        return output2, state_h1, state_c1, state_h2, state_c2
 
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
@@ -123,16 +123,17 @@ class Decoder(tf.keras.Model):
             steps_n = tf.constant(self.steps_n)
 
         # Initialize param vector
-        param_m = tf.zeros([batch_size,0,30])
-        param_y = tf.zeros([batch_size,0,15])
-        param_f = tf.zeros([batch_size,0,15])
-        param_fadj = tf.zeros([batch_size,0,15])
+        param_m = tf.zeros([batch_size,0,30], dtype=tf.float32)
+        param_y = tf.zeros([batch_size,0,15], dtype=tf.float32)
+        param_f = tf.zeros([batch_size,0,15], dtype=tf.float32)
+        param_fadj = tf.zeros([batch_size,0,15], dtype=tf.float32)
 
         enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
-        state_c_fadj = state_c
         step_condition = conditions[:, 0:1, :]
 
-        state1 = state2 = inputs[1]
+        state_h1, state_c1 = inputs[1]
+        state_h2, state_c2 = inputs[1]
+
         for step in tf.range(steps_n):
         # for step in tf.range(3):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
@@ -140,14 +141,15 @@ class Decoder(tf.keras.Model):
                         (param_y, tf.TensorShape([None,None,None])),
                         (param_f, tf.TensorShape([None,None,None])),
                         (param_fadj, tf.TensorShape([None,None,None])),
-                        (step_condition, tf.TensorShape([None,None,5])),
+                        (step_condition, tf.TensorShape([None,None,5]))
                         ])
 
             ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
             contex_vector = self.create_context_vec(enc_h, step_condition, ts)
-            outputs, state1, state2 = self.dec_lstms(contex_vector, state1, state2)
-
-
+            outputs, state_h1, state_c1, state_h2, state_c2 = self.dec_lstms(
+                                                                    contex_vector,
+                                                                    [state_h1, state_c1],
+                                                                    [state_h2, state_c2])
 
             outputs = self.out_linear_layer(tf.concat([contex_vector, outputs], axis=2))
             """Merger vehicle

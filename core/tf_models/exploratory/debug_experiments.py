@@ -37,8 +37,8 @@ config = {
      "enc_units": 200,
      "dec_units": 200,
      "enc_in_linear_units": 200,
-     "dec_in_linear_units": 250,
-     "dec_out_linear_units": 500,
+     "dec_in_linear_units": 10,
+     "dec_out_linear_units": 250,
      "epochs_n": 50,
      "components_n": 5
 },
@@ -120,8 +120,8 @@ legend = [
 #         'context[rnn+linear]',
 #         # 'multi-head 200unit - ts[both]',
 #         ]
-# %%
 
+# %%
 for item in exp_vals:
 # for item in ['exp005', 'exp003']:
     plt.plot(exp_vals[item])
