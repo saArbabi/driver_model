@@ -17,7 +17,7 @@ class Encoder(tf.keras.Model):
     def __init__(self, config):
         super(Encoder, self).__init__(name="Encoder")
         self.enc_units = config['model_config']['enc_units']
-        self.enc_in_linear_units = config['model_config']['enc_in_linear_units']
+        # self.enc_in_linear_units = config['model_config']['enc_in_linear_units']
         self.architecture_def()
 
     def in_linear(self, inputs):
@@ -25,13 +25,14 @@ class Encoder(tf.keras.Model):
         return self.linear_layer_2(output)
 
     def architecture_def(self):
-        self.linear_layer_1 = TimeDistributed(Dense(self.enc_in_linear_units))
-        self.linear_layer_2 = TimeDistributed(Dense(30))
+        # self.linear_layer_1 = TimeDistributed(Dense(self.enc_in_linear_units))
+        # self.linear_layer_2 = TimeDistributed(Dense(30))
         self.lstm_layers = LSTM(self.enc_units, return_state=True)
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-        _, state_h, state_c = self.lstm_layers(self.in_linear(inputs))
+        # _, state_h, state_c = self.lstm_layers(self.in_linear(inputs))
+        _, state_h, state_c = self.lstm_layers(inputs)
         return [state_h, state_c]
 
 class Decoder(tf.keras.Model):
@@ -39,12 +40,9 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__(name="Decoder")
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
-        self.dec_in_linear_units = config['model_config']['dec_in_linear_units']
-        self.dec_out_linear_units = config['model_config']['dec_out_linear_units']
         self.pred_horizon = config['data_config']['pred_horizon']
         self.steps_n = None # note self.steps_n =< self.pred_horizon
         self.model_use = model_use # can be training or inference
-        self.teacher_percent = tf.constant(config['model_config']['teacher_percent'])
         self.architecture_def()
         self.create_tf_time_stamp(self.pred_horizon)
 
@@ -91,9 +89,9 @@ class Decoder(tf.keras.Model):
 
         self.time_stamp = tf.constant(ts, dtype='float32')
 
-    def create_context_vec(self, enc_h, step_condition, ts):
-        # contex_vector = tf.concat([enc_h, step_condition, ts], axis=2)
-        return self.in_linear(step_condition)
+    def create_context_vec(self, enc_h, step_condition):
+        contex_vector = tf.concat([enc_h, step_condition], axis=2)
+        return contex_vector
 
     def concat_param_vecs(self, step_param_vec, veh_param_vec, step):
         """Use for concatinating gmm parameters across time-steps
@@ -124,13 +122,14 @@ class Decoder(tf.keras.Model):
         param_f = tf.zeros([batch_size,0,15], dtype=tf.float32)
         param_fadj = tf.zeros([batch_size,0,15], dtype=tf.float32)
 
-        # enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
-        step_condition = conditions[:, 0:1, :]
+        enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
 
+
+        step_condition = tf.slice(conditions, [0, 0, 0], [batch_size, 1, 5])
         cond_m = step_condition
         cond_y = step_condition
-        cond_f = conditions[:, 0:1, 3:4]
-        cond_fadj = conditions[:, 0:1, 4:5]
+        cond_f = tf.slice(conditions, [0, 0, 3], [batch_size, 1, 1])
+        cond_fadj = tf.slice(conditions, [0, 0, 4], [batch_size, 1, 1])
 
         state_h_m = state_h
         state_h_y = state_h
@@ -156,13 +155,12 @@ class Decoder(tf.keras.Model):
 
             # ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
 
-            # contex_vector = self.create_context_vec(enc_h, step_condition, ts)
 
             # outputs = self.out_linear_layer(tf.concat([contex_vector, outputs], axis=2))
-            outputs = self.out_linear_layer(outputs)
             """Merger vehicle
             """
-            outputs, state_h_m, state_c_m = self.lstm_layer_m(cond_m, \
+            contex_vector = self.create_context_vec(enc_h, cond_m)
+            outputs, state_h_m, state_c_m = self.lstm_layer_m(contex_vector, \
                                                             initial_state=[state_h_m, state_c_m])
             alphas = self.alphas_m(outputs)
             mus_long = self.mus_long_m(outputs)
@@ -176,7 +174,8 @@ class Decoder(tf.keras.Model):
             param_m = self.concat_param_vecs(param_vec, param_m, step)
             """Yielder vehicle
             """
-            outputs, state_h_y, state_c_y = self.lstm_layer_y(cond_y, \
+            contex_vector = self.create_context_vec(enc_h, cond_y)
+            outputs, state_h_y, state_c_y = self.lstm_layer_y(contex_vector, \
                                                             initial_state=[state_h_y, state_c_y])
             alphas = self.alphas_y(outputs)
             mus_long = self.mus_long_y(outputs)
@@ -187,7 +186,8 @@ class Decoder(tf.keras.Model):
             param_y = self.concat_param_vecs(param_vec, param_y, step)
             """F vehicle
             """
-            outputs, state_h_f, state_c_f = self.lstm_layer_f(cond_f, \
+            contex_vector = self.create_context_vec(enc_h, cond_f)
+            outputs, state_h_f, state_c_f = self.lstm_layer_f(contex_vector, \
                                                             initial_state=[state_h_f, state_c_f])
             alphas = self.alphas_f(outputs)
             mus_long = self.mus_long_f(outputs)
@@ -198,7 +198,8 @@ class Decoder(tf.keras.Model):
             param_f = self.concat_param_vecs(param_vec, param_f, step)
             """Fadj vehicle
             """
-            outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(cond_fadj, \
+            contex_vector = self.create_context_vec(enc_h, cond_fadj)
+            outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(contex_vector, \
                                                             initial_state=[state_h_fadj, state_c_fadj])
             alphas = self.alphas_fadj(outputs)
             mus_long = self.mus_long_fadj(outputs)
@@ -210,19 +211,25 @@ class Decoder(tf.keras.Model):
 
             """Conditioning
             """
-            step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
-            cond_m = step_condition
-            cond_y = step_condition
-            cond_f = sample_f
-            cond_fadj = sample_fadj
-
             if step < steps_n-1:
                 coin_flip = tf.random.uniform([1])
                 if coin_flip < self.teacher_percent and self.model_use == 'training':
-                    step_condition = conditions[:, step+1:step+2, :]
+
+                    step_condition = tf.slice(conditions, [0, step+1, 0],
+                                                                [batch_size, 1, 5])
+
+                    cond_m = step_condition
+                    cond_y = step_condition
+                    cond_f = tf.slice(conditions, [0, step+1, 3],
+                                                                [batch_size, 1, 1])
+                    cond_fadj = tf.slice(conditions, [0, step+1, 4],
+                                                                [batch_size, 1, 1])
                 else:
                     step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
-
+                    cond_m = step_condition
+                    cond_y = step_condition
+                    cond_f = sample_f
+                    cond_fadj = sample_fadj
 
         gmm_m = get_pdf(param_m, 'merge_vehicle')
         gmm_y = get_pdf(param_y, 'other_vehicle')
@@ -236,6 +243,7 @@ class CAE(abstract_model.AbstractModel):
         super(CAE, self).__init__(config)
         self.enc_model = Encoder(config)
         self.dec_model = Decoder(config, model_use)
+        self.teacher_percent = 1
 
     def architecture_def(self):
         pass
@@ -244,5 +252,9 @@ class CAE(abstract_model.AbstractModel):
         # Defines the computation from inputs to outputs
         # input[0] = state obs
         # input[1] = conditions
+        if self.teacher_percent >= 0:
+            # else it will use the minimum self.teacher_percent reached
+            self.dec_model.teacher_percent = tf.constant(self.teacher_percent,
+                                                                dtype='float32')
         encoder_states = self.enc_model(inputs[0])
         return self.dec_model([inputs[1], encoder_states])

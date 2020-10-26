@@ -9,6 +9,7 @@ def modelTrain(exp_id, explogs):
 
     # (1) Load model and setup checkpoints
     model = CAE(config, model_use='training')
+    teacher_drop_rate = config['model_config']['teacher_drop_rate']
 
     # for more on checkpointing model see: https://www.tensorflow.org/guide/checkpoint
     ckpt = tf.train.Checkpoint(step=tf.Variable(1), net=model) # no need for optimizer for now
