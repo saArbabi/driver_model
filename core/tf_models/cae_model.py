@@ -44,6 +44,7 @@ class Decoder(tf.keras.Model):
         self.pred_horizon = config['data_config']['pred_horizon']
         self.steps_n = None # note self.steps_n =< self.pred_horizon
         self.model_use = model_use # can be training or inference
+        self.teacher_percent = tf.constant(config['model_config']['teacher_percent'])
         self.architecture_def()
         self.create_tf_time_stamp(self.pred_horizon)
 
@@ -130,7 +131,7 @@ class Decoder(tf.keras.Model):
 
         # enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
         step_condition = conditions[:, 0:1, :]
-
+        coin_flip = tf.random.uniform([1])
         for step in tf.range(steps_n):
         # for step in tf.range(3):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
@@ -141,7 +142,7 @@ class Decoder(tf.keras.Model):
                         (step_condition, tf.TensorShape([None,None,5]))
                         ])
 
-            ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
+            # ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
 
             # contex_vector = self.create_context_vec(enc_h, step_condition, ts)
             contex_vector = self.in_linear(step_condition)
@@ -149,7 +150,7 @@ class Decoder(tf.keras.Model):
                                                             [state_h1, state_c1])
 
             # outputs = self.out_linear_layer(tf.concat([contex_vector, outputs], axis=2))
-            outputs = self.out_linear_layer(outputs)
+            # outputs = self.out_linear_layer(outputs)
             """Merger vehicle
             """
             alphas = self.alphas_m(outputs)
@@ -189,9 +190,15 @@ class Decoder(tf.keras.Model):
             gmm = get_pdf(param_vec, 'other_vehicle')
             sample_fadj = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
             param_fadj = self.concat_param_vecs(param_vec, param_fadj, step)
+
             """Conditioning
             """
-            step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
+            if step < steps_n-1:
+                if coin_flip < self.teacher_percent:
+                    step_condition = conditions[:, step+1:step+2, :]
+                else:
+                    step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
+
 
         gmm_m = get_pdf(param_m, 'merge_vehicle')
         gmm_y = get_pdf(param_y, 'other_vehicle')

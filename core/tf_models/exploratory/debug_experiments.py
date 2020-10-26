@@ -40,7 +40,9 @@ config = {
      "dec_in_linear_units": 10,
      "dec_out_linear_units": 250,
      "epochs_n": 50,
-     "components_n": 5
+     "components_n": 5,
+     "teacher_percent": 0.2
+
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
@@ -88,7 +90,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(2):
+    for epoch in range(10):
         model.train_loop(data_objs[0:3])
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
@@ -105,13 +107,15 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp002')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp004']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 legend = [
-        'single-head double-dec-layer',
+        '10',
+        '20',
+        'whole',
         # 'multi-head 200unit - ts[both]',
         ]
 
@@ -119,6 +123,7 @@ legend = [
 #         'context[rnn]',
 #         'context[rnn+linear]',
 #         # 'multi-head 200unit - ts[both]',
+
 #         ]
 
 # %%
