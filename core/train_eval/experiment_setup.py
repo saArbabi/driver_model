@@ -37,6 +37,7 @@ def modelTrain(exp_id, explogs):
         ckpt.step.assign_add(1)
         if int(ckpt.step) % 5 == 0:
             save_path = manager.save()
+        model.teacher_percent -= config['model_config']['teacher_drop_rate']
 
     utils.updateExpstate(model, explogs, exp_id, 'complete')
     # modelEvaluate(model, validation_data, config)

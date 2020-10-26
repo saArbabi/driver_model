@@ -107,7 +107,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp004')
 # del exp_trains['exp004']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
@@ -116,6 +116,7 @@ legend = [
         '0.1',
         '0.02',
         '0.02 with enc_h',
+        '0.02 2 brancher',
         # 'multi-head 200unit - ts[both]',
         ]
 
