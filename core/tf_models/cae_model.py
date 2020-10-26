@@ -213,7 +213,6 @@ class Decoder(tf.keras.Model):
             cond_y = step_condition
             cond_f = sample_f
             cond_fadj = sample_fadj
-        print(cond_fadj.shape)
 
         gmm_m = get_pdf(param_m, 'merge_vehicle')
         gmm_y = get_pdf(param_y, 'other_vehicle')
