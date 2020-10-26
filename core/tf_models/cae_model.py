@@ -131,7 +131,6 @@ class Decoder(tf.keras.Model):
 
         # enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
         step_condition = conditions[:, 0:1, :]
-        coin_flip = tf.random.uniform([1])
         for step in tf.range(steps_n):
         # for step in tf.range(3):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
@@ -193,8 +192,10 @@ class Decoder(tf.keras.Model):
 
             """Conditioning
             """
+
             if step < steps_n-1:
-                if coin_flip < self.teacher_percent:
+                coin_flip = tf.random.uniform([1])
+                if coin_flip < self.teacher_percent and self.model_use == 'training':
                     step_condition = conditions[:, step+1:step+2, :]
                 else:
                     step_condition = tf.concat([sample_m, sample_y, sample_f, sample_fadj], axis=-1)
