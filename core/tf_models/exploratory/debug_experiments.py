@@ -104,14 +104,14 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
 
     return exp_trains, exp_vals
 
-# train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp002')
+train_debugger()
+# exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp002')
 # del exp_trains['exp004']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 legend = [
-        'single-head double-dec-layer',
+        'multi-head',
         # 'multi-head 200unit - ts[both]',
         ]
 
