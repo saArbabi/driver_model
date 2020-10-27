@@ -43,8 +43,6 @@ class Decoder(tf.keras.Model):
         self.pred_horizon = config['data_config']['pred_horizon']
         self.steps_n = None # note self.steps_n =< self.pred_horizon
         self.model_use = model_use # can be training or inference
-        self.teacher_percent = config['model_config']['teacher_percent']
-
         self.architecture_def()
         self.create_tf_time_stamp(self.pred_horizon)
 
@@ -95,6 +93,7 @@ class Decoder(tf.keras.Model):
         # input[1] = encoder states
         conditions = inputs[0]
         state_h, state_c = inputs[1] # encoder cell state
+        epsilon = inputs[2]
 
         if self.model_use == 'training':
             batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
@@ -159,7 +158,7 @@ class Decoder(tf.keras.Model):
             if step < steps_n-1:
                 if self.model_use == 'training':
                     coin_flip = tf.random.uniform([1])
-                    if coin_flip < self.teacher_percent:
+                    if coin_flip < epsilon:
                         step_condition = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 3])
                     else:
                         step_condition = tf.concat([sample_m, sample_y], axis=-1)
@@ -170,11 +169,15 @@ class Decoder(tf.keras.Model):
         gmm_y = get_pdf(param_y, 'other_vehicle')
         return gmm_m, gmm_y
 
+
+        # if schedule_type = 'logistic':
+
 class CAE(abstract_model.AbstractModel):
     def __init__(self, config, model_use):
         super(CAE, self).__init__(config)
         self.enc_model = Encoder(config)
         self.dec_model = Decoder(config, model_use)
+        self.dec_model.total_batch_count = None
 
     def architecture_def(self):
         pass
@@ -184,4 +187,4 @@ class CAE(abstract_model.AbstractModel):
         # input[0] = state obs
         # input[1] = conditions
         encoder_states = self.enc_model(inputs[0])
-        return self.dec_model([inputs[1], encoder_states])
+        return self.dec_model([inputs[1], encoder_states, inputs[2]])
