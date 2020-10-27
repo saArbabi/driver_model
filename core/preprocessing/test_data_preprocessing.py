@@ -36,8 +36,12 @@ len(states_train[16])
 states_train[16].shape
 conditions_train[16].shape
 targets_train[16].shape
-targets_train.keys()
 
+
+size = 0
+for i in targets_train.keys():
+    size += states_train[i].shape[0]
+size
 # %%
 states_train[16][0][-1]
 targets_train[16][0][0]
