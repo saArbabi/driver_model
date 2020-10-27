@@ -43,7 +43,9 @@ def get_completedExpIDs(explogs):
 def updateExpstate(model, explogs, exp_id, exp_state):
     for key, value in explogs.items():
         # first remove failed experiments
-        if value['exp_state'] != ('complete' or 'NA') and key != exp_id:
+        if value['exp_state'] != 'complete' and  value['exp_state'] != 'NA' \
+                                                            and key != exp_id:
+                                                            
             explogs[key]['exp_state'] = 'failed'
 
     explogs[exp_id]['exp_state'] = exp_state

@@ -186,5 +186,6 @@ class CAE(abstract_model.AbstractModel):
             # else it will use the minimum self.teacher_percent reached
             self.dec_model.teacher_percent = tf.constant(self.teacher_percent,
                                                                 dtype='float32')
+
         encoder_states = self.enc_model(inputs[0])
         return self.dec_model([inputs[1], encoder_states])

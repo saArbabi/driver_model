@@ -38,13 +38,14 @@ config = {
      "dec_units": 200,
      "epochs_n": 50,
      "components_n": 5,
-     "teacher_drop_rate": 0.02
+     "teacher_drop_rate": 1,
+    "batch_size": 512
+
 
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
-                "batch_size": 512,
                 "Note": ""
 },
 "exp_id": "NA",
@@ -88,7 +89,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(10):
+    for epoch in range(3):
         model.train_loop(data_objs[0:3])
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
@@ -98,7 +99,6 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
         print('train_loss', train_loss[-1])
         print('valid_loss', valid_loss[-1])
         model.teacher_percent -= config['model_config']['teacher_drop_rate']
-        print(model.teacher_percent)
 
     print(time.time() - t0)
     exp_trains[exp_name] = train_loss
@@ -107,7 +107,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp004')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp004']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
