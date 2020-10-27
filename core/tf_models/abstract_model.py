@@ -12,7 +12,7 @@ class AbstractModel(tf.keras.Model):
         self.config = config['model_config']
         self.exp_dir = './models/experiments/'+config['exp_id']
         self.optimizer = tf.optimizers.Adam(self.config['learning_rate'])
-        self.batch_size = config['data_config']['batch_size']
+        self.batch_size = self.config['batch_size']
         self.pred_horizon = config['data_config']['pred_horizon']
         self.callback_def()
 
@@ -34,13 +34,11 @@ class AbstractModel(tf.keras.Model):
         self.writer_1.flush()
 
         with self.writer_2.as_default():
-            gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions], training=True)
+            gmm_m, gmm_y = self([states, conditions], training=True)
             covDet = covDet_mean(gmm_m)
             tf.summary.scalar('covDet_mean', covDet, step=epoch)
             tf.summary.scalar('loss_m', loss_merge(targs[0], gmm_m), step=epoch)
             tf.summary.scalar('loss_y', loss_other(targs[1], gmm_y), step=epoch)
-            tf.summary.scalar('loss_f', loss_other(targs[2], gmm_f), step=epoch)
-            tf.summary.scalar('loss_fadj', loss_other(targs[3], gmm_fadj), step=epoch)
         self.writer_2.flush()
 
     def train_loop(self, data_objs):
@@ -51,9 +49,7 @@ class AbstractModel(tf.keras.Model):
             train_ds = self.batch_data(train_seq_data)
 
             for states, targets, conditions in train_ds:
-                targs = [targets[:, :, :2], targets[:, :, 2], \
-                                                targets[:, :, 3], targets[:, :, 4]]
-
+                targs = [targets[:, :, :2], targets[:, :, 2]]
                 self.train_step(states, targs, conditions)
 
     def test_loop(self, data_objs, epoch):
@@ -62,20 +58,16 @@ class AbstractModel(tf.keras.Model):
             test_ds = self.batch_data(test_seq_data)
 
             for states, targets, conditions in test_ds:
-                targs = [targets[:, :, :2], targets[:, :, 2], \
-                                                targets[:, :, 3], targets[:, :, 4]]
-
+                targs = [targets[:, :, :2], targets[:, :, 2]]
                 self.test_step(states, targs, conditions)
         self.save_epoch_metrics(states, targs, conditions, epoch)
 
     @tf.function(experimental_relax_shapes=True)
     def train_step(self, states, targs, conditions):
         with tf.GradientTape() as tape:
-            gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions])
+            gmm_m, gmm_y = self([states, conditions])
             loss = loss_merge(targs[0], gmm_m) + \
-                    loss_other(targs[1], gmm_y) + \
-                    loss_other(targs[2], gmm_f) + \
-                    loss_other(targs[3], gmm_fadj)
+                    loss_other(targs[1], gmm_y)
 
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
@@ -84,11 +76,9 @@ class AbstractModel(tf.keras.Model):
 
     @tf.function(experimental_relax_shapes=True)
     def test_step(self, states, targs, conditions):
-        gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions])
+        gmm_m, gmm_y = self([states, conditions])
         loss = loss_merge(targs[0], gmm_m) + \
-                loss_other(targs[1], gmm_y) + \
-                loss_other(targs[2], gmm_f) + \
-                loss_other(targs[3], gmm_fadj)
+                loss_other(targs[1], gmm_y)
 
         self.test_loss.reset_states()
         self.test_loss(loss)

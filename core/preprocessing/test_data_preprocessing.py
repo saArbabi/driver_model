@@ -22,9 +22,8 @@ config = {
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 50,
-                "batch_size": 1124,
-                "Note": ""
+                "pred_horizon": 20,
+                "Note": "Target includes mveh and yveh only"
 },
 "exp_id": "NA",
 "Note": "NA"
@@ -35,6 +34,7 @@ states_train, targets_train, conditions_train, \
 
 len(states_train[16])
 states_train[16].shape
+conditions_train[16].shape
 targets_train[16].shape
 targets_train.keys()
 

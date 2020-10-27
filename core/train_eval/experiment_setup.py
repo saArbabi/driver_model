@@ -9,6 +9,7 @@ def modelTrain(exp_id, explogs):
 
     # (1) Load model and setup checkpoints
     model = CAE(config, model_use='training')
+    teacher_drop_rate = config['model_config']['teacher_drop_rate']
 
     # for more on checkpointing model see: https://www.tensorflow.org/guide/checkpoint
     ckpt = tf.train.Checkpoint(step=tf.Variable(1), net=model) # no need for optimizer for now
@@ -36,6 +37,7 @@ def modelTrain(exp_id, explogs):
         ckpt.step.assign_add(1)
         if int(ckpt.step) % 5 == 0:
             save_path = manager.save()
+        model.teacher_percent -= config['model_config']['teacher_drop_rate']
 
     utils.updateExpstate(model, explogs, exp_id, 'complete')
     # modelEvaluate(model, validation_data, config)

@@ -100,32 +100,26 @@ def get_stateReal_arr(m_df, y_df, f_df, fadj_df):
     fadj_arr = fadj_df[col_o].values
     return np.concatenate([m_arr, y_arr, f_arr, fadj_arr], axis=1)
 
-def get_target_arr(m_df, y_df, f_df, fadj_df):
+def get_target_arr(m_df, y_df):
     m_arr = m_df[['episode_id', 'act_long','act_lat']].values
     y_arr = y_df[['act_long']].values
-    f_arr = f_df[['act_long']].values
-    fadj_arr = fadj_df[['act_long']].values
-    return np.concatenate([m_arr, y_arr, f_arr, fadj_arr], axis=1)
+    return np.concatenate([m_arr, y_arr], axis=1)
 
-def get_condition_arr(m_df, y_df, f_df, fadj_df):
+def get_condition_arr(m_df, y_df):
     m_arr = m_df[['episode_id', 'act_long_p','act_lat_p']].values
     y_arr = y_df[['act_long_p']].values
-    f_arr = f_df[['act_long_p']].values
-    fadj_arr = fadj_df[['act_long_p']].values
-    return np.concatenate([m_arr, y_arr, f_arr, fadj_arr], axis=1)
+    return np.concatenate([m_arr, y_arr], axis=1)
 
 # %%
 o_trim_col = ['dx', 'act_long_p', 'act_long']
 m_trim_col = ['act_long_p', 'act_lat_p', 'act_long', 'act_lat']
 
-_f_df = trimStatevals(f_df, o_trim_col)
-_fadj_df = trimStatevals(fadj_df, o_trim_col)
 _y_df = trimStatevals(y_df, o_trim_col)
 _m_df = trimStatevals(m_df, m_trim_col)
 state_bool_arr = get_stateBool_arr(_m_df, _y_df, _f_df, _fadj_df)
 state_real_arr = get_stateReal_arr(_m_df, _y_df, _f_df, _fadj_df)
-target_arr = get_target_arr(_m_df, _y_df, _f_df, _fadj_df)
-condition_arr = get_condition_arr(_m_df, _y_df, _f_df, _fadj_df)
+target_arr = get_target_arr(_m_df, _y_df)
+condition_arr = get_condition_arr(_m_df, _y_df)
 state_arr =  np.concatenate([state_real_arr, state_bool_arr], axis=1)
 state_arr.shape
 target_arr[1000]
@@ -138,8 +132,7 @@ state_col = ['episode_id', 'vel', 'pc', 'act_long_p','act_lat_p',
                                      'vel', 'dx', 'act_long_p',
                                      'lc_type', 'exists', 'exists', 'exists']
 
-target_col = ['episode_id', 'act_long','act_lat',
-                                            'act_long', 'act_long', 'act_long']
+target_col = ['episode_id', 'act_long','act_lat', 'act_long']
 
 vis_dataDistribution(state_arr, state_col)
 vis_dataDistribution(target_arr, target_col)

@@ -36,16 +36,16 @@ config = {
      "learning_rate": 1e-3,
      "enc_units": 200,
      "dec_units": 200,
-     "enc_in_linear_units": 200,
-     "dec_in_linear_units": 10,
-     "dec_out_linear_units": 250,
      "epochs_n": 50,
-     "components_n": 5
+     "components_n": 5,
+     "teacher_drop_rate": 1,
+    "batch_size": 512
+
+
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
                 "pred_horizon": 20,
-                "batch_size": 512,
                 "Note": ""
 },
 "exp_id": "NA",
@@ -84,11 +84,12 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     train_loss = []
     valid_loss = []
 
+
     model = CAE(config, model_use='training')
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(2):
+    for epoch in range(3):
         model.train_loop(data_objs[0:3])
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
@@ -97,6 +98,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
         print(epoch, 'epochs completed')
         print('train_loss', train_loss[-1])
         print('valid_loss', valid_loss[-1])
+        model.teacher_percent -= config['model_config']['teacher_drop_rate']
 
     print(time.time() - t0)
     exp_trains[exp_name] = train_loss
@@ -105,13 +107,16 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     return exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp002')
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp004']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 legend = [
-        'single-head double-dec-layer',
+        '0.1',
+        '0.02',
+        '0.02 with enc_h',
+        '0.02 2 brancher',
         # 'multi-head 200unit - ts[both]',
         ]
 
@@ -119,6 +124,7 @@ legend = [
 #         'context[rnn]',
 #         'context[rnn+linear]',
 #         # 'multi-head 200unit - ts[both]',
+
 #         ]
 
 # %%
@@ -130,10 +136,17 @@ for item in exp_vals:
 plt.grid()
 plt.xticks(np.arange(10))
 
-
 plt.legend(legend)
 # %%
+a = tf.constant([[1,2,3,4,5],[1,2,3,9,5]])
+for i in tf.range(2):
 
+print(tf.slice(a,[0,0],[2,1]))
+
+
+print(tf.slice(a,[0,2],[2,2]))
+tf.gather(a,[0,0])
+# %%
 for item in exp_trains:
     plt.plot(exp_trains[item])
 
