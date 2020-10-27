@@ -43,6 +43,8 @@ class Decoder(tf.keras.Model):
         self.pred_horizon = config['data_config']['pred_horizon']
         self.steps_n = None # note self.steps_n =< self.pred_horizon
         self.model_use = model_use # can be training or inference
+        self.teacher_percent = config['model_config']['teacher_percent']
+
         self.architecture_def()
         self.create_tf_time_stamp(self.pred_horizon)
 
@@ -173,7 +175,6 @@ class CAE(abstract_model.AbstractModel):
         super(CAE, self).__init__(config)
         self.enc_model = Encoder(config)
         self.dec_model = Decoder(config, model_use)
-        self.teacher_percent = 1
 
     def architecture_def(self):
         pass
@@ -182,10 +183,5 @@ class CAE(abstract_model.AbstractModel):
         # Defines the computation from inputs to outputs
         # input[0] = state obs
         # input[1] = conditions
-        if self.teacher_percent >= 0:
-            # else it will use the minimum self.teacher_percent reached
-            self.dec_model.teacher_percent = tf.constant(self.teacher_percent,
-                                                                dtype='float32')
-
         encoder_states = self.enc_model(inputs[0])
         return self.dec_model([inputs[1], encoder_states])

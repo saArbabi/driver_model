@@ -38,7 +38,7 @@ config = {
      "dec_units": 200,
      "epochs_n": 50,
      "components_n": 5,
-     "teacher_drop_rate": 1,
+     "teacher_percent": 0,
     "batch_size": 512
 
 
@@ -89,7 +89,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(3):
+    for epoch in range(5):
         model.train_loop(data_objs[0:3])
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
@@ -98,7 +98,6 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
         print(epoch, 'epochs completed')
         print('train_loss', train_loss[-1])
         print('valid_loss', valid_loss[-1])
-        model.teacher_percent -= config['model_config']['teacher_drop_rate']
 
     print(time.time() - t0)
     exp_trains[exp_name] = train_loss
@@ -113,10 +112,9 @@ exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp001']
 
 legend = [
-        '0.1',
-        '0.02',
-        '0.02 with enc_h',
-        '0.02 2 brancher',
+        '0',
+        '0.2',
+        '0.4',
         # 'multi-head 200unit - ts[both]',
         ]
 
