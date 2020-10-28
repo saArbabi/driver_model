@@ -38,7 +38,7 @@ config = {
      "dec_units": 200,
      "epochs_n": 50,
      "components_n": 5,
-     "teacher_percent": 0,
+     "teacher_percent": 0.4,
     "batch_size": 512
 
 
@@ -105,8 +105,8 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
 
     return exp_trains, exp_vals
 
-# train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
+train_debugger()
+# exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp004']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
