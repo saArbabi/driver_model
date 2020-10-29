@@ -105,13 +105,17 @@ class Decoder(tf.keras.Model):
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
             steps_n = tf.constant(self.steps_n)
+            """Delete these later
+            """
+            zeros_pad_m = tf.zeros([batch_size, 1, 2])
+            zeros_pad_y = tf.zeros([batch_size, 1, 1])
 
         # Initialize param vector
         param_m = tf.zeros([batch_size,0,30], dtype=tf.float32)
         param_y = tf.zeros([batch_size,0,15], dtype=tf.float32)
 
         enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
-        
+
         mveh_prev_action = tf.slice(conditions, [0,  0, 0], [batch_size, 1, 2])
         yveh_prev_action = tf.slice(conditions, [0,  0, 2], [batch_size, 1, 1])
         step_condition_m = tf.concat([zeros_pad_m, yveh_prev_action], axis=2)
@@ -182,6 +186,13 @@ class Decoder(tf.keras.Model):
 
                 elif self.model_use == 'inference':
                     step_condition = tf.concat([sample_m, sample_y], axis=-1)
+
+                    # """Delete these later
+                    # """
+                    #
+                    # step_condition_m = tf.concat([zeros_pad_m, sample_y], axis=2)
+                    # step_condition_y = tf.concat([sample_m, zeros_pad_y], axis=2)
+
 
         gmm_m = get_pdf(param_m, 'merge_vehicle')
         gmm_y = get_pdf(param_y, 'other_vehicle')
