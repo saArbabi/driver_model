@@ -116,10 +116,9 @@ class Decoder(tf.keras.Model):
 
         enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
 
-        mveh_prev_action = tf.slice(conditions, [0,  0, 0], [batch_size, 1, 2])
-        yveh_prev_action = tf.slice(conditions, [0,  0, 2], [batch_size, 1, 1])
-        step_condition_m = tf.concat([zeros_pad_m, yveh_prev_action], axis=2)
-        step_condition_y = tf.concat([mveh_prev_action, zeros_pad_y], axis=2)
+
+        step_condition_m = tf.slice(conditions, [0, 0, 0], [batch_size, 1, 3])
+        step_condition_y = step_condition_m
 
         state_h_m = state_h
         state_h_y = state_h
@@ -136,7 +135,7 @@ class Decoder(tf.keras.Model):
                         (step_condition_y, tf.TensorShape([None,None,3])),
                         ])
 
-            # ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
+            ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
             # outputs = self.out_linear_layer(tf.concat([contex_vector, outputs], axis=2))
             """Merger vehicle
             """
@@ -145,6 +144,8 @@ class Decoder(tf.keras.Model):
 
             outputs, state_h_m, state_c_m = self.lstm_layer_m(contex_vec_m, \
                                                             initial_state=[state_h_m, state_c_m])
+            outputs = tf.concat([outputs, ts], axis=2)
+
             alphas = self.alphas_m(outputs)
             mus_long = self.mus_long_m(outputs)
             sigmas_long = self.sigmas_long_m(outputs)
@@ -159,6 +160,8 @@ class Decoder(tf.keras.Model):
             """
             outputs, state_h_y, state_c_y = self.lstm_layer_y(contex_vec_y, \
                                                             initial_state=[state_h_y, state_c_y])
+            outputs = tf.concat([outputs, ts], axis=2)
+
             alphas = self.alphas_y(outputs)
             mus_long = self.mus_long_y(outputs)
             sigmas_long = self.sigmas_long_y(outputs)
