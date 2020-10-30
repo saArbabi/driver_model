@@ -65,10 +65,7 @@ class AbstractModel(tf.keras.Model):
     def train_loop(self, data_objs):
         """Covers one epoch
         """
-        if not self.batch_count:
-            self.schedule_sampling_def(data_objs)
-
-        for seq_len in range(3, self.pred_horizon + 1): # 3 is minimum step_n
+        for seq_len in range(3, self.pred_horizon+1): # 3 is minimum step_n
             train_seq_data = [data_objs[0][seq_len], data_objs[1][seq_len], data_objs[2][seq_len]]
             train_ds = self.batch_data(train_seq_data)
 
@@ -78,7 +75,7 @@ class AbstractModel(tf.keras.Model):
                 self.mini_batch_i += 1
 
     def test_loop(self, data_objs, epoch):
-        for seq_len in range(3, self.pred_horizon + 1):
+        for seq_len in range(3, self.pred_horizon+1):
             test_seq_data = [data_objs[0][seq_len], data_objs[1][seq_len], data_objs[2][seq_len]]
             test_ds = self.batch_data(test_seq_data)
 
