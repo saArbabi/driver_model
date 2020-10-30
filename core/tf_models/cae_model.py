@@ -17,21 +17,13 @@ class Encoder(tf.keras.Model):
     def __init__(self, config):
         super(Encoder, self).__init__(name="Encoder")
         self.enc_units = config['model_config']['enc_units']
-        # self.enc_in_linear_units = config['model_config']['enc_in_linear_units']
         self.architecture_def()
 
-    def in_linear(self, inputs):
-        output = self.linear_layer_1(inputs)
-        return self.linear_layer_2(output)
-
     def architecture_def(self):
-        # self.linear_layer_1 = TimeDistributed(Dense(self.enc_in_linear_units))
-        # self.linear_layer_2 = TimeDistributed(Dense(30))
         self.lstm_layers = LSTM(self.enc_units, return_state=True)
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-        # _, state_h, state_c = self.lstm_layers(self.in_linear(inputs))
         _, state_h, state_c = self.lstm_layers(inputs)
         return [state_h, state_c]
 
@@ -41,14 +33,11 @@ class Decoder(tf.keras.Model):
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
         self.pred_horizon = config['data_config']['pred_horizon']
+        self.teacher_percent = config['model_config']['teacher_percent']
         self.steps_n = None # note self.steps_n =< self.pred_horizon
         self.model_use = model_use # can be training or inference
         self.architecture_def()
         self.create_tf_time_stamp(self.pred_horizon)
-
-    def in_linear(self, inputs):
-        output = self.in_linear_layer(inputs)
-        return output
 
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
@@ -75,10 +64,6 @@ class Decoder(tf.keras.Model):
 
         self.time_stamp = tf.constant(ts, dtype='float32')
 
-    def create_context_vec(self, enc_h, step_condition):
-        contex_vector = tf.concat([enc_h, step_condition], axis=2)
-        return contex_vector
-
     def concat_param_vecs(self, step_param_vec, veh_param_vec, step):
         """Use for concatinating gmm parameters across time-steps
         """
@@ -93,7 +78,6 @@ class Decoder(tf.keras.Model):
         # input[1] = encoder states
         conditions = inputs[0]
         state_h, state_c = inputs[1] # encoder cell state
-        epsilon = inputs[2]
 
         if self.model_use == 'training':
             batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
@@ -135,16 +119,11 @@ class Decoder(tf.keras.Model):
                         ])
 
             ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
-            # outputs = self.out_linear_layer(tf.concat([contex_vector, outputs], axis=2))
             """Merger vehicle
             """
-            contex_vec_m = self.create_context_vec(enc_h, step_condition_m)
-            contex_vec_y = self.create_context_vec(enc_h, step_condition_y)
-
-            outputs, state_h_m, state_c_m = self.lstm_layer_m(contex_vec_m, \
+            outputs, state_h_m, state_c_m = self.lstm_layer_m(tf.concat([enc_h, step_condition_m], axis=2), \
                                                             initial_state=[state_h_m, state_c_m])
             outputs = tf.concat([outputs, ts], axis=2)
-
             alphas = self.alphas_m(outputs)
             mus_long = self.mus_long_m(outputs)
             sigmas_long = self.sigmas_long_m(outputs)
@@ -157,10 +136,9 @@ class Decoder(tf.keras.Model):
             param_m = self.concat_param_vecs(param_vec, param_m, step)
             """Yielder vehicle
             """
-            outputs, state_h_y, state_c_y = self.lstm_layer_y(contex_vec_y, \
+            outputs, state_h_y, state_c_y = self.lstm_layer_y(tf.concat([enc_h, step_condition_y], axis=2), \
                                                             initial_state=[state_h_y, state_c_y])
             outputs = tf.concat([outputs, ts], axis=2)
-
             alphas = self.alphas_y(outputs)
             mus_long = self.mus_long_y(outputs)
             sigmas_long = self.sigmas_long_y(outputs)
@@ -172,36 +150,43 @@ class Decoder(tf.keras.Model):
             """
             if step < steps_n-1:
                 if self.model_use == 'training':
+                    ################################
+                    """Merger vehicle conditional
+                    """
                     coin_flip = tf.random.uniform([1])
                     if coin_flip < self.teacher_percent:
                         # feed truth - Teacher forcing
-                        step_condition_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 3])
-                        step_condition_y = step_condition_m
+                        act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
+                        act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
 
                     else:
                         # feed zero
-                        mveh_prev_action = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
-                        yveh_prev_action = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
+                        act_m = zeros_pad_m
+                        act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
 
-                        step_condition_m = tf.concat([zeros_pad_m, yveh_prev_action], axis=2)
-                        step_condition_y = tf.concat([mveh_prev_action, zeros_pad_y], axis=2)
+                    step_condition_m = tf.concat([act_m, act_y], axis=2)
+                    ################################
+                    """Yielder vehicle conditional
+                    """
+                    coin_flip = tf.random.uniform([1])
+                    if coin_flip < self.teacher_percent:
+                        # feed truth - Teacher forcing
+                        act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
+                        act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
+
+                    else:
+                        # feed zero
+                        act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
+                        act_y = zeros_pad_y
+
+                    step_condition_y = tf.concat([act_m, act_y], axis=2)
 
                 elif self.model_use == 'inference':
                     step_condition = tf.concat([sample_m, sample_y], axis=-1)
 
-                    # """Delete these later
-                    # """
-                    #
-                    # step_condition_m = tf.concat([zeros_pad_m, sample_y], axis=2)
-                    # step_condition_y = tf.concat([sample_m, zeros_pad_y], axis=2)
-
-
         gmm_m = get_pdf(param_m, 'merge_vehicle')
         gmm_y = get_pdf(param_y, 'other_vehicle')
         return gmm_m, gmm_y
-
-
-        # if schedule_type = 'logistic':
 
 class CAE(abstract_model.AbstractModel):
     def __init__(self, config, model_use):
@@ -218,4 +203,4 @@ class CAE(abstract_model.AbstractModel):
         # input[0] = state obs
         # input[1] = conditions
         encoder_states = self.enc_model(inputs[0])
-        return self.dec_model([inputs[1], encoder_states, inputs[2]])
+        return self.dec_model([inputs[1], encoder_states])

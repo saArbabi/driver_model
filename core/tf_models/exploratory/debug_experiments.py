@@ -35,10 +35,11 @@ config = {
  "model_config": {
      "learning_rate": 1e-3,
      "enc_units": 200,
+     "enc_in_linear_units": 200,
      "dec_units": 200,
      "epochs_n": 50,
      "components_n": 5,
-     "teacher_percent": 0.4,
+     "teacher_percent": 0.2,
     "batch_size": 512
 },
 "data_config": {"step_size": 1,
@@ -87,7 +88,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(5):
+    for epoch in range(3):
         model.train_loop(data_objs[0:3])
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
@@ -103,16 +104,16 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
 
     return exp_trains, exp_vals
 
-train_debugger()
-# exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
-# del exp_trains['exp004']
+# train_debugger()
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
+# del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 legend = [
         '0',
-        '0.2',
-        '0.4',
+        'no embedding',
+        'no conditioning',
         # 'multi-head 200unit - ts[both]',
         ]
 

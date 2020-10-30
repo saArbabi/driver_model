@@ -29,38 +29,19 @@ class AbstractModel(tf.keras.Model):
         self.train_loss = tf.keras.metrics.Mean(name='train_loss')
         self.test_loss = tf.keras.metrics.Mean(name='test_loss')
 
-    def save_epoch_metrics(self, states, targs, conditions, epsilon, epoch):
+    def save_epoch_metrics(self, states, targs, conditions, epoch):
         with self.writer_1.as_default():
             tf.summary.scalar('_train', self.train_loss.result(), step=epoch)
             tf.summary.scalar('_val', self.test_loss.result(), step=epoch)
         self.writer_1.flush()
 
         with self.writer_2.as_default():
-            gmm_m, gmm_y = self([states, conditions, epsilon], training=True)
+            gmm_m, gmm_y = self([states, conditions], training=True)
             covDet = covDet_mean(gmm_m)
             tf.summary.scalar('covDet_mean', covDet, step=epoch)
             tf.summary.scalar('loss_m', loss_merge(targs[0], gmm_m), step=epoch)
             tf.summary.scalar('loss_y', loss_other(targs[1], gmm_y), step=epoch)
         self.writer_2.flush()
-
-    def schedule_sampling_def(self, data_objs):
-        self.batch_count = 0
-        self.mini_batch_i = 0
-
-        for seq_len in range(3, self.pred_horizon + 1): # 3 is minimum step_n
-            train_seq_data = [data_objs[0][seq_len], data_objs[1][seq_len], data_objs[2][seq_len]]
-            train_ds = self.batch_data(train_seq_data)
-
-            for states, targets, conditions in train_ds:
-                targs = [targets[:, :, :2], targets[:, :, 2]]
-                self.batch_count += 1
-
-        self.batch_count *= self.epochs_n
-        x = np.linspace(0, self.batch_count, self.batch_count+1)
-        k = 0.9995
-
-        # if decay_type == 'exponential':
-        self.epsilons = k**x
 
     def train_loop(self, data_objs):
         """Covers one epoch
@@ -71,8 +52,7 @@ class AbstractModel(tf.keras.Model):
 
             for states, targets, conditions in train_ds:
                 targs = [targets[:, :, :2], targets[:, :, 2]]
-                self.train_step(states, targs, conditions, self.epsilons[self.mini_batch_i])
-                self.mini_batch_i += 1
+                self.train_step(states, targs, conditions)
 
     def test_loop(self, data_objs, epoch):
         for seq_len in range(3, self.pred_horizon+1):
@@ -81,13 +61,13 @@ class AbstractModel(tf.keras.Model):
 
             for states, targets, conditions in test_ds:
                 targs = [targets[:, :, :2], targets[:, :, 2]]
-                self.test_step(states, targs, conditions, self.epsilons[self.mini_batch_i])
-        self.save_epoch_metrics(states, targs, conditions, self.epsilons[self.mini_batch_i], epoch)
+                self.test_step(states, targs, conditions)
+        self.save_epoch_metrics(states, targs, conditions, epoch)
 
     @tf.function(experimental_relax_shapes=True)
-    def train_step(self, states, targs, conditions, epsilon):
+    def train_step(self, states, targs, conditions):
         with tf.GradientTape() as tape:
-            gmm_m, gmm_y = self([states, conditions, epsilon])
+            gmm_m, gmm_y = self([states, conditions])
             loss = loss_merge(targs[0], gmm_m) + \
                     loss_other(targs[1], gmm_y)
 
@@ -97,8 +77,8 @@ class AbstractModel(tf.keras.Model):
         self.train_loss(loss)
 
     @tf.function(experimental_relax_shapes=True)
-    def test_step(self, states, targs, conditions, epsilon):
-        gmm_m, gmm_y = self([states, conditions, epsilon])
+    def test_step(self, states, targs, conditions):
+        gmm_m, gmm_y = self([states, conditions])
         loss = loss_merge(targs[0], gmm_m) + \
                 loss_other(targs[1], gmm_y)
 
