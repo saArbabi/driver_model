@@ -150,12 +150,12 @@ class Decoder(tf.keras.Model):
                         (step_cond_fadj, tf.TensorShape([None,None,1])),
                         ])
 
-            ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
+            # ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
             """Merger vehicle
             """
             outputs, state_h_m, state_c_m = self.lstm_layer_m(self.axis2_conc([enc_h, step_cond_m]), \
                                                             initial_state=[state_h_m, state_c_m])
-            outputs = self.axis2_conc([outputs, ts])
+            # outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_m(outputs)
             mus_long = self.mus_long_m(outputs)
             sigmas_long = self.sigmas_long_m(outputs)
@@ -170,7 +170,7 @@ class Decoder(tf.keras.Model):
             """
             outputs, state_h_y, state_c_y = self.lstm_layer_y(self.axis2_conc([enc_h, step_cond_y]), \
                                                             initial_state=[state_h_y, state_c_y])
-            outputs = self.axis2_conc([outputs, ts])
+            # outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_y(outputs)
             mus_long = self.mus_long_y(outputs)
             sigmas_long = self.sigmas_long_y(outputs)
@@ -182,7 +182,7 @@ class Decoder(tf.keras.Model):
             """
             outputs, state_h_f, state_c_f = self.lstm_layer_f(self.axis2_conc([enc_h, step_cond_f]), \
                                                             initial_state=[state_h_f, state_c_f])
-            outputs = self.axis2_conc([outputs, ts])
+            # outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_f(outputs)
             mus_long = self.mus_long_f(outputs)
             sigmas_long = self.sigmas_long_f(outputs)
@@ -194,7 +194,7 @@ class Decoder(tf.keras.Model):
             """
             outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(self.axis2_conc([enc_h, step_cond_fadj]), \
                                                             initial_state=[state_h_fadj, state_c_fadj])
-            outputs = self.axis2_conc([outputs, ts])
+            # outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_fadj(outputs)
             mus_long = self.mus_long_fadj(outputs)
             sigmas_long = self.sigmas_long_fadj(outputs)

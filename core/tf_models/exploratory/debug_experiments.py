@@ -41,7 +41,7 @@ config = {
      "epochs_n": 50,
      "components_n": 5,
      "teacher_percent": 0.2,
-    "batch_size": 128
+    "batch_size": 512
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
@@ -167,6 +167,7 @@ enc_state = enc_model(state_obs)
 param_vec = dec_model([cond, enc_state])
 utils.get_pdf_samples(samples_n=1, param_vec=param_vec, model_type='merge_policy')
 targets[0]
+
 # %%
 """
 Recursive prediction
