@@ -206,7 +206,7 @@ class Decoder(tf.keras.Model):
             """Conditioning
             """
             if step < steps_n-1:
-                if self.model_use == 'training':
+                if self.model_use == 'training' and self.teacher_percent != 0:
                     ################################
                     act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
                     act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
@@ -253,6 +253,11 @@ class Decoder(tf.keras.Model):
                         # feed zero
                         step_cond_fadj = zeros_pad_o
                     ################################
+                elif self.teacher_percent == 0:
+                    step_cond_m = tf.zeros([batch_size, 1, 5])
+                    step_cond_y = tf.zeros([batch_size, 1, 4])
+                    step_cond_f = zeros_pad_o
+                    step_cond_fadj = zeros_pad_o
 
                 elif self.model_use == 'inference':
                     step_cond_m = self.axis2_conc([sample_m, sample_y, sample_f, sample_fadj])
