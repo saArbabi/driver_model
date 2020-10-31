@@ -86,9 +86,9 @@ class Decoder(tf.keras.Model):
             veh_param_vec = tf.concat([veh_param_vec, step_param_vec], axis=1)
             return veh_param_vec
 
-    def axis2_conc(self, item1, item2):
+    def axis2_conc(self, items_list):
         """concats tensor along the time-step axis(2)"""
-        return tf.concat([item1, item2], axis=2)
+        return tf.concat(items_list, axis=2)
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
@@ -115,10 +115,14 @@ class Decoder(tf.keras.Model):
         enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
 
         # first step conditional
-        step_cond_m = tf.slice(conditions, [0, 0, 0], [batch_size, 1, 3])
-        step_cond_y = step_cond_m
-        step_cond_f = tf.slice(conditions, [0, 0, 3], [batch_size, 1, 1])
-        step_cond_fadj = tf.slice(conditions, [0, 0, 4], [batch_size, 1, 1])
+        act_m = tf.slice(conditions, [0,  0, 0], [batch_size, 1, 2])
+        act_y = tf.slice(conditions, [0,  0, 2], [batch_size, 1, 1])
+        act_f = tf.slice(conditions, [0,  0, 3], [batch_size, 1, 1])
+        act_fadj = tf.slice(conditions, [0,  0, 4], [batch_size, 1, 1])
+        step_cond_m = self.axis2_conc([act_m, act_y, act_f, act_fadj])
+        step_cond_y = self.axis2_conc([act_m, act_y, act_fadj])
+        step_cond_f = act_f
+        step_cond_fadj = act_fadj
 
         # first step's LSTM cell and hidden state
         state_h_m = state_h
@@ -140,8 +144,8 @@ class Decoder(tf.keras.Model):
                         (param_y, tf.TensorShape([None,None,None])),
                         (param_f, tf.TensorShape([None,None,None])),
                         (param_fadj, tf.TensorShape([None,None,None])),
-                        (step_cond_m, tf.TensorShape([None,None,3])),
-                        (step_cond_y, tf.TensorShape([None,None,3])),
+                        (step_cond_m, tf.TensorShape([None,None,5])),
+                        (step_cond_y, tf.TensorShape([None,None,4])),
                         (step_cond_f, tf.TensorShape([None,None,1])),
                         (step_cond_fadj, tf.TensorShape([None,None,1])),
                         ])
@@ -149,9 +153,9 @@ class Decoder(tf.keras.Model):
             ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
             """Merger vehicle
             """
-            outputs, state_h_m, state_c_m = self.lstm_layer_m(self.axis2_conc(enc_h, step_cond_m), \
+            outputs, state_h_m, state_c_m = self.lstm_layer_m(self.axis2_conc([enc_h, step_cond_m]), \
                                                             initial_state=[state_h_m, state_c_m])
-            outputs = self.axis2_conc(outputs, ts)
+            outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_m(outputs)
             mus_long = self.mus_long_m(outputs)
             sigmas_long = self.sigmas_long_m(outputs)
@@ -164,9 +168,9 @@ class Decoder(tf.keras.Model):
             param_m = self.concat_param_vecs(param_vec, param_m, step)
             """Yielder vehicle
             """
-            outputs, state_h_y, state_c_y = self.lstm_layer_y(self.axis2_conc(enc_h, step_cond_m), \
+            outputs, state_h_y, state_c_y = self.lstm_layer_y(self.axis2_conc([enc_h, step_cond_y]), \
                                                             initial_state=[state_h_y, state_c_y])
-            outputs = self.axis2_conc(outputs, ts)
+            outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_y(outputs)
             mus_long = self.mus_long_y(outputs)
             sigmas_long = self.sigmas_long_y(outputs)
@@ -176,9 +180,9 @@ class Decoder(tf.keras.Model):
             param_y = self.concat_param_vecs(param_vec, param_y, step)
             """F vehicle
             """
-            outputs, state_h_f, state_c_f = self.lstm_layer_f(self.axis2_conc(enc_h, step_cond_f), \
+            outputs, state_h_f, state_c_f = self.lstm_layer_f(self.axis2_conc([enc_h, step_cond_f]), \
                                                             initial_state=[state_h_f, state_c_f])
-            outputs = self.axis2_conc(outputs, ts)
+            outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_f(outputs)
             mus_long = self.mus_long_f(outputs)
             sigmas_long = self.sigmas_long_f(outputs)
@@ -188,9 +192,9 @@ class Decoder(tf.keras.Model):
             param_f = self.concat_param_vecs(param_vec, param_f, step)
             """Fadj vehicle
             """
-            outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(self.axis2_conc(enc_h, step_cond_fadj), \
+            outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(self.axis2_conc([enc_h, step_cond_fadj]), \
                                                             initial_state=[state_h_fadj, state_c_fadj])
-            outputs = self.axis2_conc(outputs, ts)
+            outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_fadj(outputs)
             mus_long = self.mus_long_fadj(outputs)
             sigmas_long = self.sigmas_long_fadj(outputs)
@@ -204,42 +208,37 @@ class Decoder(tf.keras.Model):
             if step < steps_n-1:
                 if self.model_use == 'training':
                     ################################
+                    act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
+                    act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
+                    act_f = tf.slice(conditions, [0,  step+1, 3], [batch_size, 1, 1])
+                    act_fadj = tf.slice(conditions, [0,  step+1, 4], [batch_size, 1, 1])
+
                     """Merger vehicle conditional
                     """
                     coin_flip = tf.random.uniform([1])
                     if coin_flip < self.teacher_percent:
                         # feed truth - Teacher forcing
-                        act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
-                        act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
-
+                        step_cond_m = self.axis2_conc([act_m, act_y, act_f, act_fadj])
                     else:
                         # feed zero
-                        act_m = zeros_pad_m
-                        act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
-
-                    step_cond_m = self.axis2_conc(act_m, act_y)
+                        step_cond_m = self.axis2_conc([zeros_pad_m, act_y, act_f, act_fadj])
                     ################################
                     """Yielder vehicle conditional
                     """
                     coin_flip = tf.random.uniform([1])
                     if coin_flip < self.teacher_percent:
                         # feed truth - Teacher forcing
-                        act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
-                        act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
-
+                        step_cond_y = self.axis2_conc([act_m, act_y, act_fadj])
                     else:
                         # feed zero
-                        act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
-                        act_y = zeros_pad_o
-
-                    step_cond_y = self.axis2_conc(act_m, act_y)
+                        step_cond_y = self.axis2_conc([act_m, zeros_pad_o, act_fadj])
                     ################################
                     """F vehicle conditional
                     """
                     coin_flip = tf.random.uniform([1])
                     if coin_flip < self.teacher_percent:
                         # feed truth - Teacher forcing
-                        step_cond_f = tf.slice(conditions, [0,  step+1, 3], [batch_size, 1, 1])
+                        step_cond_f = act_f
                     else:
                         # feed zero
                         step_cond_f = zeros_pad_o
@@ -249,16 +248,15 @@ class Decoder(tf.keras.Model):
                     coin_flip = tf.random.uniform([1])
                     if coin_flip < self.teacher_percent:
                         # feed truth - Teacher forcing
-                        step_cond_fadj = tf.slice(conditions, [0,  step+1, 4], [batch_size, 1, 1])
+                        step_cond_fadj = act_fadj
                     else:
                         # feed zero
                         step_cond_fadj = zeros_pad_o
                     ################################
 
                 elif self.model_use == 'inference':
-                    step_cond = tf.concat([sample_m, sample_y], axis=-1)
-                    step_cond_m = step_cond
-                    step_cond_y = step_cond
+                    step_cond_m = self.axis2_conc([sample_m, sample_y, sample_f, sample_fadj])
+                    step_cond_y = self.axis2_conc([sample_m, sample_y, sample_fadj])
                     step_cond_f = sample_f
                     step_cond_fadj = sample_fadj
 
@@ -266,6 +264,7 @@ class Decoder(tf.keras.Model):
         gmm_y = get_pdf(param_y, 'other_vehicle')
         gmm_f = get_pdf(param_f, 'other_vehicle')
         gmm_fadj = get_pdf(param_fadj, 'other_vehicle')
+
         return gmm_m, gmm_y, gmm_f, gmm_fadj
 
 class CAE(abstract_model.AbstractModel):

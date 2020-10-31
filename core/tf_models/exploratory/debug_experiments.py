@@ -88,7 +88,7 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(3):
+    for epoch in range(5):
         model.train_loop(data_objs[0:3])
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
@@ -104,8 +104,8 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
 
     return exp_trains, exp_vals
 
-train_debugger()
-# exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
+# train_debugger()
+exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
