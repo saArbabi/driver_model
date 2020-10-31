@@ -14,6 +14,7 @@ import time
 
 exp_trains = {}
 exp_vals = {}
+durations = {}
 # %%
 """
 Use this script for debugging the following:
@@ -40,11 +41,11 @@ config = {
      "epochs_n": 50,
      "components_n": 5,
      "teacher_percent": 0.2,
-    "batch_size": 512
+    "batch_size": 128
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 50,
+                "pred_horizon": 20,
                 "Note": ""
 },
 "exp_id": "NA",
@@ -75,7 +76,7 @@ def train_debugger():
     print(time.time() - t0)
 
 
-def train_exp(exp_trains, exp_vals, config, exp_name):
+def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
     if exp_name in (exp_trains or exp_vals):
         raise  KeyError("Experiment already completed")
@@ -83,12 +84,13 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
     train_loss = []
     valid_loss = []
 
-
     model = CAE(config, model_use='training')
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
     for epoch in range(5):
+        t1 = time.time()
+
         model.train_loop(data_objs[0:3])
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
@@ -97,23 +99,26 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
         print(epoch, 'epochs completed')
         print('train_loss', train_loss[-1])
         print('valid_loss', valid_loss[-1])
+        print(time.time() - t1)
 
-    print(time.time() - t0)
     exp_trains[exp_name] = train_loss
     exp_vals[exp_name] = valid_loss
+    durations[exp_name] = time.time() - t0
 
-    return exp_trains, exp_vals
+
+    return durations, exp_trains, exp_vals
 
 # train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
+
 legend = [
-        '0',
-        'no embedding',
-        'no conditioning',
+        '1024',
+        '128',
+        '20 steps',
         # 'multi-head 200unit - ts[both]',
         ]
 
