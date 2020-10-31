@@ -131,6 +131,7 @@ state_arr.shape
 target_arr[1000]
 state_arr[1000]
 condition_arr[1000]
+condition_arr[1000].shape
 # %%
 state_col = ['episode_id', 'vel', 'pc', 'act_long_p','act_lat_p',
                                      'vel', 'dx', 'act_long_p',

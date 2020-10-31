@@ -22,8 +22,8 @@ config = {
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 20,
-                "Note": "Target includes mveh and yveh only"
+                "pred_horizon": 50,
+                "Note": ""
 },
 "exp_id": "NA",
 "Note": "NA"
@@ -32,7 +32,7 @@ data_objs =  DataObj(config).loadData()
 states_train, targets_train, conditions_train, \
                             states_val, targets_val, conditions_val = data_objs
 
-len(states_train[16])
+len(states_train[3][0][0])
 states_train[16].shape
 conditions_train[16].shape
 targets_train[16].shape

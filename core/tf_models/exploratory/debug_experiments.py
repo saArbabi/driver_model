@@ -44,7 +44,7 @@ config = {
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 20,
+                "pred_horizon": 50,
                 "Note": ""
 },
 "exp_id": "NA",
@@ -104,8 +104,8 @@ def train_exp(exp_trains, exp_vals, config, exp_name):
 
     return exp_trains, exp_vals
 
-# train_debugger()
-exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
+train_debugger()
+# exp_trains, exp_vals = train_exp(exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']

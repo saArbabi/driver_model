@@ -54,7 +54,7 @@ class AbstractModel(tf.keras.Model):
 
             for states, targets, conditions in train_ds:
                 targs = [targets[:, :, :2], targets[:, :, 2]], \
-                                                targets[:, :, 3], targets[:, :, 4]]
+                                                targets[:, :, 3], targets[:, :, 4]
                 self.train_step(states, targs, conditions)
 
     def test_loop(self, data_objs, epoch):
@@ -64,7 +64,7 @@ class AbstractModel(tf.keras.Model):
 
             for states, targets, conditions in test_ds:
                 targs = [targets[:, :, :2], targets[:, :, 2]], \
-                                                targets[:, :, 3], targets[:, :, 4]]
+                                                targets[:, :, 3], targets[:, :, 4]
 
                 self.test_step(states, targs, conditions)
         self.save_epoch_metrics(states, targs, conditions, epoch)
@@ -72,7 +72,7 @@ class AbstractModel(tf.keras.Model):
     @tf.function(experimental_relax_shapes=True)
     def train_step(self, states, targs, conditions):
         with tf.GradientTape() as tape:
-            gmm_m, gmm_y = self([states, conditions])
+            gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions])
             loss = loss_merge(targs[0], gmm_m) + \
                     loss_other(targs[1], gmm_y) + \
                     loss_other(targs[2], gmm_f) + \
@@ -85,7 +85,7 @@ class AbstractModel(tf.keras.Model):
 
     @tf.function(experimental_relax_shapes=True)
     def test_step(self, states, targs, conditions):
-        gmm_m, gmm_y = self([states, conditions])
+        gmm_m, gmm_y, gmm_f, gmm_fadj = self([states, conditions])
         loss = loss_merge(targs[0], gmm_m) + \
                 loss_other(targs[1], gmm_y) + \
                 loss_other(targs[2], gmm_f) + \

@@ -104,7 +104,7 @@ class Decoder(tf.keras.Model):
 
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
-            steps_n = tf.constant(self.steps_n)111
+            steps_n = tf.constant(self.steps_n)
 
         # Initialize param vector
         param_m = tf.zeros([batch_size,0,30], dtype=tf.float32)
@@ -138,6 +138,8 @@ class Decoder(tf.keras.Model):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
                         (param_m, tf.TensorShape([None,None,None])),
                         (param_y, tf.TensorShape([None,None,None])),
+                        (param_f, tf.TensorShape([None,None,None])),
+                        (param_fadj, tf.TensorShape([None,None,None])),
                         (step_cond_m, tf.TensorShape([None,None,3])),
                         (step_cond_y, tf.TensorShape([None,None,3])),
                         (step_cond_f, tf.TensorShape([None,None,1])),
@@ -264,7 +266,6 @@ class Decoder(tf.keras.Model):
         gmm_y = get_pdf(param_y, 'other_vehicle')
         gmm_f = get_pdf(param_f, 'other_vehicle')
         gmm_fadj = get_pdf(param_fadj, 'other_vehicle')
-
         return gmm_m, gmm_y, gmm_f, gmm_fadj
 
 class CAE(abstract_model.AbstractModel):
