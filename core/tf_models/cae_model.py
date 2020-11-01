@@ -116,6 +116,8 @@ class Decoder(tf.keras.Model):
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
             steps_n = tf.constant(self.steps_n)
+            self.zeros_pad_m = tf.zeros([batch_size, 1, 2])
+            self.zeros_pad_o = tf.zeros([batch_size, 1, 1]) # for other single action cars
 
         # Initialize param vector
         param_m = tf.zeros([batch_size,0,30], dtype=tf.float32)
@@ -237,6 +239,9 @@ class Decoder(tf.keras.Model):
                 elif self.teacher_percent == 0:
                     step_cond_f = self.zeros_pad_o
                     step_cond_fadj = self.zeros_pad_o
+                    step_cond_m = tf.zeros([batch_size, 1, 5])
+                    step_cond_y = tf.zeros([batch_size, 1, 4])
+
 
                 elif self.model_use == 'inference':
                     step_cond_m = self.axis2_conc([sample_m, sample_y, sample_f, sample_fadj])
