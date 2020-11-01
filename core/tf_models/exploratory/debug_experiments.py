@@ -41,7 +41,7 @@ config = {
      "epochs_n": 50,
      "components_n": 5,
      "teacher_percent": 0.2,
-    "batch_size": 512
+    "batch_size": 1024
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
@@ -109,7 +109,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp003')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']

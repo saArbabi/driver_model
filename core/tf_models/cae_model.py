@@ -69,7 +69,6 @@ class Decoder(tf.keras.Model):
         self.mus_long_fadj = Dense(self.components_n, name="mus_long")
         self.sigmas_long_fadj = Dense(self.components_n, activation=K.exp, name="sigmas_long")
 
-
     def create_tf_time_stamp(self, pred_horizon):
         ts = np.zeros([1, pred_horizon, pred_horizon])
         for i in range(pred_horizon):
@@ -90,6 +89,18 @@ class Decoder(tf.keras.Model):
         """concats tensor along the time-step axis(2)"""
         return tf.concat(items_list, axis=2)
 
+    def mask_action(self, action, vehicle_type):
+        coin_flip = tf.random.uniform([1])
+        if coin_flip < self.teacher_percent:
+            # feed truth - Teacher forcing
+            return action
+        else:
+            # feed zero
+            if vehicle_type == 'merge_vehicle':
+                return self.zeros_pad_m
+            elif vehicle_type == 'other_vehicle':
+                return self.zeros_pad_o
+
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
@@ -99,8 +110,8 @@ class Decoder(tf.keras.Model):
         if self.model_use == 'training':
             batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
             steps_n = tf.shape(conditions)[1] # dynamiclaly assigned
-            zeros_pad_m = tf.zeros([batch_size, 1, 2])
-            zeros_pad_o = tf.zeros([batch_size, 1, 1]) # for other single action cars
+            self.zeros_pad_m = tf.zeros([batch_size, 1, 2])
+            self.zeros_pad_o = tf.zeros([batch_size, 1, 1]) # for other single action cars
 
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
@@ -208,56 +219,24 @@ class Decoder(tf.keras.Model):
             if step < steps_n-1:
                 if self.model_use == 'training' and self.teacher_percent != 0:
                     ################################
-                    act_m = tf.slice(conditions, [0,  step+1, 0], [batch_size, 1, 2])
-                    act_y = tf.slice(conditions, [0,  step+1, 2], [batch_size, 1, 1])
-                    act_f = tf.slice(conditions, [0,  step+1, 3], [batch_size, 1, 1])
-                    act_fadj = tf.slice(conditions, [0,  step+1, 4], [batch_size, 1, 1])
+                    act_m = tf.slice(conditions, [0, step+1, 0], [batch_size, 1, 2])
+                    act_y = tf.slice(conditions, [0, step+1, 2], [batch_size, 1, 1])
+                    act_f = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 1])
+                    act_fadj = tf.slice(conditions, [0, step+1, 4], [batch_size, 1, 1])
 
-                    """Merger vehicle conditional
-                    """
-                    coin_flip = tf.random.uniform([1])
-                    if coin_flip < self.teacher_percent:
-                        # feed truth - Teacher forcing
-                        step_cond_m = self.axis2_conc([act_m, act_y, act_f, act_fadj])
-                    else:
-                        # feed zero
-                        step_cond_m = self.axis2_conc([zeros_pad_m, act_y, act_f, act_fadj])
-                    ################################
-                    """Yielder vehicle conditional
-                    """
-                    coin_flip = tf.random.uniform([1])
-                    if coin_flip < self.teacher_percent:
-                        # feed truth - Teacher forcing
-                        step_cond_y = self.axis2_conc([act_m, act_y, act_fadj])
-                    else:
-                        # feed zero
-                        step_cond_y = self.axis2_conc([act_m, zeros_pad_o, act_fadj])
-                    ################################
-                    """F vehicle conditional
-                    """
-                    coin_flip = tf.random.uniform([1])
-                    if coin_flip < self.teacher_percent:
-                        # feed truth - Teacher forcing
-                        step_cond_f = act_f
-                    else:
-                        # feed zero
-                        step_cond_f = zeros_pad_o
-                    ################################
-                    """Fadj vehicle conditional
-                    """
-                    coin_flip = tf.random.uniform([1])
-                    if coin_flip < self.teacher_percent:
-                        # feed truth - Teacher forcing
-                        step_cond_fadj = act_fadj
-                    else:
-                        # feed zero
-                        step_cond_fadj = zeros_pad_o
-                    ################################
+                    act_m = self.mask_action(act_m, 'merge_vehicle')
+                    act_y = self.mask_action(act_y, 'other_vehicle')
+                    act_f = self.mask_action(act_f, 'other_vehicle')
+                    act_fadj = self.mask_action(act_fadj, 'other_vehicle')
+
+                    step_cond_m = self.axis2_conc([act_m, act_y, act_f, act_fadj])
+                    step_cond_y = self.axis2_conc([act_m, act_y, act_fadj])
+                    step_cond_f = act_f
+                    step_cond_fadj = act_fadj
+
                 elif self.teacher_percent == 0:
-                    step_cond_m = tf.zeros([batch_size, 1, 5])
-                    step_cond_y = tf.zeros([batch_size, 1, 4])
-                    step_cond_f = zeros_pad_o
-                    step_cond_fadj = zeros_pad_o
+                    step_cond_f = self.zeros_pad_o
+                    step_cond_fadj = self.zeros_pad_o
 
                 elif self.model_use == 'inference':
                     step_cond_m = self.axis2_conc([sample_m, sample_y, sample_f, sample_fadj])
