@@ -226,15 +226,15 @@ class Decoder(tf.keras.Model):
                     act_f = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions, [0, step+1, 4], [batch_size, 1, 1])
 
-                    act_m = self.mask_action(act_m, 'merge_vehicle')
-                    act_y = self.mask_action(act_y, 'other_vehicle')
-                    act_f = self.mask_action(act_f, 'other_vehicle')
-                    act_fadj = self.mask_action(act_fadj, 'other_vehicle')
+                    act_m_masked = self.mask_action(act_m, 'merge_vehicle')
+                    act_y_masked = self.mask_action(act_y, 'other_vehicle')
+                    act_f_masked = self.mask_action(act_f, 'other_vehicle')
+                    act_fadj_masked = self.mask_action(act_fadj, 'other_vehicle')
 
-                    step_cond_m = self.axis2_conc([act_m, act_y, act_f, act_fadj])
-                    step_cond_y = self.axis2_conc([act_m, act_y, act_fadj])
-                    step_cond_f = act_f
-                    step_cond_fadj = act_fadj
+                    step_cond_m = self.axis2_conc([act_m_masked, act_y, act_f, act_fadj])
+                    step_cond_y = self.axis2_conc([act_m, act_y_masked, act_fadj])
+                    step_cond_f = act_f_masked
+                    step_cond_fadj = act_fadj_masked
 
                 elif self.teacher_percent == 0:
                     step_cond_f = self.zeros_pad_o
