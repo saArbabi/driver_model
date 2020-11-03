@@ -101,6 +101,15 @@ class Decoder(tf.keras.Model):
             else:
                 return self.zeros_pad_2
 
+    def flip_action(self, true_action, sampled_action):
+        coin_flip = tf.random.uniform([1])
+        if coin_flip < self.teacher_percent:
+            # feed truth - Teacher forcing
+            return true_action
+        else:
+            return sampled_action
+
+
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
@@ -215,15 +224,20 @@ class Decoder(tf.keras.Model):
                     ################################
                     act_m = tf.slice(conditions, [0, step+1, 0], [batch_size, 1, 2])
                     act_y = tf.slice(conditions, [0, step+1, 2], [batch_size, 1, 1])
-                    act_ffadj = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 2])
+                    act_f = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 1])
+                    act_fadj = tf.slice(conditions, [0, step+1, 4], [batch_size, 1, 1])
 
-                    act_m_masked = self.mask_action(act_m, 'merge_vehicle')
-                    act_y_masked = self.mask_action(act_y, 'yield_vehicle')
-                    act_ffadj_masked = self.mask_action(act_ffadj, 'other_vehicle')
+                    # act_m_masked = self.mask_action(act_m, 'merge_vehicle')
+                    # act_y_masked = self.mask_action(act_y, 'yield_vehicle')
+                    # act_ffadj_masked = self.mask_action(act_ffadj, 'other_vehicle')
+                    act_m_flipped = self.flip_action(act_m, sample_m)
+                    act_y_flipped = self.flip_action(act_y, sample_y)
+                    act_f_flipped = self.flip_action(act_f, sample_f)
+                    act_fadj_flipped = self.flip_action(act_fadj, sample_fadj)
 
-                    step_cond_m = self.axis2_conc([act_m_masked, act_y, act_ffadj])
-                    step_cond_y = self.axis2_conc([act_m, act_y_masked, act_ffadj])
-                    step_cond_ffadj = act_ffadj_masked
+                    step_cond_ffadj = self.axis2_conc([act_f_flipped, act_fadj_flipped])
+                    step_cond_m = self.axis2_conc([act_m_flipped, act_y, act_f, act_fadj])
+                    step_cond_y = self.axis2_conc([act_m, act_y_flipped, act_f, act_fadj])
 
                 elif self.teacher_percent == 0:
                     step_cond_ffadj = self.zeros_pad_2
