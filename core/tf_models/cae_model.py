@@ -133,7 +133,7 @@ class Decoder(tf.keras.Model):
         act_f = tf.slice(conditions, [0,  0, 3], [batch_size, 1, 1])
         act_fadj = tf.slice(conditions, [0,  0, 4], [batch_size, 1, 1])
         step_cond_m = self.axis2_conc([act_m, act_y, act_f, act_fadj])
-        step_cond_y = self.axis2_conc([act_m, act_y, act_fadj])
+        step_cond_y = self.axis2_conc([act_m, act_y, act_f, act_fadj])
         step_cond_f = act_f
         step_cond_fadj = act_fadj
 
@@ -158,7 +158,7 @@ class Decoder(tf.keras.Model):
                         (param_f, tf.TensorShape([None,None,None])),
                         (param_fadj, tf.TensorShape([None,None,None])),
                         (step_cond_m, tf.TensorShape([None,None,5])),
-                        (step_cond_y, tf.TensorShape([None,None,4])),
+                        (step_cond_y, tf.TensorShape([None,None,5])),
                         (step_cond_f, tf.TensorShape([None,None,1])),
                         (step_cond_fadj, tf.TensorShape([None,None,1])),
                         ])
@@ -232,7 +232,7 @@ class Decoder(tf.keras.Model):
                     act_fadj_masked = self.mask_action(act_fadj, 'other_vehicle')
 
                     step_cond_m = self.axis2_conc([act_m_masked, act_y, act_f, act_fadj])
-                    step_cond_y = self.axis2_conc([act_m, act_y_masked, act_fadj])
+                    step_cond_y = self.axis2_conc([act_m, act_y_masked, act_f, act_fadj])
                     step_cond_f = act_f_masked
                     step_cond_fadj = act_fadj_masked
 
@@ -245,7 +245,7 @@ class Decoder(tf.keras.Model):
 
                 elif self.model_use == 'inference':
                     step_cond_m = self.axis2_conc([sample_m, sample_y, sample_f, sample_fadj])
-                    step_cond_y = self.axis2_conc([sample_m, sample_y, sample_fadj])
+                    step_cond_y = self.axis2_conc([sample_m, sample_y, sample_f, sample_fadj])
                     step_cond_f = sample_f
                     step_cond_fadj = sample_fadj
 
