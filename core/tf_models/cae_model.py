@@ -41,9 +41,11 @@ class Decoder(tf.keras.Model):
 
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
+        self.lstm_layer_m = LSTM(self.dec_units, return_sequences=True, return_state=True)
+        self.lstm_layer_y = LSTM(self.dec_units, return_sequences=True, return_state=True)
+        self.lstm_layer_ffadj = LSTM(self.dec_units, return_sequences=True, return_state=True)
         """Merger vehicle
         """
-        self.lstm_layer_m = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.alphas_m = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_m = Dense(self.components_n, name="mus_long")
         self.sigmas_long_m = Dense(self.components_n, activation=K.exp, name="sigmas_long")
@@ -52,19 +54,16 @@ class Decoder(tf.keras.Model):
         self.rhos_m = Dense(self.components_n, activation=K.tanh, name="rhos")
         """Yielder vehicle
         """
-        self.lstm_layer_y = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.alphas_y = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_y = Dense(self.components_n, name="mus_long")
         self.sigmas_long_y = Dense(self.components_n, activation=K.exp, name="sigmas_long")
         """F vehicle
         """
-        self.lstm_layer_f = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.alphas_f = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_f = Dense(self.components_n, name="mus_long")
         self.sigmas_long_f = Dense(self.components_n, activation=K.exp, name="sigmas_long")
         """Fadj vehicle
         """
-        self.lstm_layer_fadj = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.alphas_fadj = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_fadj = Dense(self.components_n, name="mus_long")
         self.sigmas_long_fadj = Dense(self.components_n, activation=K.exp, name="sigmas_long")
@@ -96,10 +95,11 @@ class Decoder(tf.keras.Model):
             return action
         else:
             # feed zero
-            if vehicle_type == 'merge_vehicle':
-                return self.zeros_pad_m
-            elif vehicle_type == 'other_vehicle':
-                return self.zeros_pad_o
+            if vehicle_type == 'yield_vehicle':
+                return self.zeros_pad_1
+
+            else:
+                return self.zeros_pad_2
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
@@ -110,14 +110,14 @@ class Decoder(tf.keras.Model):
         if self.model_use == 'training':
             batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
             steps_n = tf.shape(conditions)[1] # dynamiclaly assigned
-            self.zeros_pad_m = tf.zeros([batch_size, 1, 2])
-            self.zeros_pad_o = tf.zeros([batch_size, 1, 1]) # for other single action cars
+            self.zeros_pad_2 = tf.zeros([batch_size, 1, 2])
+            self.zeros_pad_1 = tf.zeros([batch_size, 1, 1]) # for other single action cars
 
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
             steps_n = tf.constant(self.steps_n)
-            self.zeros_pad_m = tf.zeros([batch_size, 1, 2])
-            self.zeros_pad_o = tf.zeros([batch_size, 1, 1]) # for other single action cars
+            self.zeros_pad_2 = tf.zeros([batch_size, 1, 2])
+            self.zeros_pad_1 = tf.zeros([batch_size, 1, 1]) # for other single action cars
 
         # Initialize param vector
         param_m = tf.zeros([batch_size,0,30], dtype=tf.float32)
@@ -130,12 +130,10 @@ class Decoder(tf.keras.Model):
         # first step conditional
         act_m = tf.slice(conditions, [0,  0, 0], [batch_size, 1, 2])
         act_y = tf.slice(conditions, [0,  0, 2], [batch_size, 1, 1])
-        act_f = tf.slice(conditions, [0,  0, 3], [batch_size, 1, 1])
-        act_fadj = tf.slice(conditions, [0,  0, 4], [batch_size, 1, 1])
-        step_cond_m = self.axis2_conc([act_m, act_y, act_f, act_fadj])
-        step_cond_y = self.axis2_conc([act_m, act_y, act_f, act_fadj])
-        step_cond_f = act_f
-        step_cond_fadj = act_fadj
+        act_ffadj = tf.slice(conditions, [0,  0, 3], [batch_size, 1, 2])
+        step_cond_m = self.axis2_conc([act_m, act_y, act_ffadj])
+        step_cond_y = self.axis2_conc([act_m, act_y, act_ffadj])
+        step_cond_ffadj = act_ffadj
 
         # first step's LSTM cell and hidden state
         state_h_m = state_h
@@ -144,11 +142,8 @@ class Decoder(tf.keras.Model):
         state_h_y = state_h
         state_c_y = state_c
 
-        state_h_f = state_h
-        state_c_f = state_c
-
-        state_h_fadj = state_h
-        state_c_fadj = state_c
+        state_h_ffadj = state_h
+        state_c_ffadj = state_c
 
         for step in tf.range(steps_n):
         # for step in tf.range(3):
@@ -159,8 +154,7 @@ class Decoder(tf.keras.Model):
                         (param_fadj, tf.TensorShape([None,None,None])),
                         (step_cond_m, tf.TensorShape([None,None,5])),
                         (step_cond_y, tf.TensorShape([None,None,5])),
-                        (step_cond_f, tf.TensorShape([None,None,1])),
-                        (step_cond_fadj, tf.TensorShape([None,None,1])),
+                        (step_cond_ffadj, tf.TensorShape([None,None,2])),
                         ])
 
             # ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
@@ -193,8 +187,8 @@ class Decoder(tf.keras.Model):
             param_y = self.concat_param_vecs(param_vec, param_y, step)
             """F vehicle
             """
-            outputs, state_h_f, state_c_f = self.lstm_layer_f(self.axis2_conc([enc_h, step_cond_f]), \
-                                                            initial_state=[state_h_f, state_c_f])
+            outputs, state_h_ffadj, state_c_ffadj = self.lstm_layer_ffadj(self.axis2_conc([enc_h, step_cond_ffadj]), \
+                                                            initial_state=[state_h_ffadj, state_c_ffadj])
             # outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_f(outputs)
             mus_long = self.mus_long_f(outputs)
@@ -205,8 +199,6 @@ class Decoder(tf.keras.Model):
             param_f = self.concat_param_vecs(param_vec, param_f, step)
             """Fadj vehicle
             """
-            outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(self.axis2_conc([enc_h, step_cond_fadj]), \
-                                                            initial_state=[state_h_fadj, state_c_fadj])
             # outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_fadj(outputs)
             mus_long = self.mus_long_fadj(outputs)
@@ -223,31 +215,25 @@ class Decoder(tf.keras.Model):
                     ################################
                     act_m = tf.slice(conditions, [0, step+1, 0], [batch_size, 1, 2])
                     act_y = tf.slice(conditions, [0, step+1, 2], [batch_size, 1, 1])
-                    act_f = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 1])
-                    act_fadj = tf.slice(conditions, [0, step+1, 4], [batch_size, 1, 1])
+                    act_ffadj = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 2])
 
                     act_m_masked = self.mask_action(act_m, 'merge_vehicle')
-                    act_y_masked = self.mask_action(act_y, 'other_vehicle')
-                    act_f_masked = self.mask_action(act_f, 'other_vehicle')
-                    act_fadj_masked = self.mask_action(act_fadj, 'other_vehicle')
+                    act_y_masked = self.mask_action(act_y, 'yield_vehicle')
+                    act_ffadj_masked = self.mask_action(act_ffadj, 'other_vehicle')
 
-                    step_cond_m = self.axis2_conc([act_m_masked, act_y, act_f, act_fadj])
-                    step_cond_y = self.axis2_conc([act_m, act_y_masked, act_f, act_fadj])
-                    step_cond_f = act_f_masked
-                    step_cond_fadj = act_fadj_masked
+                    step_cond_m = self.axis2_conc([act_m_masked, act_y, act_ffadj])
+                    step_cond_y = self.axis2_conc([act_m, act_y_masked, act_ffadj])
+                    step_cond_ffadj = act_ffadj_masked
 
                 elif self.teacher_percent == 0:
-                    step_cond_f = self.zeros_pad_o
-                    step_cond_fadj = self.zeros_pad_o
+                    step_cond_ffadj = self.zeros_pad_2
                     step_cond_m = tf.zeros([batch_size, 1, 5])
-                    step_cond_y = tf.zeros([batch_size, 1, 4])
-
+                    step_cond_y = tf.zeros([batch_size, 1, 5])
 
                 elif self.model_use == 'inference':
-                    step_cond_m = self.axis2_conc([sample_m, sample_y, sample_f, sample_fadj])
-                    step_cond_y = self.axis2_conc([sample_m, sample_y, sample_f, sample_fadj])
-                    step_cond_f = sample_f
-                    step_cond_fadj = sample_fadj
+                    step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])
+                    step_cond_m = self.axis2_conc([sample_m, sample_y, sample_ffadj])
+                    step_cond_y = self.axis2_conc([sample_m, sample_y, sample_ffadj])
 
         gmm_m = get_pdf(param_m, 'merge_vehicle')
         gmm_y = get_pdf(param_y, 'other_vehicle')
