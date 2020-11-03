@@ -232,8 +232,8 @@ class Decoder(tf.keras.Model):
 
                 elif self.model_use == 'inference':
                     step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])
-                    step_cond_m = self.axis2_conc([sample_m, sample_y, sample_ffadj])
-                    step_cond_y = self.axis2_conc([sample_m, sample_y, sample_ffadj])
+                    step_cond_m = self.axis2_conc([sample_m, sample_y, step_cond_ffadj])
+                    step_cond_y = self.axis2_conc([sample_m, sample_y, step_cond_ffadj])
 
         gmm_m = get_pdf(param_m, 'merge_vehicle')
         gmm_y = get_pdf(param_y, 'other_vehicle')
