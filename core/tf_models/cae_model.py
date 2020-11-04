@@ -88,19 +88,6 @@ class Decoder(tf.keras.Model):
         """concats tensor along the time-step axis(2)"""
         return tf.concat(items_list, axis=2)
 
-    def mask_action(self, action, vehicle_type):
-        coin_flip = tf.random.uniform([1])
-        if coin_flip < self.teacher_percent:
-            # feed truth - Teacher forcing
-            return action
-        else:
-            # feed zero
-            if vehicle_type == 'yield_vehicle':
-                return self.zeros_pad_1
-
-            else:
-                return self.zeros_pad_2
-
     def flip_action(self, true_action, sampled_action):
         coin_flip = tf.random.uniform([1])
         if coin_flip < self.teacher_percent:
@@ -108,7 +95,6 @@ class Decoder(tf.keras.Model):
             return true_action
         else:
             return sampled_action
-
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
@@ -125,8 +111,6 @@ class Decoder(tf.keras.Model):
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
             steps_n = tf.constant(self.steps_n)
-            self.zeros_pad_2 = tf.zeros([batch_size, 1, 2])
-            self.zeros_pad_1 = tf.zeros([batch_size, 1, 1]) # for other single action cars
 
         # Initialize param vector
         param_m = tf.zeros([batch_size,0,30], dtype=tf.float32)
@@ -227,9 +211,6 @@ class Decoder(tf.keras.Model):
                     act_f = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions, [0, step+1, 4], [batch_size, 1, 1])
 
-                    # act_m_masked = self.mask_action(act_m, 'merge_vehicle')
-                    # act_y_masked = self.mask_action(act_y, 'yield_vehicle')
-                    # act_ffadj_masked = self.mask_action(act_ffadj, 'other_vehicle')
                     act_m_flipped = self.flip_action(act_m, sample_m)
                     act_y_flipped = self.flip_action(act_y, sample_y)
                     act_f_flipped = self.flip_action(act_f, sample_f)
@@ -238,11 +219,6 @@ class Decoder(tf.keras.Model):
                     step_cond_ffadj = self.axis2_conc([act_f_flipped, act_fadj_flipped])
                     step_cond_m = self.axis2_conc([act_m_flipped, act_y, act_f, act_fadj])
                     step_cond_y = self.axis2_conc([act_m, act_y_flipped, act_f, act_fadj])
-
-                elif self.teacher_percent == 0:
-                    step_cond_ffadj = self.zeros_pad_2
-                    step_cond_m = tf.zeros([batch_size, 1, 5])
-                    step_cond_y = tf.zeros([batch_size, 1, 5])
 
                 elif self.model_use == 'inference':
                     step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])
