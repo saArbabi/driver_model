@@ -16,6 +16,17 @@ exp_trains = {}
 exp_vals = {}
 durations = {}
 # %%
+def teacher_check(true, sample):
+    allowed_error = 1
+    error = tf.math.abs(tf.math.subtract(sample, true))
+    less = tf.cast(tf.math.less(error, allowed_error), dtype='float')
+    greater = tf.cast(tf.math.greater_equal(error, allowed_error), dtype='float')
+    return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
+
+true = tf.constant([[3,1.2],[2.7,1]])
+sample = tf.constant([[2,-1.2],[2.9,1]])
+teacher_check(true, sample)
+# %%
 """
 Use this script for debugging the following:
 - models.core.tf_models.utils
@@ -40,7 +51,7 @@ config = {
      "dec_units": 200,
      "epochs_n": 50,
      "components_n": 5,
-     "teacher_percent": 0.2,
+     "allowed_error": 0.5,
     "batch_size": 1024
 },
 "data_config": {"step_size": 1,
@@ -108,17 +119,16 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
     return durations, exp_trains, exp_vals
 
-train_debugger()
-# durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
+# train_debugger()
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp002')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 
 legend = [
-        '1024',
-        '128',
-        '20 steps',
+        'max_error: 0.1',
+        'max_error: 0.5',
         # 'multi-head 200unit - ts[both]',
         ]
 

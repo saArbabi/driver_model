@@ -33,7 +33,7 @@ class Decoder(tf.keras.Model):
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
         self.pred_horizon = config['data_config']['pred_horizon']
-        self.teacher_percent = config['model_config']['teacher_percent']
+        self.allowed_error = config['model_config']['allowed_error']
         self.steps_n = None # note self.steps_n =< self.pred_horizon
         self.model_use = model_use # can be training or inference
         self.architecture_def()
@@ -88,13 +88,11 @@ class Decoder(tf.keras.Model):
         """concats tensor along the time-step axis(2)"""
         return tf.concat(items_list, axis=2)
 
-    def flip_action(self, true_action, sampled_action):
-        coin_flip = tf.random.uniform([1])
-        if coin_flip < self.teacher_percent:
-            # feed truth - Teacher forcing
-            return true_action
-        else:
-            return sampled_action
+    def teacher_check(self, true, sample):
+        error = tf.math.abs(tf.math.subtract(sample, true))
+        less = tf.cast(tf.math.less(error, self.allowed_error), dtype='float')
+        greater = tf.cast(tf.math.greater_equal(error, self.allowed_error), dtype='float')
+        return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
@@ -105,8 +103,6 @@ class Decoder(tf.keras.Model):
         if self.model_use == 'training':
             batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
             steps_n = tf.shape(conditions)[1] # dynamiclaly assigned
-            self.zeros_pad_2 = tf.zeros([batch_size, 1, 2])
-            self.zeros_pad_1 = tf.zeros([batch_size, 1, 1]) # for other single action cars
 
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
@@ -204,21 +200,21 @@ class Decoder(tf.keras.Model):
             """Conditioning
             """
             if step < steps_n-1:
-                if self.model_use == 'training' and self.teacher_percent != 0:
+                if self.model_use == 'training':
                     ################################
                     act_m = tf.slice(conditions, [0, step+1, 0], [batch_size, 1, 2])
                     act_y = tf.slice(conditions, [0, step+1, 2], [batch_size, 1, 1])
                     act_f = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions, [0, step+1, 4], [batch_size, 1, 1])
 
-                    act_m_flipped = self.flip_action(act_m, sample_m)
-                    act_y_flipped = self.flip_action(act_y, sample_y)
-                    act_f_flipped = self.flip_action(act_f, sample_f)
-                    act_fadj_flipped = self.flip_action(act_fadj, sample_fadj)
+                    act_m_checked = self.teacher_check(act_m, sample_m)
+                    act_y_checked = self.teacher_check(act_y, sample_y)
+                    act_f_checked = self.teacher_check(act_f, sample_f)
+                    act_fadj_checked = self.teacher_check(act_fadj, sample_fadj)
 
-                    step_cond_ffadj = self.axis2_conc([act_f_flipped, act_fadj_flipped])
-                    step_cond_m = self.axis2_conc([act_m_flipped, act_y, act_f, act_fadj])
-                    step_cond_y = self.axis2_conc([act_m, act_y_flipped, act_f, act_fadj])
+                    step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
+                    step_cond_m = self.axis2_conc([act_m_checked, act_y, act_f, act_fadj])
+                    step_cond_y = self.axis2_conc([act_m, act_y_checked, act_f, act_fadj])
 
                 elif self.model_use == 'inference':
                     step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])
