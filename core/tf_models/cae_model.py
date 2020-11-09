@@ -146,12 +146,11 @@ class Decoder(tf.keras.Model):
                         (step_cond_ffadj, tf.TensorShape([None,None,2])),
                         ])
 
-            ts = tf.repeat(self.time_stamp[:, step:step+1, :], batch_size, axis=0)
             """Merger vehicle
             """
             outputs, state_h_m, state_c_m = self.lstm_layer_m(self.axis2_conc([enc_h, step_cond_m]), \
                                                             initial_state=[state_h_m, state_c_m])
-            outputs = self.axis2_conc([outputs, ts])
+
             alphas = self.alphas_m(outputs)
             mus_long = self.mus_long_m(outputs)
             sigmas_long = self.sigmas_long_m(outputs)
@@ -166,7 +165,7 @@ class Decoder(tf.keras.Model):
             """
             outputs, state_h_y, state_c_y = self.lstm_layer_y(self.axis2_conc([enc_h, step_cond_y]), \
                                                             initial_state=[state_h_y, state_c_y])
-            outputs = self.axis2_conc([outputs, ts])
+
             alphas = self.alphas_y(outputs)
             mus_long = self.mus_long_y(outputs)
             sigmas_long = self.sigmas_long_y(outputs)
@@ -178,7 +177,6 @@ class Decoder(tf.keras.Model):
             """
             outputs, state_h_ffadj, state_c_ffadj = self.lstm_layer_ffadj(self.axis2_conc([enc_h, step_cond_ffadj]), \
                                                             initial_state=[state_h_ffadj, state_c_ffadj])
-            outputs = self.axis2_conc([outputs, ts])
             alphas = self.alphas_f(outputs)
             mus_long = self.mus_long_f(outputs)
             sigmas_long = self.sigmas_long_f(outputs)
