@@ -22,7 +22,7 @@ config = {
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 50,
+                "pred_horizon": 20,
                 "Note": ""
 },
 "exp_id": "NA",
@@ -35,9 +35,10 @@ states_train, targets_train, conditions_train, \
 len(states_train[3][0][0])
 states_train[16].shape
 conditions_train[16].shape
-targets_train[16].shape
+targets_train[45].shape
+states_train[16][1]
 
-
+states_train[16][0]
 size = 0
 for i in targets_train.keys():
     size += states_train[i].shape[0]
@@ -101,7 +102,7 @@ for chunks in range(step_size):
         if len(prev_states) == obsSequence_n:
             obs_seq.append(np.array(prev_states))
             decoder_conditioning_seq = []
-            for n in range(prediction_step_n):
+            for n in range(prediction_step_n-20):
                 decoder_conditioning_seq.append([yveh_action[i+n], mveh_action[i+n]])
             input_seq.append(decoder_conditioning_seq)
             target_seq.append(list(mveh_action)[i+1:i + prediction_step_n+1])
@@ -111,9 +112,9 @@ for chunks in range(step_size):
     i = i_reset
 
 
-
-print(len(target_seq[-1]))
-input_seq[-1]
+#
+# print(len(target_seq[-1]))
+# input_seq[-1]
 
 # %%
 print(obs_seq[-1])

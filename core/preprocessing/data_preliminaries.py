@@ -148,7 +148,7 @@ vis_dataDistribution(target_arr, target_col)
 
 #%%
 all_episodes = spec['episode_id'].values
-validation_episodes = np.random.choice(all_episodes, int(0.1*len(all_episodes)))
+validation_episodes = np.random.choice(all_episodes, int(0.1*len(all_episodes)), replace=False)
 test_episodes = spec.loc[(spec['episode_id'].isin(validation_episodes)) &
                                         (spec['frm_n']>60) &
                                         (spec['f_id']>0) &
@@ -156,8 +156,15 @@ test_episodes = spec.loc[(spec['episode_id'].isin(validation_episodes)) &
 training_episodes = np.setdiff1d(all_episodes, validation_episodes)
 
 len(validation_episodes)/len(training_episodes)
+all_episodes[all_episodes == 2895]
+test_episodes[test_episodes == 2895]
+training_episodes[training_episodes == 2895]
+validation_episodes[validation_episodes == 2895]
+
 # %%
 
+
+# %%
 
 vis_trajs(80, training_episodes, -1)
 
