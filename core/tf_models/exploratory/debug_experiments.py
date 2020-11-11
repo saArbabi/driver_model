@@ -17,13 +17,13 @@ exp_vals = {}
 durations = {}
 # %%
 def teacher_check(true, sample):
-    allowed_error = 1
+    allowed_error = [1,0.8]
     error = tf.math.abs(tf.math.subtract(sample, true))
     less = tf.cast(tf.math.less(error, allowed_error), dtype='float')
     greater = tf.cast(tf.math.greater_equal(error, allowed_error), dtype='float')
     return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
 
-true = tf.constant([[3,1.2],[2.7,1]])
+true = tf.constant([[3,1.2],[2.7,0.2]])
 sample = tf.constant([[2,-1.2],[2.9,1]])
 teacher_check(true, sample)
 # %%
@@ -51,7 +51,7 @@ config = {
      "dec_units": 200,
      "epochs_n": 50,
      "components_n": 5,
-     "allowed_error": 0.5,
+     "allowed_error":  [0.1, 0.1],
     "batch_size": 1024
 },
 "data_config": {"step_size": 1,

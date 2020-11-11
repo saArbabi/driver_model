@@ -88,10 +88,16 @@ class Decoder(tf.keras.Model):
         """concats tensor along the time-step axis(2)"""
         return tf.concat(items_list, axis=2)
 
-    def teacher_check(self, true, sample):
+    def teacher_check(self, true, sample, vehicle_type):
+        if vehicle_type == 'merge_vehicle':
+            allowed_error = self.allowed_error
+        elif vehicle_type == 'other_vehicle':
+            allowed_error = self.allowed_error[0]
+
+
         error = tf.math.abs(tf.math.subtract(sample, true))
-        less = tf.cast(tf.math.less(error, self.allowed_error), dtype='float')
-        greater = tf.cast(tf.math.greater_equal(error, self.allowed_error), dtype='float')
+        less = tf.cast(tf.math.less(error, allowed_error), dtype='float')
+        greater = tf.cast(tf.math.greater_equal(error, allowed_error), dtype='float')
         return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
 
     def call(self, inputs):
@@ -204,10 +210,10 @@ class Decoder(tf.keras.Model):
                     act_f = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions, [0, step+1, 4], [batch_size, 1, 1])
 
-                    act_m_checked = self.teacher_check(act_m, sample_m)
-                    act_y_checked = self.teacher_check(act_y, sample_y)
-                    act_f_checked = self.teacher_check(act_f, sample_f)
-                    act_fadj_checked = self.teacher_check(act_fadj, sample_fadj)
+                    act_m_checked = self.teacher_check(act_m, sample_m, 'merge_vehicle')
+                    act_y_checked = self.teacher_check(act_y, sample_y, 'other_vehicle')
+                    act_f_checked = self.teacher_check(act_f, sample_f, 'other_vehicle')
+                    act_fadj_checked = self.teacher_check(act_fadj, sample_fadj, 'other_vehicle')
 
                     step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
                     step_cond_m = self.axis2_conc([act_m_checked, act_y, act_f, act_fadj])

@@ -36,7 +36,7 @@ len(states_train[3][0][0])
 states_train[16].shape
 conditions_train[16].shape
 targets_train[45].shape
-states_train[16][1]
+states_train[16].shape
 
 states_train[16][0]
 size = 0
