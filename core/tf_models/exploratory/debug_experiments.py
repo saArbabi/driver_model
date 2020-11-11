@@ -56,7 +56,7 @@ config = {
 },
 "data_config": {"step_size": 1,
                 "obsSequence_n": 20,
-                "pred_horizon": 50,
+                "pred_horizon": 20,
                 "Note": ""
 },
 "exp_id": "NA",
