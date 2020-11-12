@@ -64,36 +64,45 @@ encoder_outputs = encoder(encoder_inputs)
 # We discard `encoder_outputs` and only keep the states.
 
 # Set up the decoder, using `encoder_states` as initial state.
-param_n = 4
+param_n = 1
 dense_layer1 = keras.layers.Dense(latent_dim)
 dense_layer2 = keras.layers.Dense(param_n)
 dense_outputs = dense_layer2(dense_layer1(encoder_outputs))
 model = keras.Model(encoder_inputs, dense_outputs)
 
-
 def custom_loss(true, weights):
     def poly_term(weight, power, batch_size):
-        x = tf.repeat([tf.linspace(0.0,9,5)], batch_size, axis=0)
+        x = tf.repeat([tf.linspace(0.0,4,5)], batch_size, axis=0)
         return tf.math.multiply(weight, tf.math.pow(x, power))
 
-    def poly_fun(weights):
+    def poly_fun(true, weights):
 
         batch_size = tf.shape(weights)[0]
-        param_n = 4
+        param_n = 1
 
-        w_slice = [tf.slice(weights, [0, n], [batch_size, 1]) for n in range(param_n)]
+        w_slice = tf.slice(weights, [0, 0], [batch_size, 1])
         # print(weights.shape)
         # print(weights[:, 0,0])
-        i = param_n-1
         poly_terms = []
-        for w_n in w_slice:
-            poly_terms.append(poly_term(w_n, i, batch_size))
-            i -= 1
+
+        targ0 = tf.slice(true, [0, 0], [batch_size, 1])
+        targ1 = tf.slice(true, [0, 1], [batch_size, 1])
+        targ2 = tf.slice(true, [0, 2], [batch_size, 1])
+
+        der1 = tf.math.subtract(targ1, targ0)
+        der2 = tf.math.subtract(targ2, targ1)
+        double_der = tf.math.divide(tf.math.subtract(der2, der1), 2)
+
+        poly_terms.append(poly_term(targ0, 0, batch_size))
+        poly_terms.append(poly_term(der1, 1, batch_size))
+        poly_terms.append(poly_term(double_der, 2, batch_size))
+        poly_terms.append(poly_term(weights, 3, batch_size))
+
         y = tf.math.add_n(poly_terms)
 
         return y
 
-    pred = poly_fun(weights)
+    pred = poly_fun(true, weights)
     prior_mean = tf.square(tf.math.subtract(true, pred))
 
     return tf.reduce_mean(prior_mean)
@@ -122,25 +131,36 @@ trial.shape
 
 
 # %%
-sample = 55
+sample =55
 trial = xs_val[sample]
 trial.shape = (1, 10)
 
-weights = model(trial).numpy()[0]
+weights = list(model(trial).numpy()[0])
+
+targ0 = ys_target_val[sample][0][0]
+targ1 = ys_target_val[sample][1][0]
+targ2 = ys_target_val[sample][2][0]
+der1 = targ1 - targ0
+der2 = targ2 - targ1
+double_der = (der2 - der1)/2
+
+weights.append(double_der)
+weights.append(der1)
+weights.append(targ0)
 
 def fun(weights):
-    param_n = 4
+    param_n = 3
     x = np.array(range(5))
-    i = param_n-1
+    i = param_n
     poly_terms = []
     for w_n in weights:
         poly_terms.append(w_n*x**i)
+        print(i)
         i -= 1
 
     # y = x**4 - 2*x**2
     return np.sum(poly_terms, axis=0)
 
-ys_target_val[0]
 # plt.plot(xs_val[sample])
 plt.plot(fun(weights))
 plt.plot(ys_target_val[sample])
