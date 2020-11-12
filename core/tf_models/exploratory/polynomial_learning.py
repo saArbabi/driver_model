@@ -80,23 +80,23 @@ def custom_loss(true, weights):
         batch_size = tf.shape(weights)[0]
         param_n = 1
 
-        w_slice = tf.slice(weights, [0, 0], [batch_size, 1])
+        # w_slice = tf.slice(weights, [0, 0], [batch_size, 1])
         # print(weights.shape)
         # print(weights[:, 0,0])
         poly_terms = []
 
         targ0 = tf.slice(true, [0, 0], [batch_size, 1])
         targ1 = tf.slice(true, [0, 1], [batch_size, 1])
-        targ2 = tf.slice(true, [0, 2], [batch_size, 1])
+        # targ2 = tf.slice(true, [0, 2], [batch_size, 1])
 
         der1 = tf.math.subtract(targ1, targ0)
-        der2 = tf.math.subtract(targ2, targ1)
-        double_der = tf.math.divide(tf.math.subtract(der2, der1), 2)
+        # der2 = tf.math.subtract(targ2, targ1)
+        # double_der = tf.math.divide(tf.math.subtract(der2, der1), 2)
 
         poly_terms.append(poly_term(targ0, 0, batch_size))
         poly_terms.append(poly_term(der1, 1, batch_size))
-        poly_terms.append(poly_term(double_der, 2, batch_size))
-        poly_terms.append(poly_term(weights, 3, batch_size))
+        # poly_terms.append(poly_term(double_der, 2, batch_size))
+        poly_terms.append(poly_term(weights, 2, batch_size))
 
         y = tf.math.add_n(poly_terms)
 
@@ -131,40 +131,61 @@ trial.shape
 
 
 # %%
-sample =55
-trial = xs_val[sample]
-trial.shape = (1, 10)
+sample = 57
 
-weights = list(model(trial).numpy()[0])
-
-targ0 = ys_target_val[sample][0][0]
-targ1 = ys_target_val[sample][1][0]
-targ2 = ys_target_val[sample][2][0]
-der1 = targ1 - targ0
-der2 = targ2 - targ1
-double_der = (der2 - der1)/2
-
-weights.append(double_der)
-weights.append(der1)
-weights.append(targ0)
 
 def fun(weights):
-    param_n = 3
+    param_n = 2
     x = np.array(range(5))
     i = param_n
     poly_terms = []
     for w_n in weights:
         poly_terms.append(w_n*x**i)
-        print(i)
         i -= 1
 
     # y = x**4 - 2*x**2
     return np.sum(poly_terms, axis=0)
 
 # plt.plot(xs_val[sample])
+np.array([2,3])**2
+trial = xs_val[sample]
+trial.shape = (1, 10)
+
+# weights = [0.0033]
+weights = list(model(trial).numpy()[0])
+
+targ0 = ys_target_val[sample][0][0]
+targ1 = ys_target_val[sample][1][0]
+der1 = targ1 - targ0
+# der1 = -0.021
+
+weights.append(der1)
+weights.append(targ0)
+weights = np.round(weights, 5)
+true = np.ndarray.flatten(np.round(ys_target_val[sample], 5))
 plt.plot(fun(weights))
-plt.plot(ys_target_val[sample])
+plt.plot(true)
 plt.legend(['pred', 'truth'])
+plt.grid()
+# %%
+
+for sample in range (50,70):
+    plt.figure()
+    trial = xs_val[sample]
+    trial.shape = (1, 10)
+
+    weights = list(model(trial).numpy()[0])
+
+    targ0 = ys_target_val[sample][0][0]
+    targ1 = ys_target_val[sample][1][0]
+    der1 = targ1 - targ0
+
+    weights.append(der1)
+    weights.append(targ0)
+
+    plt.plot(fun(weights))
+    plt.plot(ys_target_val[sample])
+    plt.legend(['pred', 'truth'])
 
 # %%
 # X_test, y_test = create_dataset(test, x_len, y_len)
