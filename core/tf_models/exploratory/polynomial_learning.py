@@ -31,83 +31,102 @@ def cubic_spline(x, w):
 
 def obsSequence(full_traj, x_len, y_len):
     traj_len = len(full_traj)
-    set = np.empty([traj_len, 1 + x_len + 4]) # array index + x_len + n spline coefs
-    set[:] = np.nan
-    set[:, 0] = range(0, traj_len)
+    snip_n = 10
+    pred_horizon = 2 # number of snippets
 
-    # xs
-    for i in range(0, traj_len - x_len):
-        x_sequence = full_traj[i:(i + x_len)]
-        end_indx = i + x_len - 1
-        set[end_indx, 1:-4] = x_sequence
-
-    # coeffcient
-    for i in range(y_len):
+    states = np.empty([traj_len, x_len, 1])
+    targs = np.empty([traj_len, pred_horizon, 4])
+    conds = np.empty([traj_len, pred_horizon, 4])
+    coefs = np.empty([traj_len, 4])
+    states[:] = np.nan
+    targs[:] = np.nan
+    coefs[:] = np.nan
+    conds[:] = np.nan
+    # create traj_snippets
+    for i in range(snip_n):
         indx = [i]
-        indx.extend(np.arange(i+y_len-1, traj_len, y_len))
+        indx.extend(np.arange(i+snip_n-1, traj_len, snip_n))
         traj_snippets = full_traj[indx]
         f = CubicSpline(indx, traj_snippets)
-        set[indx[:-1], -4:] = np.stack(f.c, axis=1) # number of splines = knots_n - 1
+        coefs[indx[:-1], :] = np.stack(f.c, axis=1)[:,:, 0] # number of splines = knots_n - 1
 
-    set = set[~np.isnan(set).any(axis=1)]
-    # pred_step = 2
-    features = []
-    coefs = []
-    for i in range(x_len-1, len(set)-y_len):
-        features.append(set[i,1:-4])
-        coefs.append(set[[i,i+y_len-1], -4:])
+    for i in range(0, traj_len):
+        x_sequence = full_traj[i:(i + x_len)]
+        end_indx = i + x_len - 1
+        states[end_indx, :, :] = x_sequence
+        target_snippet_indxs = [end_indx+snip_n*n for n in range(pred_horizon)]
+        cond_snippet_indxs = [(end_indx-snip_n)+snip_n*n for n in range(pred_horizon)]
 
-    features = np.reshape(np.array(features), [len(features), 10, 1])
-    return features, np.array(coefs)
+        if max(target_snippet_indxs) < traj_len:
+            targs[end_indx, :, :] = coefs[target_snippet_indxs, :]
+            conds[end_indx, :, :] = coefs[cond_snippet_indxs, :]
+            # TODO make it varied sequence length
+        else:
+            break
+            # target_snippet_indxs = [end_indx+i*n for n in range(pred_horizon)]
 
-xs_val, cofs_val = obsSequence(np.ndarray.flatten(test.values), x_len, y_len)
-xs, cofs = obsSequence(np.ndarray.flatten(train.values), x_len, y_len)
+    s_indx = np.argwhere(~np.isnan(states[:,0,0]))
+    t_indx = np.argwhere(~np.isnan(targs[:,0,0]))
+    c_indx = np.argwhere(~np.isnan(conds[:,0,0]))
+    indx = np.intersect1d(s_indx, t_indx, assume_unique=False)
+    indx = np.intersect1d(indx, c_indx, assume_unique=False)
+    return states[indx], targs[indx], conds[indx]
 
-cofs.shape
-
+states_val, targs_val, conds_val = obsSequence(test.values, x_len, y_len)
+states_train, targs_train, conds_train = obsSequence(train.values, x_len, y_len)
+states_train.shape
+targs_train.shape
+conds_train.shape
 # %%
-sample = 57
-plt.plot(range(9,19), cubic_spline(x, cofs_val[sample][1]))
-plt.plot(cubic_spline(x, cofs_val[sample][0]))
-# plt.plot(range(9,19), cubic_spline(x, cofs_val[67][0]))
+
+plt.plot(range(9, 19), cubic_spline(x, cofs_val[0][0]))
+plt.plot(cubic_spline(x, conds_val[0][0]))
+# plt.plot(xs_val[0])
 # %%
-indx = [0]
-# indx =
-# a =
 
 cofs.shape
 xs_val.shape
 
-
-
+ conds_val[:, :, 0:1].shape
+conds_train[0:4]
 # %%
 # %%
 latent_dim = 20
 # Define an input sequence and process it.
 encoder_inputs = keras.Input(shape=(None, 1))
-encoder = keras.layers.LSTM(latent_dim)
-encoder_outputs = encoder(encoder_inputs)
+encoder = keras.layers.LSTM(latent_dim, return_state=True)
+encoder_outputs, state_h, state_c = encoder(encoder_inputs)
+encoder_states = [state_h, state_c]
+decoder_inputs = keras.Input(shape=(None, 1))
+decoder_lstm = keras.layers.LSTM(20, return_sequences=True, return_state=True)
+decoder_outputs, _, _ = decoder_lstm(decoder_inputs, initial_state=encoder_states)
 
-dense_layer1 = keras.layers.Dense(latent_dim)
-dense_layer2 = keras.layers.Dense(2)
-dense_outputs = dense_layer2(dense_layer1(encoder_outputs))
-model = keras.Model(encoder_inputs, dense_outputs)
+
+
+dense_layer1 = keras.layers.Dense(1)
+dense_outputs = dense_layer1(decoder_outputs)
+# model = keras.Model(encoder_inputs, dense_outputs)
+
+model = keras.Model([encoder_inputs, decoder_inputs], dense_outputs)
 
 model.compile(
     optimizer=keras.optimizers.Adam(1e-2),
     loss='MeanSquaredError'
 )
 
-history = model.fit(xs, cofs[:, :, 0]*1000,
+history = model.fit([states_train, conds_train[:, :, 0:1]*1000],
+    targs_train[:, :, 0:1]*1000,
     batch_size=100,
-    epochs=30,
+    epochs=3,
     shuffle=False,
-    validation_data=(xs_val, cofs_val[:, :, 0]*1000),
+    validation_data=([states_val, conds_val[:, :, 0:1]*1000],
+    targs_val[:, :, 0:1]*1000),
     verbose=1)
 
 plt.plot(history.history['val_loss'][5:])
 plt.plot(history.history['loss'][5:])
 plt.legend(['val', 'train'])
+
 
 
 # %%
