@@ -27,7 +27,7 @@ spec = pd.read_csv('./datasets/episode_spec.txt', delimiter=' ',
                                                         header=None, names=spec_col)
 
 # %%
-y_df['exists'].plot.hist(bins=125)
+y_df['exists']
 m_df.loc[m_df['pc']>2]['pc'].plot.hist(bins=125)
 m_df['act_long'].var()
 m_df['act_lat'].var()
