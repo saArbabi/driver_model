@@ -32,7 +32,7 @@ def cubic_spline(x, w):
 def obsSequence(full_traj, x_len, y_len):
     traj_len = len(full_traj)
     snip_n = 10
-    pred_horizon = 5 # number of snippets
+    pred_horizon = 10 # number of snippets
 
     states = np.empty([traj_len, x_len, 1])
     targs = np.empty([traj_len, pred_horizon, 4])
@@ -79,13 +79,33 @@ targs_train.shape
 conds_train.shape
 # %%
 conds_train[0]
-conds_train[0]*np.array([10000, 100, 10, 1])
+conds_train[0]*np.array([0, 0, 0, 0])
 
 # %%
-plt.plot(range(9, 19), cubic_spline(x, cofs_val[0][0]))
-plt.plot(cubic_spline(x, conds_val[0][0]))
+
 # plt.plot(xs_val[0])
 # %%
+x
+pointer = 10
+ts = targs_train
+cs = conds_train
+plt.plot(np.poly1d(cs[1][0])(x), color='grey')
+for step in range(0, 5):
+
+    # if step == 0:
+
+    #     weights = get_spline(conds_val[sample][0], dec_seq[step])
+    # else:
+    #     weights = get_spline(weights, dec_seq[step])
+    weights = ts[1][step]
+    # plt.plot(range(pointer, pointer+10), np.poly1d(targs_val[sample][step])(x), color='grey', linestyle='--')
+    if step%2 == 0:
+        plt.plot(range(pointer, pointer+11), np.poly1d(weights)(x), color='red', linestyle='--')
+    else:
+        plt.plot(range(pointer, pointer+11), np.poly1d(weights)(x), color='blue', linestyle='--')
+
+    pointer += 10
+plt.grid()
 
 # %%
 # %%
@@ -111,12 +131,12 @@ model.compile(
     optimizer=keras.optimizers.Adam(1e-3),
     loss='MeanSquaredError'
 )
-history = model.fit([states_train, conds_train[:, :, :]*np.array([10000, 100, 10, 1])],
+history = model.fit([states_train, conds_train[:, :, :]*np.array([0, 0, 0, 0])],
     targs_train[:, :, 0:1]*10000,
     batch_size=100,
     epochs=20,
     shuffle=False,
-    validation_data=([states_val, conds_val[:, :, :]*np.array([10000, 100, 10, 1])],
+    validation_data=([states_val, conds_val[:, :, :]*np.array([0, 0, 0, 0])],
     targs_val[:, :, 0:1]*10000),
     verbose=1)
 
@@ -183,17 +203,18 @@ state.shape = (1, 10, 1)
 cond = conds_val[sample][:, :][0]
 states_value = enc_model.predict(state)
 dec_seq = []
-seq_len = 20
+seq_len = 40
 for i in range(seq_len):
     cond.shape = (1,1,4)
-    cond = cond*np.array([10000, 100, 10, 1])
+    # cond = cond*np.array([0, 0, 0, 0])
     # cond *= np.array([[[1,0,0,0]]])
-    output_, h, c = dec_model.predict([cond] + states_value)
+    output_, h, c = dec_model.predict([cond*np.array([0, 0, 0, 0])] + states_value)
     states_value = [h, c]
     cond.shape = (4)
     # cond = get_spline(cond, output_[0][0])
     output_.shape = 1
-    cond = get_spline(cond*np.array([1/10000, 1/100, 1/10, 1]), output_/10000)
+    # cond = get_spline(cond*np.array([1/10000, 1/100, 1/10, 1]), output_/10000)
+    cond = get_spline(cond, output_/10000)
     dec_seq.append(cond.copy())
 
 a = []
@@ -206,16 +227,15 @@ dec_seq
 # dec_seq.shape = 20
 # plt.plot(dec_seq)
 # %%
-plt.plot(range(20), dec_seq[:,0])
+plt.plot(range(20), dec_seq[:,-1])
 plt.scatter(range(20), dec_seq[:,0])
 plt.grid()
 
 # %%
-targs_val[sample][0]
 x= np.arange(0, 11, 1)
 pointer = 10
 plt.plot(np.poly1d(conds_val[sample][0])(x), color='grey', linestyle='--')
-for step in range(10):
+for step in range(30):
 
 
     # if step == 0:
