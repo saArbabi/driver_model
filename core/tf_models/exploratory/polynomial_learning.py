@@ -44,18 +44,18 @@ def obsSequence(full_traj, x_len, y_len):
     conds[:] = np.nan
     # create traj_snippets
     for i in range(snip_n):
-        indx = [i]
-        indx.extend(np.arange(i+snip_n-1, traj_len, snip_n))
+        indx = []
+        indx.extend(np.arange(i, traj_len, snip_n))
         traj_snippets = full_traj[indx]
         f = CubicSpline(indx, traj_snippets)
-        coefs[indx[:-1], :] = np.stack(f.c, axis=1)[:,:, 0] # number of splines = knots_n - 1
+        coefs[indx[:-1], :] = np.stack(f.c, axis=2)[:,0,:] # number of splines = knots_n - 1
 
     for i in range(0, traj_len):
         x_sequence = full_traj[i:(i + x_len)]
         end_indx = i + x_len - 1
         states[end_indx, :, :] = x_sequence
-        target_snippet_indxs = [end_indx+(snip_n-1)*n for n in range(pred_horizon)]
-        cond_snippet_indxs = [(end_indx-(snip_n-1))+(snip_n-1)*n for n in range(pred_horizon)]
+        target_snippet_indxs = [end_indx+(snip_n)*n for n in range(pred_horizon)]
+        cond_snippet_indxs = [(end_indx-(snip_n))+(snip_n)*n for n in range(pred_horizon)]
 
         if max(target_snippet_indxs) < traj_len:
             targs[end_indx, :, :] = coefs[target_snippet_indxs, :]
@@ -157,14 +157,30 @@ model.summary()
 """
 Model evaluation
 """
+def get_spline(prev_coeffs, next_coeff):
+    """Given parameters of previous spline and predicted next_coeff parameter, it returns
+        full next_coeff params
+    """
+    x_eval = 10
+    prev_snip = np.poly1d(prev_coeffs)
+    p_dydx = np.poly1d(np.polyder(prev_snip, 1))(x_eval)
+    p_d2ydx2 = np.poly1d(np.polyder(prev_snip, 2))(x_eval)
+
+    coeffs = np.zeros(4)
+
+    coeffs[0] = next_coeff
+    coeffs[1] = p_d2ydx2/2
+    coeffs[2] = p_dydx
+    coeffs[3] = prev_snip(x_eval)
+
+    return coeffs
+
+
 sample = 73
 state = states_val[sample]
 state.shape = (1, 10, 1)
 
 cond = conds_val[sample][:, :][0]
-cond.shape = (1,1,4)
-# trial.shape = (1, 10)
-
 states_value = enc_model.predict(state)
 dec_seq = []
 seq_len = 20
@@ -195,30 +211,12 @@ plt.scatter(range(20), dec_seq[:,0])
 plt.grid()
 
 # %%
-def get_spline(prev_coeffs, next_coeff):
-    """Given parameters of previous spline and predicted next_coeff parameter, it returns
-        full next_coeff params
-    """
-    x_eval = 9
-    prev_snip = np.poly1d(prev_coeffs)
-    p_dydx = np.poly1d(np.polyder(prev_snip, 1))(x_eval)
-    p_d2ydx2 = np.poly1d(np.polyder(prev_snip, 2))(x_eval)
-
-    coeffs = np.zeros(4)
-
-    coeffs[0] = next_coeff
-    coeffs[1] = p_d2ydx2/2
-    coeffs[2] = p_dydx
-    coeffs[3] = prev_snip(x_eval)
-
-    return coeffs
-
-
 targs_val[sample][0]
-x= np.arange(0, 10, 1)
-pointer = 9
+x= np.arange(0, 11, 1)
+pointer = 10
 plt.plot(np.poly1d(conds_val[sample][0])(x), color='grey', linestyle='--')
-for step in range(20):
+for step in range(10):
+
 
     # if step == 0:
 
@@ -228,42 +226,13 @@ for step in range(20):
     weights =  dec_seq[step]
 
     # plt.plot(range(pointer, pointer+10), np.poly1d(targs_val[sample][step])(x), color='grey', linestyle='--')
-    plt.plot(range(pointer, pointer+10), np.poly1d(weights)(x))
-    pointer += 9
+    plt.plot(range(pointer, pointer+11), np.poly1d(weights)(x))
+    pointer += 10
 plt.grid()
 
 
 # %%
-
-
-    plt.plot(range(18, 28), np.poly1d(targs_val[sample][1])(x), color='grey', linestyle='--')
-
-    plt.plot(np.poly1d(conds_val[sample][0]))(x)
-
-
-plt.plot(cubic_spline(x, weights1))
-plt.plot(range(9,19), cubic_spline(x, weights2))
-plt.plot(cubic_spline(x, targs_val[sample][0]), color='red', linestyle='--')
-plt.plot(range(9,19),cubic_spline(x, targs_val[sample][1]), color='grey', linestyle='--')
-
-plt.legend(['pred', 'truth'])
-plt.grid()
-# %%
-
-for sample in range (50,70):
-    plt.figure()
-    trial = xs_val[sample]
-    trial.shape = (1, 10)
-
-    # weights = [0.0033]
-    weights = list(model(trial).numpy()[0]/1000)
-    weights.extend(cofs_val[sample][1:].tolist())
-
-    x= np.arange(0, 10, 1)
-    plt.plot(cubic_spline(x, weights))
-    plt.plot(cubic_spline(x, cofs_val[sample]))
-
-    plt.legend(['pred', 'truth'])
-    plt.grid()
-
+a = np.array(5)
+a = [a for n in range(5)]
+a
 # %%
