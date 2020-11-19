@@ -15,8 +15,6 @@ import time
 """
 Generate data.
 """
-x_len = 10
-y_len = 10
 time_axis = np.arange(0, 500, 0.1)
 scale=0.1
 sin = np.sin(time_axis)
@@ -29,20 +27,17 @@ train, test = df.iloc[0:train_size], df.iloc[train_size:len(df)]
 def cubic_spline(x, w):
     return w[0]*x**3 + w[1]*x**2 + w[2]*x + w[3]
 
-def obsSequence(full_traj, x_len, y_len):
+def obsSequence(full_traj, obs_n):
     traj_len = len(full_traj)
     snip_n = 10
-    pred_horizon = 10 # number of snippets
+    pred_h = 5 # number of snippets
 
-    states = np.empty([traj_len, x_len, 1])
-    targs = np.empty([traj_len, pred_horizon, 4])
-    conds = np.empty([traj_len, pred_horizon, 4])
-    coefs = np.empty([traj_len, 4])
-    states[:] = np.nan
-    targs[:] = np.nan
+    states = []
+    targs = []
+    conds = []
+    coefs = np.empty([traj_len-snip_n, 4])
     coefs[:] = np.nan
-    conds[:] = np.nan
-    # create traj_snippets
+
     for i in range(snip_n):
         indx = []
         indx.extend(np.arange(i, traj_len, snip_n))
@@ -50,36 +45,35 @@ def obsSequence(full_traj, x_len, y_len):
         f = CubicSpline(indx, traj_snippets)
         coefs[indx[:-1], :] = np.stack(f.c, axis=2)[:,0,:] # number of splines = knots_n - 1
 
-    for i in range(0, traj_len):
-        x_sequence = full_traj[i:(i + x_len)]
-        end_indx = i + x_len - 1
-        states[end_indx, :, :] = x_sequence
-        target_snippet_indxs = [end_indx+(snip_n)*n for n in range(pred_horizon)]
-        cond_snippet_indxs = [(end_indx-(snip_n))+(snip_n)*n for n in range(pred_horizon)]
+    coefs = coefs.tolist()
+    for i in range(traj_len):
+        end_indx = i + obs_n - 1
+        targ_indx = [end_indx+(snip_n)*n for n in range(pred_h)]
+        targ_indx = [num for num in targ_indx if num < len(coefs)]
 
-        if max(target_snippet_indxs) < traj_len:
-            targs[end_indx, :, :] = coefs[target_snippet_indxs, :]
-            conds[end_indx, :, :] = coefs[cond_snippet_indxs, :]
-            # TODO make it varied sequence length
-        else:
+        if len(targ_indx) == pred_h:
+            cond_indx = [end_indx-snip_n]
+            cond_indx.extend(targ_indx[:-1])
+            targs.append([coefs[num] for num in targ_indx])
+            conds.append([coefs[num] for num in cond_indx])
+            states.append(full_traj[i:(i + obs_n), :].tolist())
+        elif not targ_indx:
             break
 
-    s_indx = np.argwhere(~np.isnan(states[:,:,0]).any(axis=1))
-    t_indx = np.argwhere(~np.isnan(targs[:,:,0]).any(axis=1))
-    c_indx = np.argwhere(~np.isnan(conds[:,:,0]).any(axis=1))
-    indx = np.intersect1d(s_indx, t_indx, assume_unique=False)
-    indx = np.intersect1d(indx, c_indx, assume_unique=False)
-    return states[indx], targs[indx], conds[indx]
+    return np.array(states), np.array(targs), np.array(conds)
 
 
-states_val, targs_val, conds_val = obsSequence(test.values, x_len, y_len)
-states_train, targs_train, conds_train = obsSequence(train.values, x_len, y_len)
+states_val, targs_val, conds_val = obsSequence(test.values, 10)
+states_train, targs_train, conds_train = obsSequence(train.values, 10)
+
 states_train.shape
-targs_train.shape
-conds_train.shape
+
 # %%
+
+# %%
+states_train[0]
 conds_train[0]
-conds_train[0]*np.array([0, 0, 0, 0])
+targs_train[0]
 
 # %%
 
@@ -87,18 +81,12 @@ conds_train[0]*np.array([0, 0, 0, 0])
 # %%
 x
 pointer = 10
-ts = targs_train
-cs = conds_train
+ts = targs_val
+cs = conds_val
 plt.plot(np.poly1d(cs[1][0])(x), color='grey')
 for step in range(0, 5):
-
-    # if step == 0:
-
-    #     weights = get_spline(conds_val[sample][0], dec_seq[step])
-    # else:
-    #     weights = get_spline(weights, dec_seq[step])
     weights = ts[1][step]
-    # plt.plot(range(pointer, pointer+10), np.poly1d(targs_val[sample][step])(x), color='grey', linestyle='--')
+
     if step%2 == 0:
         plt.plot(range(pointer, pointer+11), np.poly1d(weights)(x), color='red', linestyle='--')
     else:
@@ -131,12 +119,12 @@ model.compile(
     optimizer=keras.optimizers.Adam(1e-3),
     loss='MeanSquaredError'
 )
-history = model.fit([states_train, conds_train[:, :, :]*np.array([0, 0, 0, 0])],
+history = model.fit([states_train, conds_train[:, :, :]*np.array([10000, 100, 10, 1])],
     targs_train[:, :, 0:1]*10000,
     batch_size=100,
     epochs=20,
     shuffle=False,
-    validation_data=([states_val, conds_val[:, :, :]*np.array([0, 0, 0, 0])],
+    validation_data=([states_val, conds_val[:, :, :]*np.array([10000, 100, 10, 1])],
     targs_val[:, :, 0:1]*10000),
     verbose=1)
 
@@ -203,31 +191,27 @@ state.shape = (1, 10, 1)
 cond = conds_val[sample][:, :][0]
 states_value = enc_model.predict(state)
 dec_seq = []
-seq_len = 40
+seq_len = 20
 for i in range(seq_len):
     cond.shape = (1,1,4)
-    # cond = cond*np.array([0, 0, 0, 0])
+    cond = cond*np.array([10000, 100, 10, 1])
     # cond *= np.array([[[1,0,0,0]]])
-    output_, h, c = dec_model.predict([cond*np.array([0, 0, 0, 0])] + states_value)
+    output_, h, c = dec_model.predict([cond] + states_value)
     states_value = [h, c]
     cond.shape = (4)
     # cond = get_spline(cond, output_[0][0])
     output_.shape = 1
-    # cond = get_spline(cond*np.array([1/10000, 1/100, 1/10, 1]), output_/10000)
-    cond = get_spline(cond, output_/10000)
+    cond = get_spline(cond*np.array([1/10000, 1/100, 1/10, 1]), output_/10000)
+    # cond = get_spline(cond, output_/10000)
     dec_seq.append(cond.copy())
 
-a = []
-b = 1
-a.append(b)
-b += 2
-a
+
 dec_seq = np.array(dec_seq)
 dec_seq
 # dec_seq.shape = 20
 # plt.plot(dec_seq)
 # %%
-plt.plot(range(20), dec_seq[:,-1])
+plt.plot(range(20), dec_seq[:,0])
 plt.scatter(range(20), dec_seq[:,0])
 plt.grid()
 
@@ -235,24 +219,11 @@ plt.grid()
 x= np.arange(0, 11, 1)
 pointer = 10
 plt.plot(np.poly1d(conds_val[sample][0])(x), color='grey', linestyle='--')
-for step in range(30):
-
-
-    # if step == 0:
-
-    #     weights = get_spline(conds_val[sample][0], dec_seq[step])
-    # else:
-    #     weights = get_spline(weights, dec_seq[step])
+for step in range(10):
     weights =  dec_seq[step]
 
-    # plt.plot(range(pointer, pointer+10), np.poly1d(targs_val[sample][step])(x), color='grey', linestyle='--')
     plt.plot(range(pointer, pointer+11), np.poly1d(weights)(x))
     pointer += 10
 plt.grid()
 
-
-# %%
-a = np.array(5)
-a = [a for n in range(5)]
-a
-# %%
+ 

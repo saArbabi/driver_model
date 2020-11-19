@@ -10,17 +10,15 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 import os
 import pickle
+from scipy.interpolate import CubicSpline
 import dill
-import tensorflow as tf
-
 # %%
 def read_data():
-    global all_state_arr, all_target_arr, all_condition_arr
+    global all_state_arr, all_target_arr
     global training_episodes, validation_episodes, test_episodes
 
     all_state_arr = np.loadtxt('./datasets/states_arr.csv', delimiter=',')
     all_target_arr = np.loadtxt('./datasets/targets_arr.csv', delimiter=',')
-    all_condition_arr = np.loadtxt('./datasets/conditions_arr.csv', delimiter=',')
 
     training_episodes = np.loadtxt('./datasets/training_episodes.csv', delimiter=',')
     validation_episodes = np.loadtxt('./datasets/validation_episodes.csv', delimiter=',')
@@ -34,140 +32,125 @@ class DataPrep():
 
     def __init__(self, config, dirName):
         self.config = config['data_config']
-        self.obsSequence_n = self.config["obsSequence_n"]
-        self.step_size = self.config["step_size"]
-        self.pred_horizon = self.config["pred_horizon"]
+        self.obs_n = self.config["obs_n"]
+        self.pred_h = self.config["pred_h"]
         self.setScalers() # will set the scaler attributes
         self.dirName = dirName
         os.mkdir(dirName)
 
-    def obsSequence(self, state_arr, target_arr, condition_arr):
-        i_reset = 0
-        i = 0
-        for chunks in range(self.step_size):
-            prev_states = deque(maxlen=self.obsSequence_n)
-            while i < (len(state_arr)-2):
-                # 2 is minimum prediction horizon
-                prev_states.append(state_arr[i])
-                if len(prev_states) == self.obsSequence_n:
-                    state_seq = np.array(prev_states)
-                    target_seq = target_arr[i:i+self.pred_horizon]
-                    condition_seq = condition_arr[i:i+self.pred_horizon]
-                    seq_len = len(target_seq)
+    def obsSequence(self, state_arr, target_arr):
+        actions = [target_arr[:, n] for n in range(5)]
+        traj_len = len(state_arr)
+        snip_n = 5
+        if len(state_arr) > 20:
 
-                    if seq_len not in self.states:
-                        self.states[seq_len] = [state_seq]
-                        self.targets[seq_len] = [target_seq]
-                        self.conditions[seq_len] = [condition_seq]
+            for n in range(5):
+                coefs = np.empty([traj_len-snip_n, 4]) # number of splines = knots_n - 1
+                coefs[:] = np.nan
 
+                for i in range(snip_n):
+                    indx = []
+                    indx.extend(np.arange(i, traj_len, snip_n))
+                    traj_snippets = actions[n][indx]
+                    f = CubicSpline(indx, traj_snippets)
+                    coefs[indx[:-1], :] = np.stack(f.c, axis=1)[:,:] # number of splines = knots_n - 1
+
+                coefs = coefs.tolist()
+                for i in range(traj_len):
+                    end_indx = i + self.obs_n - 1
+                    targ_indx = [end_indx+(snip_n)*n for n in range(self.pred_h)]
+                    targ_indx = [num for num in targ_indx if num < len(coefs)]
+
+                    if targ_indx:
+                        cond_indx = [end_indx-snip_n]
+                        cond_indx.extend(targ_indx[:-1])
+                        seq_len = len(targ_indx)
+                        if seq_len in self.targs[n]:
+                            self.targs[n][seq_len].append([coefs[num] for num in targ_indx])
+                            self.conds[n][seq_len].append([coefs[num] for num in cond_indx])
+                        else:
+                            self.targs[n][seq_len] = [[coefs[num] for num in targ_indx]]
+                            self.conds[n][seq_len] = [[coefs[num] for num in cond_indx]]
+
+                        if n == 0:
+                            if seq_len in self.states:
+                                self.states[seq_len].append(state_arr[i:(i + self.obs_n), :].tolist())
+                            else:
+                                self.states[seq_len] = [state_arr[i:(i + self.obs_n), :].tolist()]
                     else:
-                        self.states[seq_len].append(state_seq)
-                        self.targets[seq_len].append(target_seq)
-                        self.conditions[seq_len].append(condition_seq)
-
-                i += self.step_size
-            i_reset += 1
-            i = i_reset
-
-    def mask_history(self, v_x_arr):
-        pass
-        # if self.config['seqask_prob'] != 0:
-        #     if random.random() > probability:
-        #         return n
-        #     else:
-        #         return round(np.random.uniform(low=-1, high=1),2)
-        #     dropout_percentage = self.config['mask_history']['percentage']
-        #     if  dropout_percentage != 0:
-        #         target_name = self.config['mask_history']['vehicle']
-        #         if target_name == 'mveh':
-        #             index = mveh.sample(int(len(mveh)*dropout_percentage)).index
-        #             mveh.loc[:, index, mveh.columns != 'lc_type']=0
-        #
-        #         self.scalar_indx[state_key+'veh'] = i
-        # else:
-        #     return v_x_arr
+                        break
 
     def get_episode_arr(self, episode_id):
         state_arr = all_state_arr[all_state_arr[:, 0] == episode_id]
         target_arr = all_target_arr[all_target_arr[:, 0] == episode_id]
-        condition_arr = all_condition_arr[all_condition_arr[:, 0] == episode_id]
-        return state_arr[:, 1:], target_arr[:, 1:], condition_arr[:, 1:]
+        return state_arr[:, 1:], target_arr[:, 1:]
 
     def applystateScaler(self, _arr):
         _arr[:, :-4] = self.state_scaler.transform(_arr[:, :-4])
         return _arr
 
-    def applytargetScaler(self, _arr):
-        return self.target_scaler.transform(_arr)
-
-    def applyconditionScaler(self, _arr):
-        return self.condition_scaler.transform(_arr)
-
-    def apply_InvScaler(self, action_arr):
-        """
-        Note: only applies to target (i.e. action) values
-        """
-        return self.target_scaler.inverse_transform(action_arr)
-
     def setScalers(self):
         self.state_scaler = StandardScaler().fit(all_state_arr[:, 1:-4])
-        self.target_scaler = StandardScaler().fit(all_target_arr[:, 1:])
-        self.condition_scaler = StandardScaler().fit(all_condition_arr[:, 1:])
 
     def episode_prep(self, episode_id):
         """
         :Return: x, y arrays for model training.
         """
-        state_arr, target_arr, condition_arr = self.get_episode_arr(episode_id)
-
+        state_arr, target_arr = self.get_episode_arr(episode_id)
         state_arr = self.applystateScaler(state_arr)
-        target_arr = self.applytargetScaler(target_arr)
-        condition_arr = self.applyconditionScaler(condition_arr)
-        self.obsSequence(state_arr, target_arr, condition_arr)
-        # self.mask_history(x_df)
+        self.obsSequence(state_arr, target_arr)
 
-    def shuffle(self, dict_list):
-        dict_list_shuffled = []
-        for data_dict in dict_list:
-            for item in data_dict:
-                data_dict[item] = np.array(shuffle(data_dict[item], random_state=2020))
+    def shuffle(self, data_list):
+        for item in data_list:
+            data_list[item] = np.array(shuffle(data_list[item], random_state=2020))
+        return data_list
 
-            dict_list_shuffled.append(data_dict)
-
-        return dict_list_shuffled
+    def trim_scale_coefs(self, coefs):
+        """
+        Scale the spline coefficients
+        """
+        for item in coefs:
+            for c in range(4): #cubic polynomial
+                min, max = np.quantile(coefs[item][:,0,c], [0.005, 0.995])
+                coefs[item][:,:,c][coefs[item][:,:,c]<min]=min
+                coefs[item][:,:,c][coefs[item][:,:,c]>max]=max
+                coefs[item][:,:,c] = coefs[item][:,:,c]/max
+        return coefs
 
     def pickler(self, episode_type):
-        # self.states = np.array(self.states)
-        self.states, self.targets, self.conditions = self.shuffle([self.states,
-                                        self.targets, self.conditions])
+        self.states = self.shuffle(self.states)
+        self.targs = [self.shuffle(self.targs[n]) for n in range(5)]
+        self.conds = [self.shuffle(self.conds[n]) for n in range(5)]
+        self.targs = [self.trim_scale_coefs(self.targs[n]) for n in range(5)]
+        self.conds = [self.trim_scale_coefs(self.conds[n]) for n in range(5)]
 
         if episode_type == 'validation_episodes':
             with open(self.dirName+'/states_val', "wb") as f:
                 pickle.dump(self.states, f)
 
             with open(self.dirName+'/targets_val', "wb") as f:
-                pickle.dump(self.targets, f)
+                pickle.dump(self.targs, f)
 
             with open(self.dirName+'/conditions_val', "wb") as f:
-                pickle.dump(self.conditions, f)
+                pickle.dump(self.conds, f)
 
             delattr(self, 'states')
-            delattr(self, 'targets')
-            delattr(self, 'conditions')
+            delattr(self, 'targs')
+            delattr(self, 'conds')
 
         elif episode_type == 'training_episodes':
             with open(self.dirName+'/states_train', "wb") as f:
                 pickle.dump(self.states, f)
 
             with open(self.dirName+'/targets_train', "wb") as f:
-                pickle.dump(self.targets, f)
+                pickle.dump(self.targs, f)
 
             with open(self.dirName+'/conditions_train', "wb") as f:
-                pickle.dump(self.conditions, f)
+                pickle.dump(self.conds, f)
 
             delattr(self, 'states')
-            delattr(self, 'targets')
-            delattr(self, 'conditions')
+            delattr(self, 'targs')
+            delattr(self, 'conds')
 
             # also you want to save validation arr for later use
             with open(self.dirName+'/data_obj', "wb") as f:
@@ -181,16 +164,12 @@ class DataPrep():
                 _arr = all_target_arr[np.isin(all_target_arr[:, 0], test_episodes)]
                 pickle.dump(_arr, f)
 
-            with open(self.dirName+'/conditions_test', "wb") as f:
-                _arr = all_condition_arr[np.isin(all_condition_arr[:, 0], test_episodes)]
-                pickle.dump(_arr, f)
-
     def data_prep(self, episode_type=None):
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
         self.states = {}
-        self.targets = {}
-        self.conditions = {}
+        self.targs = [{}, {}, {}, {}, {}] # for dict for each vehicle aciton
+        self.conds = [{}, {}, {}, {}, {}]
 
         if episode_type == 'training_episodes':
             for episode_id in training_episodes:

@@ -1,11 +1,8 @@
 from models.core.preprocessing import data_prep
 from models.core.preprocessing import data_obj
 import numpy as np
-import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
-
 from importlib import reload
 reload(data_prep)
 reload(data_obj)
@@ -20,10 +17,9 @@ config = {
      "epochs_n": 50,
      "components_n": 5
 },
-"data_config": {"step_size": 1,
-                "obsSequence_n": 20,
-                "pred_horizon": 20,
-                "Note": ""
+"data_config": {"obs_n": 20,
+                "pred_h": 4,
+                "Note": "Splines"
 },
 "exp_id": "NA",
 "Note": "NA"
@@ -32,31 +28,17 @@ data_objs =  DataObj(config).loadData()
 states_train, targets_train, conditions_train, \
                             states_val, targets_val, conditions_val = data_objs
 
-len(states_train[3][0][0])
-states_train[16].shape
-conditions_train[16].shape
-targets_train[45].shape
-states_train[16].shape
 
-states_train[16][0]
 size = 0
-for i in targets_train.keys():
+for i in states_train.keys():
     size += states_train[i].shape[0]
 size
 # %%
-states_train[16][0][-1]
-targets_train[16][0][0]
-conditions_train[16][0][0]
+for i in range(0, 4):
+    plt.figure()
+    plt.hist(targets_train[0][3][:,1,i], bins=125)
 
 
-
-states_train[5][-1]
-targets_train[5][0]
-conditions_train[5][0]
-
-conditions_train.shape
-targets_train.shape
-states_train.shape
 # %%
 """Distribution vis with sequence data
 """
@@ -65,7 +47,7 @@ def vis_dataDistribution(x):
         fig = plt.figure()
         plt.hist(x[:100000,:100000,i], bins=125)
 
-vis_dataDistribution(states_train)
+vis_dataDistribution(targets_train)
 
 # %%
 """Distribution vis for sinlge step data
