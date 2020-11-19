@@ -15,17 +15,7 @@ import time
 exp_trains = {}
 exp_vals = {}
 durations = {}
-# %%
-def teacher_check(true, sample):
-    allowed_error = [1,0.8]
-    error = tf.math.abs(tf.math.subtract(sample, true))
-    less = tf.cast(tf.math.less(error, allowed_error), dtype='float')
-    greater = tf.cast(tf.math.greater_equal(error, allowed_error), dtype='float')
-    return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
 
-true = tf.constant([[3,1.2],[2.7,0.2]])
-sample = tf.constant([[2,-1.2],[2.9,1]])
-teacher_check(true, sample)
 # %%
 """
 Use this script for debugging the following:
@@ -33,11 +23,11 @@ Use this script for debugging the following:
 
 Particularly ensure:
 [] Distribution shapes are reasonable.
-    See range(3, config['data_config']['pred_horizon'])('Distribution description: ',str(mvn))
-    see range(3, config['data_config']['pred_horizon'])('covariance shape: ', cov.shape)
-    see range(3, config['data_config']['pred_horizon'])('mu shape: ', mu.shape)
+    See range(3, config['data_config']['pred_h'])('Distribution description: ',str(mvn))
+    see range(3, config['data_config']['pred_h'])('covariance shape: ', cov.shape)
+    see range(3, config['data_config']['pred_h'])('mu shape: ', mu.shape)
 [] Shape of log_likelihood is reasonable
-    See range(3, config['data_config']['pred_horizon'])('log_likelihood shape: ', log_likelihood.shape)
+    See range(3, config['data_config']['pred_h'])('log_likelihood shape: ', log_likelihood.shape)
 
 See:
 https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distributions_Shapes
@@ -119,11 +109,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp002')
-# del exp_trains['exp003']
-# del exp_vals['exp001']
-# del exp_trains['exp001']
-
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
 
 legend = [
         'max_error: 0.1',
@@ -131,18 +117,12 @@ legend = [
         # 'multi-head 200unit - ts[both]',
         ]
 
-# legend = [
-#         'context[rnn]',
-#         'context[rnn+linear]',
-#         # 'multi-head 200unit - ts[both]',
-
-#         ]
 
 # %%
 for item in exp_vals:
 # for item in ['exp005', 'exp003']:
     plt.plot(exp_vals[item])
-    # plt.plot(exp_trains[item], '_')
+    plt.plot(exp_trains[item], '--')
 
 plt.grid()
 plt.xticks(np.arange(10))
@@ -200,7 +180,7 @@ def decode_sequence(state_obs, condition, step_n):
         for i in range(20):
 
             param_vec = dec_model([conditioning , states_value])
-            # range(3, config['data_config']['pred_horizon'])(output_.stddev())
+            # range(3, config['data_config']['pred_h'])(output_.stddev())
             output_ = utils.get_pdf_samples(samples_n=1, param_vec=param_vec, model_type='merge_policy')
             output_ = tf.reshape(output_, [2])
             decoded_seq.append(output_)

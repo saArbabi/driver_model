@@ -32,12 +32,11 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__(name="Decoder")
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
-        self.pred_horizon = config['data_config']['pred_horizon']
+        self.pred_h = config['data_config']['pred_h']
         self.allowed_error = config['model_config']['allowed_error']
-        self.steps_n = None # note self.steps_n =< self.pred_horizon
+        self.steps_n = None # note self.steps_n =< self.pred_h
         self.model_use = model_use # can be training or inference
         self.architecture_def()
-        self.create_tf_time_stamp(self.pred_horizon)
 
     def architecture_def(self):
         self.pvector = Concatenate(name="output") # parameter vector
@@ -67,13 +66,6 @@ class Decoder(tf.keras.Model):
         self.alphas_fadj = Dense(self.components_n, activation=K.softmax, name="alphas")
         self.mus_long_fadj = Dense(self.components_n, name="mus_long")
         self.sigmas_long_fadj = Dense(self.components_n, activation=K.exp, name="sigmas_long")
-
-    def create_tf_time_stamp(self, pred_horizon):
-        ts = np.zeros([1, pred_horizon, pred_horizon])
-        for i in range(pred_horizon):
-            ts[0, i, :i+1] = 1
-
-        self.time_stamp = tf.constant(ts, dtype='float32')
 
     def concat_param_vecs(self, step_param_vec, veh_param_vec, step):
         """Use for concatinating gmm parameters across time-steps
@@ -107,8 +99,8 @@ class Decoder(tf.keras.Model):
         state_h, state_c = inputs[1] # encoder cell state
 
         if self.model_use == 'training':
-            batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
-            steps_n = tf.shape(conditions)[1] # dynamiclaly assigned
+            batch_size = tf.shape(conditions[0])[0] # dynamiclaly assigned
+            steps_n = tf.shape(conditions[0])[1] # dynamiclaly assigned
 
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
@@ -123,12 +115,13 @@ class Decoder(tf.keras.Model):
         enc_h = tf.reshape(state_h, [batch_size, 1, self.dec_units]) # encoder hidden state
 
         # first step conditional
-        act_m = tf.slice(conditions, [0,  0, 0], [batch_size, 1, 2])
-        act_y = tf.slice(conditions, [0,  0, 2], [batch_size, 1, 1])
-        act_ffadj = tf.slice(conditions, [0,  0, 3], [batch_size, 1, 2])
-        step_cond_m = self.axis2_conc([act_m, act_y, act_ffadj])
-        step_cond_y = self.axis2_conc([act_m, act_y, act_ffadj])
-        step_cond_ffadj = act_ffadj
+        coeff_m = tf.slice(conditions[0], [0,  0, 0], [batch_size, 1, 8])
+        coeff_y = tf.slice(conditions[1], [0,  0, 0], [batch_size, 1, 4])
+        coeff_f = tf.slice(conditions[2], [0,  0, 0], [batch_size, 1, 4])
+        coeff_fadj = tf.slice(conditions[3], [0,  0, 0], [batch_size, 1, 4])
+        step_cond_m = self.axis2_conc([coeff_m, coeff_y, coeff_f, coeff_fadj])
+        step_cond_y = step_cond_m
+        step_cond_ffadj = self.axis2_conc([coeff_f, coeff_fadj])
 
         # first step's LSTM cell and hidden state
         state_h_m = state_h
@@ -147,9 +140,9 @@ class Decoder(tf.keras.Model):
                         (param_y, tf.TensorShape([None,None,None])),
                         (param_f, tf.TensorShape([None,None,None])),
                         (param_fadj, tf.TensorShape([None,None,None])),
-                        (step_cond_m, tf.TensorShape([None,None,5])),
-                        (step_cond_y, tf.TensorShape([None,None,5])),
-                        (step_cond_ffadj, tf.TensorShape([None,None,2])),
+                        (step_cond_m, tf.TensorShape([None,None,20])),
+                        (step_cond_y, tf.TensorShape([None,None,20])),
+                        (step_cond_ffadj, tf.TensorShape([None,None,8])),
                         ])
 
             """Merger vehicle
@@ -205,19 +198,14 @@ class Decoder(tf.keras.Model):
             if step < steps_n-1:
                 if self.model_use == 'training':
                     ################################
-                    act_m = tf.slice(conditions, [0, step+1, 0], [batch_size, 1, 2])
-                    act_y = tf.slice(conditions, [0, step+1, 2], [batch_size, 1, 1])
-                    act_f = tf.slice(conditions, [0, step+1, 3], [batch_size, 1, 1])
-                    act_fadj = tf.slice(conditions, [0, step+1, 4], [batch_size, 1, 1])
+                    coeff_m = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 8])
+                    coeff_y = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 4])
+                    coeff_f = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 4])
+                    coeff_fadj = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 4])
 
-                    act_m_checked = self.teacher_check(act_m, sample_m, 'merge_vehicle')
-                    act_y_checked = self.teacher_check(act_y, sample_y, 'other_vehicle')
-                    act_f_checked = self.teacher_check(act_f, sample_f, 'other_vehicle')
-                    act_fadj_checked = self.teacher_check(act_fadj, sample_fadj, 'other_vehicle')
-
-                    step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
-                    step_cond_m = self.axis2_conc([act_m_checked, act_y, act_f, act_fadj])
-                    step_cond_y = self.axis2_conc([act_m, act_y_checked, act_f, act_fadj])
+                    step_cond_ffadj = self.axis2_conc([coeff_f, coeff_fadj])
+                    step_cond_m = self.axis2_conc([coeff_m, coeff_y, coeff_f, coeff_fadj])
+                    step_cond_y = step_cond_m
 
                 elif self.model_use == 'inference':
                     step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])
