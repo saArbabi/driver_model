@@ -54,10 +54,9 @@ config = {
      "allowed_error":  [0.1, 0.1],
     "batch_size": 1024
 },
-"data_config": {"step_size": 1,
-                "obsSequence_n": 20,
-                "pred_horizon": 50,
-                "Note": ""
+"data_config": {"obs_n": 20,
+                "pred_h": 4,
+                "Note": "Splines"
 },
 "exp_id": "NA",
 "Note": "NA"

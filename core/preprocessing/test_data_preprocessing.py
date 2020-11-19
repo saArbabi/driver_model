@@ -8,7 +8,6 @@ reload(data_prep)
 reload(data_obj)
 DataPrep = data_prep.DataPrep
 DataObj = data_obj.DataObj
-
 config = {
  "model_config": {
      "learning_rate": 1e-3,
@@ -19,7 +18,7 @@ config = {
 },
 "data_config": {"obs_n": 20,
                 "pred_h": 4,
-                "Note": "Splines"
+                "Note": "Splines////////////////////////"
 },
 "exp_id": "NA",
 "Note": "NA"
@@ -28,15 +27,18 @@ data_objs =  DataObj(config).loadData()
 states_train, targets_train, conditions_train, \
                             states_val, targets_val, conditions_val = data_objs
 
-
 size = 0
 for i in states_train.keys():
     size += states_train[i].shape[0]
 size
 # %%
+
+conditions_train[3][0][0]
+
+# %%
 for i in range(0, 4):
     plt.figure()
-    plt.hist(targets_train[0][3][:,1,i], bins=125)
+    plt.hist(conditions_train[4][0][:,1,i], bins=125)
 
 
 # %%

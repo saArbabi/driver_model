@@ -36,6 +36,7 @@ class DataPrep():
         self.pred_h = self.config["pred_h"]
         self.setScalers() # will set the scaler attributes
         self.dirName = dirName
+        self.coef_scaler = {}
         os.mkdir(dirName)
 
     def obsSequence(self, state_arr, target_arr):
@@ -62,21 +63,20 @@ class DataPrep():
                     targ_indx = [num for num in targ_indx if num < len(coefs)]
 
                     if targ_indx:
+                        seq_len = len(targ_indx)
+                        if seq_len not in self.targs:
+                            self.targs[seq_len] = [[],[],[],[],[]]
+                            self.conds[seq_len] = [[],[],[],[],[]]
+
                         cond_indx = [end_indx-snip_n]
                         cond_indx.extend(targ_indx[:-1])
-                        seq_len = len(targ_indx)
-                        if seq_len in self.targs[n]:
-                            self.targs[n][seq_len].append([coefs[num] for num in targ_indx])
-                            self.conds[n][seq_len].append([coefs[num] for num in cond_indx])
-                        else:
-                            self.targs[n][seq_len] = [[coefs[num] for num in targ_indx]]
-                            self.conds[n][seq_len] = [[coefs[num] for num in cond_indx]]
+                        self.targs[seq_len][n].append([coefs[num][0:1] for num in targ_indx])
+                        self.conds[seq_len][n].append([coefs[num] for num in cond_indx])
 
                         if n == 0:
-                            if seq_len in self.states:
-                                self.states[seq_len].append(state_arr[i:(i + self.obs_n), :].tolist())
-                            else:
+                            if seq_len not in self.states:
                                 self.states[seq_len] = [state_arr[i:(i + self.obs_n), :].tolist()]
+                            self.states[seq_len].append(state_arr[i:(i + self.obs_n), :].tolist())
                     else:
                         break
 
@@ -92,6 +92,27 @@ class DataPrep():
     def setScalers(self):
         self.state_scaler = StandardScaler().fit(all_state_arr[:, 1:-4])
 
+    def setCoefScalers(self, coefs):
+        for n in range(2):
+            scaler = []
+            for c in range(4):
+                min, max = np.quantile(coefs[4][n][:,0,c], [0.005, 0.995])
+                scaler.append([min, max])
+            if n == 0:
+                self.coef_scaler['long'] = scaler
+            else:
+                self.coef_scaler['lat'] = scaler
+
+    def concat_lat_long_action(self, data_dict):
+        data_dict=dict(data_dict)
+        for seq_n in range(1, 5):
+            new_coefs = []
+            coefs = data_dict[seq_n]
+            new_coefs.append(np.concatenate([coefs[0], coefs[1]], axis=2))
+            new_coefs.extend(coefs[2:])
+            data_dict[seq_n] = new_coefs
+        return data_dict
+
     def episode_prep(self, episode_id):
         """
         :Return: x, y arrays for model training.
@@ -100,29 +121,65 @@ class DataPrep():
         state_arr = self.applystateScaler(state_arr)
         self.obsSequence(state_arr, target_arr)
 
-    def shuffle(self, data_list):
-        for item in data_list:
-            data_list[item] = np.array(shuffle(data_list[item], random_state=2020))
-        return data_list
+    def shuffle(self, data_dict):
+        for seq_n in range(1, self.pred_h+1):
+            if len(data_dict[seq_n])>1:
+                # targets and conditionals
+                data_dict[seq_n] = [np.array(shuffle(data_dict[seq_n][n], \
+                                            random_state=2020)) for n in range(5)]
+            else:
+                # states
+                data_dict[seq_n] = np.array(shuffle(data_dict[seq_n], random_state=2020))
+        return data_dict
 
-    def trim_scale_coefs(self, coefs):
-        """
-        Scale the spline coefficients
-        """
-        for item in coefs:
-            for c in range(4): #cubic polynomial
-                min, max = np.quantile(coefs[item][:,0,c], [0.005, 0.995])
-                coefs[item][:,:,c][coefs[item][:,:,c]<min]=min
-                coefs[item][:,:,c][coefs[item][:,:,c]>max]=max
-                coefs[item][:,:,c] = coefs[item][:,:,c]/max
-        return coefs
+    def trim_scale_coefs(self, data_dict):
+
+        for seq_n in range(1, self.pred_h+1):
+            coefs = data_dict[seq_n].copy()
+            if coefs[0].shape[-1]==4:
+                for n in range(5):
+                    # 5 actions
+                    for c in range(4):
+                        # 4 coefficients for cubic spline - conditionals
+                        if n == 1:
+                            min, max = self.coef_scaler['lat'][c]
+                        else:
+                            min, max = self.coef_scaler['long'][c]
+
+                        coefs[n][:,:,c][coefs[n][:,:,c]<min]=min
+                        coefs[n][:,:,c][coefs[n][:,:,c]>max]=max
+                        coefs[n][:,:,c] = coefs[n][:,:,c]/max
+            else:
+                for n in range(5):
+                    # - targets
+                    if n == 1:
+                        min, max = self.coef_scaler['lat'][0]
+                    else:
+                        min, max = self.coef_scaler['long'][0]
+
+                    coefs[n][:,:,0:1][coefs[n][:,:,0:1]<min]=min
+                    coefs[n][:,:,0:1][coefs[n][:,:,0:1]>max]=max
+                    coefs[n][:,:,0:1] = coefs[n][:,:,0:1]/max
+
+            data_dict[seq_n] = coefs
+        return data_dict
+
+    # def concat_lat_long_motion
 
     def pickler(self, episode_type):
+
         self.states = self.shuffle(self.states)
-        self.targs = [self.shuffle(self.targs[n]) for n in range(5)]
-        self.conds = [self.shuffle(self.conds[n]) for n in range(5)]
-        self.targs = [self.trim_scale_coefs(self.targs[n]) for n in range(5)]
-        self.conds = [self.trim_scale_coefs(self.conds[n]) for n in range(5)]
+        self.targs = self.shuffle(self.targs)
+        self.conds = self.shuffle(self.conds)
+
+        if not self.coef_scaler:
+            self.setCoefScalers(self.conds)
+
+        self.conds = self.trim_scale_coefs(self.conds)
+        self.targs = self.trim_scale_coefs(self.targs)
+        self.conds = self.concat_lat_long_action(self.conds)
+        self.targs = self.concat_lat_long_action(self.targs)
+
 
         if episode_type == 'validation_episodes':
             with open(self.dirName+'/states_val', "wb") as f:
@@ -168,8 +225,8 @@ class DataPrep():
         if not episode_type:
             raise ValueError("Choose training_episodes or validation_episodes")
         self.states = {}
-        self.targs = [{}, {}, {}, {}, {}] # for dict for each vehicle aciton
-        self.conds = [{}, {}, {}, {}, {}]
+        self.targs = {}
+        self.conds = {}
 
         if episode_type == 'training_episodes':
             for episode_id in training_episodes:
