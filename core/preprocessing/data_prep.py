@@ -46,21 +46,21 @@ class DataPrep():
         if len(state_arr) > 20:
 
             for n in range(5):
-                coefs = np.empty([traj_len-snip_n, 4]) # number of splines = knots_n - 1
-                coefs[:] = np.nan
+                coeffs = np.empty([traj_len-snip_n, 4]) # number of splines = knots_n - 1
+                coeffs[:] = np.nan
 
                 for i in range(snip_n):
                     indx = []
                     indx.extend(np.arange(i, traj_len, snip_n))
                     traj_snippets = actions[n][indx]
                     f = CubicSpline(indx, traj_snippets)
-                    coefs[indx[:-1], :] = np.stack(f.c, axis=1)[:,:] # number of splines = knots_n - 1
+                    coeffs[indx[:-1], :] = np.stack(f.c, axis=1)[:,:] # number of splines = knots_n - 1
 
-                coefs = coefs.tolist()
+                coeffs = coeffs.tolist()
                 for i in range(traj_len):
                     end_indx = i + self.obs_n - 1
                     targ_indx = [end_indx+(snip_n)*n for n in range(self.pred_h)]
-                    targ_indx = [num for num in targ_indx if num < len(coefs)]
+                    targ_indx = [num for num in targ_indx if num < len(coeffs)]
 
                     if targ_indx:
                         seq_len = len(targ_indx)
@@ -70,13 +70,14 @@ class DataPrep():
 
                         cond_indx = [end_indx-snip_n]
                         cond_indx.extend(targ_indx[:-1])
-                        self.targs[seq_len][n].append([coefs[num][0:1] for num in targ_indx])
-                        self.conds[seq_len][n].append([coefs[num] for num in cond_indx])
+                        self.targs[seq_len][n].append([coeffs[num][0:1] for num in targ_indx])
+                        self.conds[seq_len][n].append([coeffs[num] for num in cond_indx])
 
                         if n == 0:
                             if seq_len not in self.states:
                                 self.states[seq_len] = [state_arr[i:(i + self.obs_n), :].tolist()]
-                            self.states[seq_len].append(state_arr[i:(i + self.obs_n), :].tolist())
+                            else:
+                                self.states[seq_len].append(state_arr[i:(i + self.obs_n), :].tolist())
                     else:
                         break
 
@@ -92,11 +93,11 @@ class DataPrep():
     def setScalers(self):
         self.state_scaler = StandardScaler().fit(all_state_arr[:, 1:-4])
 
-    def setCoefScalers(self, coefs):
+    def setcoeffscalers(self, coeffs):
         for n in range(2):
             scaler = []
             for c in range(4):
-                min, max = np.quantile(coefs[4][n][:,0,c], [0.005, 0.995])
+                min, max = np.quantile(coeffs[4][n][:,0,c], [0.005, 0.995])
                 scaler.append([min, max])
             if n == 0:
                 self.coef_scaler['long'] = scaler
@@ -106,11 +107,11 @@ class DataPrep():
     def concat_lat_long_action(self, data_dict):
         data_dict=dict(data_dict)
         for seq_n in range(1, 5):
-            new_coefs = []
-            coefs = data_dict[seq_n]
-            new_coefs.append(np.concatenate([coefs[0], coefs[1]], axis=2))
-            new_coefs.extend(coefs[2:])
-            data_dict[seq_n] = new_coefs
+            new_coeffs = []
+            coeffs = data_dict[seq_n]
+            new_coeffs.append(np.concatenate([coeffs[0], coeffs[1]], axis=2))
+            new_coeffs.extend(coeffs[2:])
+            data_dict[seq_n] = new_coeffs
         return data_dict
 
     def episode_prep(self, episode_id):
@@ -121,22 +122,22 @@ class DataPrep():
         state_arr = self.applystateScaler(state_arr)
         self.obsSequence(state_arr, target_arr)
 
-    def shuffle(self, data_dict):
+    def shuffle(self, data_dict, type):
         for seq_n in range(1, self.pred_h+1):
-            if len(data_dict[seq_n])>1:
+            if type=='coeffs':
                 # targets and conditionals
                 data_dict[seq_n] = [np.array(shuffle(data_dict[seq_n][n], \
                                             random_state=2020)) for n in range(5)]
-            else:
+            elif type=='states':
                 # states
                 data_dict[seq_n] = np.array(shuffle(data_dict[seq_n], random_state=2020))
         return data_dict
 
-    def trim_scale_coefs(self, data_dict):
+    def trim_scale_coeffs(self, data_dict, type):
 
         for seq_n in range(1, self.pred_h+1):
-            coefs = data_dict[seq_n].copy()
-            if coefs[0].shape[-1]==4:
+            coeffs = data_dict[seq_n].copy()
+            if type=='conds':
                 for n in range(5):
                     # 5 actions
                     for c in range(4):
@@ -146,10 +147,11 @@ class DataPrep():
                         else:
                             min, max = self.coef_scaler['long'][c]
 
-                        coefs[n][:,:,c][coefs[n][:,:,c]<min]=min
-                        coefs[n][:,:,c][coefs[n][:,:,c]>max]=max
-                        coefs[n][:,:,c] = coefs[n][:,:,c]/max
-            else:
+                        coeffs[n][:,:,c][coeffs[n][:,:,c]<min]=min
+                        coeffs[n][:,:,c][coeffs[n][:,:,c]>max]=max
+                        coeffs[n][:,:,c] = coeffs[n][:,:,c]/max
+
+            elif type=='targs':
                 for n in range(5):
                     # - targets
                     if n == 1:
@@ -157,26 +159,26 @@ class DataPrep():
                     else:
                         min, max = self.coef_scaler['long'][0]
 
-                    coefs[n][:,:,0:1][coefs[n][:,:,0:1]<min]=min
-                    coefs[n][:,:,0:1][coefs[n][:,:,0:1]>max]=max
-                    coefs[n][:,:,0:1] = coefs[n][:,:,0:1]/max
+                    coeffs[n][:,:,0:1][coeffs[n][:,:,0:1]<min]=min
+                    coeffs[n][:,:,0:1][coeffs[n][:,:,0:1]>max]=max
+                    coeffs[n][:,:,0:1] = coeffs[n][:,:,0:1]/max
 
-            data_dict[seq_n] = coefs
+            data_dict[seq_n] = coeffs
         return data_dict
 
     # def concat_lat_long_motion
 
     def pickler(self, episode_type):
 
-        self.states = self.shuffle(self.states)
-        self.targs = self.shuffle(self.targs)
-        self.conds = self.shuffle(self.conds)
+        self.states = self.shuffle(self.states, 'states')
+        self.targs = self.shuffle(self.targs, 'coeffs')
+        self.conds = self.shuffle(self.conds, 'coeffs')
 
         if not self.coef_scaler:
-            self.setCoefScalers(self.conds)
+            self.setcoeffscalers(self.conds)
 
-        self.conds = self.trim_scale_coefs(self.conds)
-        self.targs = self.trim_scale_coefs(self.targs)
+        self.conds = self.trim_scale_coeffs(self.conds, 'conds')
+        self.targs = self.trim_scale_coeffs(self.targs, 'targs')
         self.conds = self.concat_lat_long_action(self.conds)
         self.targs = self.concat_lat_long_action(self.targs)
 

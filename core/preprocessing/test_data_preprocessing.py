@@ -18,7 +18,7 @@ config = {
 },
 "data_config": {"obs_n": 20,
                 "pred_h": 4,
-                "Note": "Splines////////////////////////"
+                "Note": "Splines"
 },
 "exp_id": "NA",
 "Note": "NA"
@@ -31,16 +31,16 @@ size = 0
 for i in states_train.keys():
     size += states_train[i].shape[0]
 size
-# %%
-
-conditions_train[3][0][0]
 
 # %%
 for i in range(0, 4):
     plt.figure()
     plt.hist(conditions_train[4][0][:,1,i], bins=125)
 
-
+# %%
+targets_train[4][0][20,:,:]
+conditions_train[4][2][20,:]
+ 
 # %%
 """Distribution vis with sequence data
 """
