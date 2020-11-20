@@ -182,7 +182,12 @@ def get_spline(prev_coeffs, next_coeff):
     coeffs[3] = prev_snip(x_eval)
 
     return coeffs
-
+# %%
+coefficients = [1.0, 2.5, -4.2]
+x = 5.0
+y = tf.math.polyval(coefficients, x)
+y
+# %%
 
 sample = 73
 state = states_val[sample]
@@ -210,6 +215,7 @@ dec_seq = np.array(dec_seq)
 dec_seq
 # dec_seq.shape = 20
 # plt.plot(dec_seq)
+np.zeros([2,0,2])
 # %%
 plt.plot(range(20), dec_seq[:,0])
 plt.scatter(range(20), dec_seq[:,0])
@@ -225,5 +231,3 @@ for step in range(10):
     plt.plot(range(pointer, pointer+11), np.poly1d(weights)(x))
     pointer += 10
 plt.grid()
-
- 

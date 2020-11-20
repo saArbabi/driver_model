@@ -31,7 +31,7 @@ size = 0
 for i in states_train.keys():
     size += states_train[i].shape[0]
 size
-
+np.ones([10,3,4])/[2,2,2,2]
 # %%
 for i in range(0, 4):
     plt.figure()
@@ -40,7 +40,7 @@ for i in range(0, 4):
 # %%
 targets_train[4][0][20,:,:]
 conditions_train[4][2][20,:]
- 
+
 # %%
 """Distribution vis with sequence data
 """

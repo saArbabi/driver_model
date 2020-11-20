@@ -109,7 +109,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
+durations, exp_t rains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
 
 legend = [
         'max_error: 0.1',

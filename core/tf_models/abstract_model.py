@@ -57,11 +57,12 @@ class AbstractModel(tf.keras.Model):
                                 data_objs[2][seq_len][0],
                                 data_objs[2][seq_len][1],
                                 data_objs[2][seq_len][2],
-                                data_objs[2][seq_len][3]]
+                                data_objs[2][seq_len][3],
+                                data_objs[2][seq_len][4]]
 
             train_ds = self.batch_data(train_seq_data)
-            for s, t0, t1, t2, t3, c0, c1, c2, c3 in train_ds:
-                self.train_step(s, [t0, t1, t2, t3], [c0, c1, c2, c3])
+            for s, t0, t1, t2, t3, c0, c1, c2, c3, c4 in train_ds:
+                self.train_step(s, [t0, t1, t2, t3], [c0, c1, c2, c3, c4])
 
     def test_loop(self, data_objs, epoch):
         for seq_len in range(1, self.pred_h+1):
@@ -73,12 +74,13 @@ class AbstractModel(tf.keras.Model):
                                 data_objs[2][seq_len][0],
                                 data_objs[2][seq_len][1],
                                 data_objs[2][seq_len][2],
-                                data_objs[2][seq_len][3]]
+                                data_objs[2][seq_len][3],
+                                data_objs[2][seq_len][4]]
 
             test_ds = self.batch_data(test_seq_data)
-            for s, t0, t1, t2, t3, c0, c1, c2, c3 in test_ds:
-                self.test_step(s, [t0, t1, t2, t3], [c0, c1, c2, c3])
-        self.save_epoch_metrics(s, [t0, t1, t2, t3], [c0, c1, c2, c3], epoch)
+            for s, t0, t1, t2, t3, c0, c1, c2, c3, c4 in test_ds:
+                self.test_step(s, [t0, t1, t2, t3], [c0, c1, c2, c3, c4])
+        self.save_epoch_metrics(s, [t0, t1, t2, t3], [c0, c1, c2, c3, c4], epoch)
 
     @tf.function(experimental_relax_shapes=True)
     def train_step(self, states, targets, conditions):

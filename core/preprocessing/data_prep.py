@@ -97,12 +97,12 @@ class DataPrep():
         for n in range(2):
             scaler = []
             for c in range(4):
-                min, max = np.quantile(coeffs[4][n][:,0,c], [0.005, 0.995])
-                scaler.append([min, max])
+                max = np.quantile(coeffs[4][n][:,0,c], 0.995)
+                scaler.append(max)
             if n == 0:
-                self.coef_scaler['long'] = scaler
+                self.coef_scaler['long'] = np.array(scaler)
             else:
-                self.coef_scaler['lat'] = scaler
+                self.coef_scaler['lat'] = np.array(scaler)
 
     def concat_lat_long_action(self, data_dict):
         data_dict=dict(data_dict)
@@ -140,26 +140,25 @@ class DataPrep():
             if type=='conds':
                 for n in range(5):
                     # 5 actions
-                    for c in range(4):
-                        # 4 coefficients for cubic spline - conditionals
-                        if n == 1:
-                            min, max = self.coef_scaler['lat'][c]
-                        else:
-                            min, max = self.coef_scaler['long'][c]
+                    if n == 1:
+                        max = self.coef_scaler['lat']
+                    else:
+                        max = self.coef_scaler['long']
 
-                        coeffs[n][:,:,c][coeffs[n][:,:,c]<min]=min
-                        coeffs[n][:,:,c][coeffs[n][:,:,c]>max]=max
-                        coeffs[n][:,:,c] = coeffs[n][:,:,c]/max
+                    for c in range(4):
+                        coeffs[n][:,:,c][coeffs[n][:,:,c]<-1*max[c]]=-1*max[c]
+                        coeffs[n][:,:,c][coeffs[n][:,:,c]>max[c]]=max[c]
+                        coeffs[n][:,:,c] = coeffs[n][:,:,c]/max[c]
 
             elif type=='targs':
                 for n in range(5):
                     # - targets
                     if n == 1:
-                        min, max = self.coef_scaler['lat'][0]
+                        max = self.coef_scaler['lat'][0]
                     else:
-                        min, max = self.coef_scaler['long'][0]
+                        max = self.coef_scaler['long'][0]
 
-                    coeffs[n][:,:,0:1][coeffs[n][:,:,0:1]<min]=min
+                    coeffs[n][:,:,0:1][coeffs[n][:,:,0:1]<-1*max]=-1*max
                     coeffs[n][:,:,0:1][coeffs[n][:,:,0:1]>max]=max
                     coeffs[n][:,:,0:1] = coeffs[n][:,:,0:1]/max
 
@@ -179,9 +178,7 @@ class DataPrep():
 
         self.conds = self.trim_scale_coeffs(self.conds, 'conds')
         self.targs = self.trim_scale_coeffs(self.targs, 'targs')
-        self.conds = self.concat_lat_long_action(self.conds)
         self.targs = self.concat_lat_long_action(self.targs)
-
 
         if episode_type == 'validation_episodes':
             with open(self.dirName+'/states_val', "wb") as f:
