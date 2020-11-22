@@ -1,16 +1,11 @@
-"""
-- Randomly sample episodes for validation and training
-- clip outliers/unrealistic feature values from the training set
-- Add some additional features which may be useful
-"""
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-m_col = ['episode_id', 'id', 'frm', 'vel', 'pc', 'lc_type', 'act_long_p',
-                                            'act_lat_p', 'act_long', 'act_lat']
+m_col = ['episode_id', 'id', 'frm', 'vel', 'pc', 'lc_type', 'act_long_z',
+                                            'act_lat_z', 'act_long', 'act_lat']
 
-o_col = ['episode_id','frm', 'exists', 'vel', 'dx', 'act_long_p', 'act_long']
+o_col = ['episode_id','frm', 'exists', 'vel', 'dx', 'act_long_z', 'act_long']
 spec_col = ['episode_id', 'scenario', 'lc_frm', 'm_id', 'y_id', 'fadj_id', 'f_id',
        'frm_n']
 
@@ -26,9 +21,6 @@ fadj_df = pd.read_csv('./datasets/fadj_df.txt', delimiter=' ',
 spec = pd.read_csv('./datasets/episode_spec.txt', delimiter=' ',
                                                         header=None, names=spec_col)
 
-# %%
-y_df['exists'].plot.hist(bins=125)
-m_df.loc[m_df['pc']>2]['pc'].plot.hist(bins=125)
 
 # %%
 # def trimFeatureVals(veh_df)
@@ -93,8 +85,8 @@ def get_stateBool_arr(m_df, y_df, f_df, fadj_df):
     return np.concatenate([m_arr, y_arr, f_arr, fadj_arr], axis=1)
 
 def get_stateReal_arr(m_df, y_df, f_df, fadj_df):
-    m_arr = m_df[['episode_id', 'vel', 'pc', 'act_long_p','act_lat_p']].values
-    col_o = ['vel', 'dx', 'act_long_p']
+    m_arr = m_df[['episode_id', 'vel', 'pc', 'act_long','act_lat']].values
+    col_o = ['vel', 'dx', 'act_long']
     y_arr = y_df[col_o].values
     f_arr = f_df[col_o].values
     fadj_arr = fadj_df[col_o].values
@@ -108,15 +100,15 @@ def get_target_arr(m_df, y_df, f_df, fadj_df):
     return np.concatenate([m_arr, y_arr, f_arr, fadj_arr], axis=1)
 
 def get_condition_arr(m_df, y_df, f_df, fadj_df):
-    m_arr = m_df[['episode_id', 'act_long_p','act_lat_p']].values
-    y_arr = y_df[['act_long_p']].values
-    f_arr = f_df[['act_long_p']].values
-    fadj_arr = fadj_df[['act_long_p']].values
+    m_arr = m_df[['episode_id', 'act_long','act_lat']].values
+    y_arr = y_df[['act_long']].values
+    f_arr = f_df[['act_long']].values
+    fadj_arr = fadj_df[['act_long']].values
     return np.concatenate([m_arr, y_arr, f_arr, fadj_arr], axis=1)
 
 # %%
-o_trim_col = ['dx', 'act_long_p', 'act_long']
-m_trim_col = ['act_long_p', 'act_lat_p', 'act_long', 'act_lat']
+o_trim_col = ['dx', 'act_long', 'act_long']
+m_trim_col = ['act_long', 'act_lat', 'act_long', 'act_lat']
 
 _f_df = trimStatevals(f_df, o_trim_col)
 _fadj_df = trimStatevals(fadj_df, o_trim_col)
@@ -125,18 +117,17 @@ _m_df = trimStatevals(m_df, m_trim_col)
 state_bool_arr = get_stateBool_arr(_m_df, _y_df, _f_df, _fadj_df)
 state_real_arr = get_stateReal_arr(_m_df, _y_df, _f_df, _fadj_df)
 target_arr = get_target_arr(_m_df, _y_df, _f_df, _fadj_df)
-condition_arr = get_condition_arr(_m_df, _y_df, _f_df, _fadj_df)
+# condition_arr = get_condition_arr(_m_df, _y_df, _f_df, _fadj_df)
 state_arr =  np.concatenate([state_real_arr, state_bool_arr], axis=1)
 state_arr.shape
 target_arr[1000]
 state_arr[1000]
-condition_arr[1000]
-condition_arr[1000].shape
-# %%
-state_col = ['episode_id', 'vel', 'pc', 'act_long_p','act_lat_p',
-                                     'vel', 'dx', 'act_long_p',
-                                     'vel', 'dx', 'act_long_p',
-                                     'vel', 'dx', 'act_long_p',
+
+ # %%
+state_col = ['episode_id', 'vel', 'pc', 'act_long','act_lat',
+                                     'vel', 'dx', 'act_long',
+                                     'vel', 'dx', 'act_long',
+                                     'vel', 'dx', 'act_long',
                                      'lc_type', 'exists', 'exists', 'exists']
 
 target_col = ['episode_id', 'act_long','act_lat',
@@ -180,7 +171,7 @@ for episode_id in all_episodes[0:5]:
     all_dfs.append(get_episode_df(fadj_df, episode_id))
     # all_dfs.append(get_episode_df(m_df, episode_id))
 
-    # draw_traj(all_dfs, ['act_long_p'], episode_id)
+    # draw_traj(all_dfs, ['act_long'], episode_id)
     draw_traj(all_dfs, ['da', 'dv'], episode_id)
 
 

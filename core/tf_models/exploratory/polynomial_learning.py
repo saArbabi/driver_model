@@ -44,18 +44,21 @@ def obsSequence(full_traj, obs_n):
         # 2 is minimum prediction horizon
         prev_states.append(full_traj[i])
         if len(prev_states) == obs_n:
+
             state_seq = np.array(prev_states)
             indx = np.arange(i, i+(pred_h+1)*snip_n, snip_n)
             indx = indx[indx<len(full_traj)]
             targ_indx = indx
             target_seq = full_traj[indx[1:]]
             cond_seq = full_traj[indx[:-1]]
-            seq_len = len(target_seq)
-
+            seq_len = len(indx)-1
+            # print(state_seq)
             if seq_len == pred_h:
                 states.append(state_seq)
                 targs.append(target_seq)
                 conds.append(cond_seq)
+            else:
+                break
 
         i += 1
 
@@ -63,7 +66,9 @@ def obsSequence(full_traj, obs_n):
 
 
 # states_val, targs_val, conds_val = obsSequence(test.values[0:100], 10)
-states_val, targs_val, conds_val = obsSequence(test.values, 10)
+states_val, targs_val, conds_val = obsSequence(test.values[0:100], 10)
+
+# %%
 states_train, targs_train, conds_train = obsSequence(train.values, 10)
 states_train.shape
 

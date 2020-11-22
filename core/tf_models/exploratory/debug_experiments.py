@@ -51,12 +51,11 @@ config = {
      "dec_units": 200,
      "epochs_n": 50,
      "components_n": 5,
-     "allowed_error": 0.5,
+     "allowed_error": [0.5, 0.5],
     "batch_size": 1024
 },
-"data_config": {"step_size": 1,
-                "obsSequence_n": 20,
-                "pred_horizon": 20,
+"data_config": {"obs_n": 20,
+                "pred_h": 4,
                 "Note": ""
 },
 "exp_id": "NA",
@@ -120,15 +119,15 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp002')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 
 legend = [
-        'max_error: 0.1',
         'max_error: 0.5',
+        'max_error: 0.1',
         # 'multi-head 200unit - ts[both]',
         ]
 
