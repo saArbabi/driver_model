@@ -19,13 +19,20 @@ class Encoder(tf.keras.Model):
         self.enc_units = config['model_config']['enc_units']
         self.architecture_def()
 
+    def stacked_lstms(self, inputs):
+        output1 = self.lstm_layers_1(inputs)
+        _, h_s2, c_s2 = self.lstm_layers_2(output1)
+        return [h_s2, c_s2]
+
     def architecture_def(self):
-        self.lstm_layers = LSTM(self.enc_units, return_state=True)
+        self.lstm_layers_1 = LSTM(self.enc_units, return_sequences=True)
+        self.lstm_layers_2 = LSTM(self.enc_units, return_state=True)
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
-        _, state_h, state_c = self.lstm_layers(inputs)
-        return [state_h, state_c]
+        # _, state_h, state_c = self.lstm_layers(inputs)
+        # _, state_h, state_c = self.lstm_layers(inputs)
+        return self.stacked_lstms(inputs)
 
 class Decoder(tf.keras.Model):
     def __init__(self, config, model_use):
@@ -42,6 +49,7 @@ class Decoder(tf.keras.Model):
         self.pvector = Concatenate(name="output") # parameter vector
         self.lstm_layer_my = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.lstm_layer_ffadj = LSTM(self.dec_units, return_sequences=True, return_state=True)
+
         """Merger vehicle
         """
         self.alphas_m = Dense(self.components_n, activation=K.softmax, name="alphas")
@@ -97,8 +105,8 @@ class Decoder(tf.keras.Model):
         state_h, state_c = inputs[1] # encoder cell state
 
         if self.model_use == 'training':
-            batch_size = tf.shape(conditions)[0] # dynamiclaly assigned
-            steps_n = tf.shape(conditions)[1] # dynamiclaly assigned
+            batch_size = tf.shape(conditions[0])[0] # dynamiclaly assigned
+            steps_n = tf.shape(conditions[0])[1] # dynamiclaly assigned
 
         elif self.model_use == 'inference':
             batch_size = tf.constant(self.traj_n)
@@ -191,14 +199,18 @@ class Decoder(tf.keras.Model):
                     act_f = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
 
-                    act_m_checked = self.teacher_check(act_m, sample_m, 'merge_vehicle')
-                    act_y_checked = self.teacher_check(act_y, sample_y, 'other_vehicle')
-                    act_f_checked = self.teacher_check(act_f, sample_f, 'other_vehicle')
-                    act_fadj_checked = self.teacher_check(act_fadj, sample_fadj, 'other_vehicle')
+                    if self.allowed_error != [0, 0]:
+                        act_m_checked = self.teacher_check(act_m, sample_m, 'merge_vehicle')
+                        act_y_checked = self.teacher_check(act_y, sample_y, 'other_vehicle')
+                        act_f_checked = self.teacher_check(act_f, sample_f, 'other_vehicle')
+                        act_fadj_checked = self.teacher_check(act_fadj, sample_fadj, 'other_vehicle')
 
-                    step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
-                    step_cond_my = self.axis2_conc([act_m_checked, act_y_checked, \
-                                                                    step_cond_ffadj])
+                        step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
+                        step_cond_my = self.axis2_conc([act_m_checked, act_y_checked, \
+                                                                        step_cond_ffadj])
+                    else:
+                        step_cond_ffadj = self.axis2_conc([act_f, act_fadj])
+                        step_cond_my = self.axis2_conc([act_m, act_y, step_cond_ffadj])
 
                 elif self.model_use == 'inference':
                     step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])

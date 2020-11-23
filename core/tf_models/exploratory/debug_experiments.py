@@ -24,7 +24,7 @@ def teacher_check(true, sample):
     return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
 
 true = tf.constant([[3,1.2],[2.7,1]])
-sample = tf.constant([[2,-1.2],[2.9,1]])
+sample = tf.constant([[2,0.4],[2.9,1]])
 teacher_check(true, sample)
 # %%
 """
@@ -46,12 +46,11 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 200,
-     "enc_in_linear_units": 200,
-     "dec_units": 200,
+     "enc_units": 300,
+     "dec_units": 300,
      "epochs_n": 50,
      "components_n": 5,
-     "allowed_error": [0.5, 0.5],
+     "allowed_error": [0, 0],
     "batch_size": 1024
 },
 "data_config": {"obs_n": 20,
@@ -119,7 +118,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp005')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
@@ -128,6 +127,9 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, con
 legend = [
         'max_error: 0.5',
         'max_error: 0.1',
+        'max_error: 0',
+        'max_error: BIG',
+        'max_error: 2BIG',
         # 'multi-head 200unit - ts[both]',
         ]
 

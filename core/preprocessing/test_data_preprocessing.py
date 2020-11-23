@@ -32,8 +32,8 @@ states_train, targets_train, conditions_train, \
                             states_val, targets_val, conditions_val = data_objs
 
 states_train[4][10][-1]
-conditions_train[4][-1].shape
-targets_train[4][0][10]
+conditions_train[4][1][10][0:2]
+targets_train[4][0][10][0]
 
 size = 0
 for i in targets_train.keys():

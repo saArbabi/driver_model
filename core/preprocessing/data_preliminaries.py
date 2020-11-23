@@ -21,6 +21,9 @@ fadj_df = pd.read_csv('./datasets/fadj_df.txt', delimiter=' ',
 spec = pd.read_csv('./datasets/episode_spec.txt', delimiter=' ',
                                                         header=None, names=spec_col)
 
+m_df['act_long'].quantile(0.995)
+m_df['act_lat'].quantile(0.995)
+
 
 # %%
 # def trimFeatureVals(veh_df)

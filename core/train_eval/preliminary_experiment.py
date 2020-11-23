@@ -7,11 +7,7 @@ import json
 from keras.callbacks import History
 from models.core.tf_models.utils import nll_loss
 from models.core.train_eval.utils import loadConfigBase
-
 from models.core.preprocessing.data_prep import DataObj
-
-
-# %%
 
 # %%
 # load data
