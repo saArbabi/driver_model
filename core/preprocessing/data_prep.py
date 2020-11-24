@@ -33,6 +33,7 @@ class DataPrep():
         self.config = config['data_config']
         self.obs_n = self.config["obs_n"]
         self.pred_h = self.config["pred_h"]
+        self.step_size = self.config["step_size"]
         self.dirName = dirName
         os.mkdir(dirName)
         self.setScalers() # will set the scaler attributes
@@ -41,7 +42,6 @@ class DataPrep():
         actions = [target_arr[:, 0:2]]
         actions.extend([target_arr[:, n:n+1] for n in range(2, 5)])
         traj_len = len(state_arr)
-        snip_n = 5
 
         if traj_len > 20:
             prev_states = deque(maxlen=self.obs_n)
@@ -49,7 +49,7 @@ class DataPrep():
                 prev_states.append(state_arr[i])
 
                 if len(prev_states) == self.obs_n:
-                    indx = np.arange(i, i+(self.pred_h+1)*snip_n, snip_n)
+                    indx = np.arange(i, i+(self.pred_h+1)*self.step_size, self.step_size)
                     indx = indx[indx<traj_len]
                     if indx.size < 2:
                         break

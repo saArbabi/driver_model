@@ -104,7 +104,7 @@ class Decoder(tf.keras.Model):
         conditions = inputs[0]
         state_h, state_c = inputs[1] # encoder cell state
 
-        if self.model_use == 'training':
+        if self.model_use == 'training' or self.model_use == 'validating':
             batch_size = tf.shape(conditions[0])[0] # dynamiclaly assigned
             steps_n = tf.shape(conditions[0])[1] # dynamiclaly assigned
 
@@ -208,11 +208,11 @@ class Decoder(tf.keras.Model):
                         step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
                         step_cond_my = self.axis2_conc([act_m_checked, act_y_checked, \
                                                                         step_cond_ffadj])
-                    else:
+                    elif self.allowed_error == [0, 0]:
                         step_cond_ffadj = self.axis2_conc([act_f, act_fadj])
                         step_cond_my = self.axis2_conc([act_m, act_y, step_cond_ffadj])
 
-                elif self.model_use == 'inference':
+                elif self.model_use == 'inference' or self.model_use == 'validating':
                     step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])
                     step_cond_my = self.axis2_conc([sample_m, sample_y, step_cond_ffadj])
 

@@ -46,12 +46,12 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 300,
-     "dec_units": 300,
+     "enc_units": 200,
+     "dec_units": 200,
      "epochs_n": 50,
      "components_n": 5,
      "allowed_error": [0, 0],
-    "batch_size": 1024
+    "batch_size": 256
 },
 "data_config": {"obs_n": 20,
                 "pred_h": 4,
@@ -118,18 +118,16 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp005')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 
 legend = [
-        'max_error: 0.5',
-        'max_error: 0.1',
-        'max_error: 0',
-        'max_error: BIG',
-        'max_error: 2BIG',
+        'setting_1',
+        'setting_2',
+        'setting_3'
         # 'multi-head 200unit - ts[both]',
         ]
 

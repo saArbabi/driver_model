@@ -29,7 +29,9 @@ def modelTrain(exp_id, explogs):
     # (3) Run experiment
     write_graph = 'True'
     for epoch in range(start_epoch, end_epoch):
+        model.dec_model.model_use = 'training'
         model.train_loop(data_objs[0:3])
+        model.dec_model.model_use = 'validating'
         model.test_loop(data_objs[3:], epoch)
         utils.updateExpstate(model, explogs, exp_id, 'in progress')
 
