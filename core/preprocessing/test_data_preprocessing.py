@@ -22,7 +22,8 @@ config = {
 },
 "data_config": {"obs_n": 20,
                 "pred_h": 4,
-                "Note": ""
+                "step_size": 5,
+                "Note": "lat/long motion not considered jointly"
 },
 "exp_id": "NA",
 "Note": "NA"
@@ -41,7 +42,8 @@ for i in targets_train.keys():
 size
 
 # %%
-for i in range(0, 4):
+conditions_val[4][3].shape
+for i in range(0, 5):
     plt.figure()
     plt.hist(conditions_val[4][i][:,0,:], bins=125)
 

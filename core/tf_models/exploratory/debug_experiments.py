@@ -55,14 +55,15 @@ config = {
 },
 "data_config": {"obs_n": 20,
                 "pred_h": 4,
-                "Note": ""
+                "step_size": 5,
+                "Note": "lat/long motion not considered jointly"
 },
 "exp_id": "NA",
 "Note": "NA"
 }
 
-reload(utils)
 from models.core.tf_models import utils
+reload(utils)
 
 from models.core.tf_models import cae_model
 reload(cae_model)

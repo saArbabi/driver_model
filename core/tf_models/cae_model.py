@@ -52,27 +52,28 @@ class Decoder(tf.keras.Model):
 
         """Merger vehicle
         """
-        self.alphas_m = Dense(self.components_n, activation=K.softmax, name="alphas")
-        self.mus_long_m = Dense(self.components_n, name="mus_long")
-        self.sigmas_long_m = Dense(self.components_n, activation=K.exp, name="sigmas_long")
-        self.mus_lat_m = Dense(self.components_n, name="mus_lat")
-        self.sigmas_lat_m = Dense(self.components_n, activation=K.exp, name="sigmas_lat")
-        self.rhos_m = Dense(self.components_n, activation=K.tanh, name="rhos")
+        self.alphas_mlon = Dense(self.components_n, activation=K.softmax, name="alphas")
+        self.mus_mlon = Dense(self.components_n, name="mus_long")
+        self.sigmas_mlon = Dense(self.components_n, activation=K.exp, name="sigmas_long")
+
+        self.alphas_mlat = Dense(self.components_n, activation=K.softmax, name="alphas")
+        self.mus_mlat = Dense(self.components_n, name="mus_long")
+        self.sigmas_mlat = Dense(self.components_n, activation=K.exp, name="sigmas_long")
         """Yielder vehicle
         """
         self.alphas_y = Dense(self.components_n, activation=K.softmax, name="alphas")
-        self.mus_long_y = Dense(self.components_n, name="mus_long")
-        self.sigmas_long_y = Dense(self.components_n, activation=K.exp, name="sigmas_long")
+        self.mus_y = Dense(self.components_n, name="mus_long")
+        self.sigmas_y = Dense(self.components_n, activation=K.exp, name="sigmas_long")
         """F vehicle
         """
         self.alphas_f = Dense(self.components_n, activation=K.softmax, name="alphas")
-        self.mus_long_f = Dense(self.components_n, name="mus_long")
-        self.sigmas_long_f = Dense(self.components_n, activation=K.exp, name="sigmas_long")
+        self.mus_f = Dense(self.components_n, name="mus_long")
+        self.sigmas_f = Dense(self.components_n, activation=K.exp, name="sigmas_long")
         """Fadj vehicle
         """
         self.alphas_fadj = Dense(self.components_n, activation=K.softmax, name="alphas")
-        self.mus_long_fadj = Dense(self.components_n, name="mus_long")
-        self.sigmas_long_fadj = Dense(self.components_n, activation=K.exp, name="sigmas_long")
+        self.mus_fadj = Dense(self.components_n, name="mus_long")
+        self.sigmas_fadj = Dense(self.components_n, activation=K.exp, name="sigmas_long")
 
     def concat_gauss_param_vecs(self, step_gauss_param_vec, veh_gauss_param_vec, step):
         """Use for concatinating gmm parameters across time-steps
@@ -87,11 +88,11 @@ class Decoder(tf.keras.Model):
         """concats tensor along the time-step axis(2)"""
         return tf.concat(items_list, axis=2)
 
-    def teacher_check(self, true, sample, vehicle_type):
-        if vehicle_type == 'merge_vehicle':
-            allowed_error = self.allowed_error
-        elif vehicle_type == 'other_vehicle':
+    def teacher_check(self, true, sample, motion_type):
+        if motion_type == 'long':
             allowed_error = self.allowed_error[0]
+        elif motion_type == 'lat':
+            allowed_error = self.allowed_error[1]
 
         error = tf.math.abs(tf.math.subtract(sample, true))
         less = tf.cast(tf.math.less(error, allowed_error), dtype='float')
@@ -119,23 +120,26 @@ class Decoder(tf.keras.Model):
         state_c_ffadj = state_c
 
         # Initialize param vector
-        gauss_param_m = tf.zeros([batch_size,0,30], dtype=tf.float32)
+        gauss_param_mlon = tf.zeros([batch_size,0,15], dtype=tf.float32)
+        gauss_param_mlat = tf.zeros([batch_size,0,15], dtype=tf.float32)
         gauss_param_y = tf.zeros([batch_size,0,15], dtype=tf.float32)
         gauss_param_f = tf.zeros([batch_size,0,15], dtype=tf.float32)
         gauss_param_fadj = tf.zeros([batch_size,0,15], dtype=tf.float32)
 
         # first step conditional
-        act_m = tf.slice(conditions[0], [0, 0, 0], [batch_size, 1, 2])
-        act_y = tf.slice(conditions[1], [0, 0, 0], [batch_size, 1, 1])
-        act_f = tf.slice(conditions[2], [0, 0, 0], [batch_size, 1, 1])
-        act_fadj = tf.slice(conditions[3], [0, 0, 0], [batch_size, 1, 1])
+        act_mlon = tf.slice(conditions[0], [0, 0, 0], [batch_size, 1, 1])
+        act_mlat = tf.slice(conditions[1], [0, 0, 0], [batch_size, 1, 1])
+        act_y = tf.slice(conditions[2], [0, 0, 0], [batch_size, 1, 1])
+        act_f = tf.slice(conditions[3], [0, 0, 0], [batch_size, 1, 1])
+        act_fadj = tf.slice(conditions[4], [0, 0, 0], [batch_size, 1, 1])
 
         step_cond_ffadj = self.axis2_conc([act_f, act_fadj])
-        step_cond_my = self.axis2_conc([act_m, act_y, step_cond_ffadj])
+        step_cond_my = self.axis2_conc([act_mlon, act_mlat, act_y, step_cond_ffadj])
 
         for step in tf.range(steps_n):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
-                            (gauss_param_m, tf.TensorShape([None,None,None])),
+                            (gauss_param_mlon, tf.TensorShape([None,None,None])),
+                            (gauss_param_mlat, tf.TensorShape([None,None,None])),
                             (gauss_param_y, tf.TensorShape([None,None,None])),
                             (gauss_param_f, tf.TensorShape([None,None,None])),
                             (gauss_param_fadj, tf.TensorShape([None,None,None])),
@@ -150,23 +154,29 @@ class Decoder(tf.keras.Model):
                                     self.axis2_conc([enc_h, step_cond_ffadj]), \
                                     initial_state=[state_h_ffadj, state_c_ffadj])
 
-            """Merger vehicle
+            """Merger vehicle long
             """
-            alphas = self.alphas_m(outputs_my)
-            mus_long = self.mus_long_m(outputs_my)
-            sigmas_long = self.sigmas_long_m(outputs_my)
-            mus_lat = self.mus_lat_m(outputs_my)
-            sigmas_lat = self.sigmas_lat_m(outputs_my)
-            rhos = self.rhos_m(outputs_my)
-            gauss_param_vec = self.pvector([alphas, mus_long, sigmas_long, mus_lat, sigmas_lat, rhos])
-            gmm = get_pdf(gauss_param_vec, 'merge_vehicle')
-            sample_m = tf.reshape(gmm.sample(1), [batch_size, 1, 2])
-            gauss_param_m = self.concat_gauss_param_vecs(gauss_param_vec, gauss_param_m, step)
+            alphas = self.alphas_mlon(outputs_my)
+            mus_long = self.mus_mlon(outputs_my)
+            sigmas_long = self.sigmas_mlon(outputs_my)
+            gauss_param_vec = self.pvector([alphas, mus_long, sigmas_long])
+            gmm = get_pdf(gauss_param_vec, 'other_vehicle')
+            sample_mlon = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
+            gauss_param_mlon = self.concat_gauss_param_vecs(gauss_param_vec, gauss_param_mlon, step)
+            """Merger vehicle lat
+            """
+            alphas = self.alphas_mlat(outputs_my)
+            mus_long = self.mus_mlat(outputs_my)
+            sigmas_long = self.sigmas_mlat(outputs_my)
+            gauss_param_vec = self.pvector([alphas, mus_long, sigmas_long])
+            gmm = get_pdf(gauss_param_vec, 'other_vehicle')
+            sample_mlat = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
+            gauss_param_mlat = self.concat_gauss_param_vecs(gauss_param_vec, gauss_param_mlat, step)
             """Yielder vehicle
             """
             alphas = self.alphas_y(outputs_my)
-            mus_long = self.mus_long_y(outputs_my)
-            sigmas_long = self.sigmas_long_y(outputs_my)
+            mus_long = self.mus_y(outputs_my)
+            sigmas_long = self.sigmas_y(outputs_my)
             gauss_param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
             sample_y = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
@@ -174,8 +184,8 @@ class Decoder(tf.keras.Model):
             """F vehicle
             """
             alphas = self.alphas_f(outputs_ffadj)
-            mus_long = self.mus_long_f(outputs_ffadj)
-            sigmas_long = self.sigmas_long_f(outputs_ffadj)
+            mus_long = self.mus_f(outputs_ffadj)
+            sigmas_long = self.sigmas_f(outputs_ffadj)
             gauss_param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
             sample_f = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
@@ -183,8 +193,8 @@ class Decoder(tf.keras.Model):
             """Fadj vehicle
             """
             alphas = self.alphas_fadj(outputs_ffadj)
-            mus_long = self.mus_long_fadj(outputs_ffadj)
-            sigmas_long = self.sigmas_long_fadj(outputs_ffadj)
+            mus_long = self.mus_fadj(outputs_ffadj)
+            sigmas_long = self.sigmas_fadj(outputs_ffadj)
             gauss_param_vec = self.pvector([alphas, mus_long, sigmas_long])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
             sample_fadj = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
@@ -194,34 +204,44 @@ class Decoder(tf.keras.Model):
             if step < steps_n-1:
                 if self.model_use == 'training':
                     ################################
-                    act_m = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 2])
-                    act_y = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1])
-                    act_f = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
-                    act_fadj = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
+                    act_mlon = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1])
+                    act_mlat = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1])
+                    act_y = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
+                    act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
+                    act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
 
                     if self.allowed_error != [0, 0]:
-                        act_m_checked = self.teacher_check(act_m, sample_m, 'merge_vehicle')
-                        act_y_checked = self.teacher_check(act_y, sample_y, 'other_vehicle')
-                        act_f_checked = self.teacher_check(act_f, sample_f, 'other_vehicle')
-                        act_fadj_checked = self.teacher_check(act_fadj, sample_fadj, 'other_vehicle')
+                        act_mlon_checked = self.teacher_check(act_mlon, sample_mlon, 'long')
+                        act_mlat_checked = self.teacher_check(act_mlat, sample_mlat, 'lat')
+                        act_y_checked = self.teacher_check(act_y, sample_y, 'long')
+                        act_f_checked = self.teacher_check(act_f, sample_f, 'long')
+                        act_fadj_checked = self.teacher_check(act_fadj, sample_fadj, 'long')
 
                         step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
-                        step_cond_my = self.axis2_conc([act_m_checked, act_y_checked, \
-                                                                        step_cond_ffadj])
+                        step_cond_my = self.axis2_conc([act_mlon_checked,
+                                                        act_mlat_checked,
+                                                        act_y_checked,
+                                                        step_cond_ffadj])
+
                     elif self.allowed_error == [0, 0]:
                         step_cond_ffadj = self.axis2_conc([act_f, act_fadj])
-                        step_cond_my = self.axis2_conc([act_m, act_y, step_cond_ffadj])
+                        step_cond_my = self.axis2_conc([act_mlon,
+                                                        act_mlat,
+                                                        act_y,
+                                                        step_cond_ffadj])
 
                 elif self.model_use == 'inference' or self.model_use == 'validating':
                     step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])
-                    step_cond_my = self.axis2_conc([sample_m, sample_y, step_cond_ffadj])
+                    step_cond_my = self.axis2_conc([sample_mlon, sample_mlat,
+                                                    sample_y, step_cond_ffadj])
 
-        gmm_m = get_pdf(gauss_param_m, 'merge_vehicle')
+        gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
+        gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
         gmm_y = get_pdf(gauss_param_y, 'other_vehicle')
         gmm_f = get_pdf(gauss_param_f, 'other_vehicle')
         gmm_fadj = get_pdf(gauss_param_fadj, 'other_vehicle')
 
-        return gmm_m, gmm_y, gmm_f, gmm_fadj
+        return gmm_mlon, gmm_mlat, gmm_y, gmm_f, gmm_fadj
 
 class CAE(abstract_model.AbstractModel):
     def __init__(self, config, model_use):
