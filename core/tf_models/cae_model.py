@@ -88,16 +88,10 @@ class Decoder(tf.keras.Model):
         """concats tensor along the time-step axis(2)"""
         return tf.concat(items_list, axis=2)
 
-    def teacher_check(self, true, sample, motion_type):
-        if motion_type == 'long':
-            allowed_error = self.allowed_error[0]
-        elif motion_type == 'lat':
-            allowed_error = self.allowed_error[1]
-
-        error = tf.math.abs(tf.math.subtract(sample, true))
-        less = tf.cast(tf.math.less(error, allowed_error), dtype='float')
-        greater = tf.cast(tf.math.greater_equal(error, allowed_error), dtype='float')
-        return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
+    def teacher_clip(self, true, sample):
+        max = tf.math.add(true, self.allowed_error)
+        min = tf.math.subtract(true, self.allowed_error)
+        return  tf.clip_by_value(sample, clip_value_min=min, clip_value_max=max)
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
@@ -210,25 +204,17 @@ class Decoder(tf.keras.Model):
                     act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
 
-                    if self.allowed_error != [0, 0]:
-                        act_mlon_checked = self.teacher_check(act_mlon, sample_mlon, 'long')
-                        act_mlat_checked = self.teacher_check(act_mlat, sample_mlat, 'lat')
-                        act_y_checked = self.teacher_check(act_y, sample_y, 'long')
-                        act_f_checked = self.teacher_check(act_f, sample_f, 'long')
-                        act_fadj_checked = self.teacher_check(act_fadj, sample_fadj, 'long')
+                    act_mlon_checked = self.teacher_clip(act_mlon, sample_mlon)
+                    act_mlat_checked = self.teacher_clip(act_mlat, sample_mlat)
+                    act_y_checked = self.teacher_clip(act_y, sample_y)
+                    act_f_checked = self.teacher_clip(act_f, sample_f)
+                    act_fadj_checked = self.teacher_clip(act_fadj, sample_fadj)
 
-                        step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
-                        step_cond_my = self.axis2_conc([act_mlon_checked,
-                                                        act_mlat_checked,
-                                                        act_y_checked,
-                                                        step_cond_ffadj])
-
-                    elif self.allowed_error == [0, 0]:
-                        step_cond_ffadj = self.axis2_conc([act_f, act_fadj])
-                        step_cond_my = self.axis2_conc([act_mlon,
-                                                        act_mlat,
-                                                        act_y,
-                                                        step_cond_ffadj])
+                    step_cond_ffadj = self.axis2_conc([act_f_checked, act_fadj_checked])
+                    step_cond_my = self.axis2_conc([act_mlon_checked,
+                                                    act_mlat_checked,
+                                                    act_y_checked,
+                                                    step_cond_ffadj])
 
                 elif self.model_use == 'inference' or self.model_use == 'validating':
                     step_cond_ffadj = self.axis2_conc([sample_f, sample_fadj])
