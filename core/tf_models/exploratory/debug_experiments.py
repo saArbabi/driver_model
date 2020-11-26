@@ -52,16 +52,16 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 100,
-     "dec_units": 100,
+     "enc_units": 70,
+     "dec_units": 70,
      "epochs_n": 50,
-     "components_n": 5,
-     "allowed_error": 1,
+     "components_n": 3,
+     "allowed_error": 0.5,
     "batch_size": 256
 },
 "data_config": {"obs_n": 20,
-                "pred_h": 20,
-                "step_size": 1,
+                "pred_h": 6,
+                "step_size": 5,
                 "Note": "lat/long motion not considered jointly"
 },
 "exp_id": "NA",
@@ -126,19 +126,24 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp004')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp006')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 
 legend = [
-        '0.5',
-        '1',
-        'smaller',
-        '0.5',
-        '1',
-        'smaller'
+        '2',
+        '3',
+        '4',
+        '0.5step',
+        '0.5step-h8',
+        '0.5step-h8_3com',
+
+
+
+
+
         # 'multi-head 200unit - ts[both]',
         ]
 
@@ -152,8 +157,8 @@ legend = [
 # %%
 for item in exp_vals:
 # for item in ['exp005', 'exp003']:
-    # plt.plot(exp_vals[item])
-    plt.plot(exp_trains[item], '--')
+    plt.plot(exp_vals[item])
+    # plt.plot(exp_trains[item], '--')
 
 plt.grid()
 plt.xticks(np.arange(10))

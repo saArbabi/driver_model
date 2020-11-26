@@ -49,6 +49,8 @@ class Decoder(tf.keras.Model):
         self.pvector = Concatenate(name="output") # parameter vector
         self.lstm_layer_my = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.lstm_layer_ffadj = LSTM(self.dec_units, return_sequences=True, return_state=True)
+        self.linear_layer_my = TimeDistributed(Dense(50))
+        self.linear_layer_ffadj = TimeDistributed(Dense(50))
 
         """Merger vehicle
         """
@@ -143,10 +145,11 @@ class Decoder(tf.keras.Model):
             outputs_my, state_h_my, state_c_my = self.lstm_layer_my(\
                                     self.axis2_conc([enc_h, step_cond_my]), \
                                     initial_state=[state_h_my, state_c_my])
-
+            outputs_my = self.linear_layer_my(outputs_my)
             outputs_ffadj, state_h_ffadj, state_c_ffadj = self.lstm_layer_ffadj(\
                                     self.axis2_conc([enc_h, step_cond_ffadj]), \
                                     initial_state=[state_h_ffadj, state_c_ffadj])
+            outputs_ffadj = self.linear_layer_ffadj(outputs_ffadj)
 
             """Merger vehicle long
             """
