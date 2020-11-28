@@ -55,7 +55,7 @@ config = {
      "enc_units": 70,
      "dec_units": 70,
      "epochs_n": 50,
-     "components_n": 7,
+     "components_n": 5,
      "allowed_error": 0.5,
     "batch_size": 256
 },
@@ -106,7 +106,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(10):
+    for epoch in range(5):
         t1 = time.time()
         model.dec_model.model_use = 'training'
         model.train_loop(data_objs[0:3])
@@ -128,16 +128,18 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp004')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp003')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 
 legend = [
-        '2step-1sec',
-        '4step-0.5sec',
-
+        'no-conditional',
+        'relational',
+        'relational - no teacher clip',
+        'bi-directional-act',
+        'uni-directional',
         ]
 
 # legend = [
