@@ -62,7 +62,9 @@ config = {
 "data_config": {"obs_n": 20,
                 "pred_h": 4,
                 "step_size": 5,
-                "Note": "lat/long motion not considered jointly"
+                # "Note": "lat/long motion not considered jointly"
+                "Note": "jerk as target"
+
 },
 "exp_id": "NA",
 "Note": ""
@@ -104,7 +106,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     data_objs = DataObj(config).loadData()
 
     t0 = time.time()
-    for epoch in range(5):
+    for epoch in range(10):
         t1 = time.time()
         model.dec_model.model_use = 'training'
         model.train_loop(data_objs[0:3])
@@ -126,26 +128,16 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp006')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp004')
 # del exp_trains['exp003']
 # del exp_vals['exp001']
 # del exp_trains['exp001']
 
 
 legend = [
-        '2comp',
-        '3comp',
-        '5comp',
-        'done well3',
-        'done well3 - with right linear',
-        '7comp',
+        '2step-1sec',
+        '4step-0.5sec',
 
-
-
-
-
-
-        # 'multi-head 200unit - ts[both]',
         ]
 
 # legend = [
@@ -160,7 +152,17 @@ for item in exp_vals:
 # for item in ['exp005', 'exp003']:
     plt.plot(exp_vals[item])
     # plt.plot(exp_trains[item], '--')
- 
+
+plt.grid()
+plt.xticks(np.arange(10))
+
+plt.legend(legend)
+# %%
+for item in exp_vals:
+# for item in ['exp005', 'exp003']:
+    # plt.plot(exp_vals[item])
+    plt.plot(exp_trains[item], '--')
+
 plt.grid()
 plt.xticks(np.arange(10))
 

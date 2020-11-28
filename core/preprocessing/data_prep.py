@@ -61,7 +61,8 @@ class DataPrep():
 
                     self.states[seq_len].append(np.array(prev_states))
                     for n in range(5):
-                        self.targs[seq_len][n].append(actions[n][indx[1:]])
+                        jerk = actions[n][indx[1:]]-actions[n][indx[:-1]]
+                        self.targs[seq_len][n].append(jerk)
                         self.conds[seq_len][n].append(actions[n][indx[:-1]])
 
     def get_episode_arr(self, episode_id):

@@ -23,7 +23,7 @@ config = {
 "data_config": {"obs_n": 20,
                 "pred_h": 4,
                 "step_size": 5,
-                "Note": "lat/long motion not considered jointly"
+                "Note": "jerk as target"
 },
 "exp_id": "NA",
 "Note": "NA"
@@ -33,8 +33,8 @@ states_train, targets_train, conditions_train, \
                             states_val, targets_val, conditions_val = data_objs
 
 states_train[4][10][-1]
-conditions_train[4][1][10][0:2]
-targets_train[4][0][10][0]
+conditions_train[4][1][10]
+targets_train[4][1][10]
 
 size = 0
 for i in targets_train.keys():
@@ -42,12 +42,16 @@ for i in targets_train.keys():
 size
 
 # %%
-conditions_val[4][3].shape
 for i in range(0, 5):
     plt.figure()
     plt.hist(conditions_val[4][i][:,0,:], bins=125)
+# %%
+for i in range(0, 5):
+    plt.figure()
+    plt.hist(targets_train[4][i][:,0,:], bins=125)
 
 # %%
 for i in range(0, 17):
     plt.figure()
     plt.hist(states_train[4][0:10000,1,i], bins=125)
+# %%
