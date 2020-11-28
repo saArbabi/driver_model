@@ -55,12 +55,12 @@ config = {
      "enc_units": 70,
      "dec_units": 70,
      "epochs_n": 50,
-     "components_n": 3,
+     "components_n": 7,
      "allowed_error": 0.5,
     "batch_size": 256
 },
 "data_config": {"obs_n": 20,
-                "pred_h": 6,
+                "pred_h": 4,
                 "step_size": 5,
                 "Note": "lat/long motion not considered jointly"
 },
@@ -133,12 +133,13 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, con
 
 
 legend = [
-        '2',
-        '3',
-        '4',
-        '0.5step',
-        '0.5step-h8',
-        '0.5step-h8_3com',
+        '2comp',
+        '3comp',
+        '5comp',
+        'done well3',
+        'done well3 - with right linear',
+        '7comp',
+
 
 
 
@@ -159,7 +160,7 @@ for item in exp_vals:
 # for item in ['exp005', 'exp003']:
     plt.plot(exp_vals[item])
     # plt.plot(exp_trains[item], '--')
-
+ 
 plt.grid()
 plt.xticks(np.arange(10))
 

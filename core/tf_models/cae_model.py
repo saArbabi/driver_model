@@ -51,10 +51,10 @@ class Decoder(tf.keras.Model):
         self.lstm_layer_y = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.lstm_layer_f = LSTM(self.dec_units, return_sequences=True, return_state=True)
         self.lstm_layer_fadj = LSTM(self.dec_units, return_sequences=True, return_state=True)
-        self.linear_layer_m = TimeDistributed(Dense(50))
-        self.linear_layer_y = TimeDistributed(Dense(50))
-        self.linear_layer_f = TimeDistributed(Dense(50))
-        self.linear_layer_fadj = TimeDistributed(Dense(50))
+        self.linear_layer_m = TimeDistributed(Dense(self.components_n*6))
+        self.linear_layer_y = TimeDistributed(Dense(self.components_n*3))
+        self.linear_layer_f = TimeDistributed(Dense(self.components_n*3))
+        self.linear_layer_fadj = TimeDistributed(Dense(self.components_n*3))
 
         """Merger vehicle
         """
@@ -123,18 +123,18 @@ class Decoder(tf.keras.Model):
         state_h_fadj = state_h
         state_c_fadj = state_c
         # Initialize param vector
-        gauss_param_mlon = tf.zeros([batch_size,0,15], dtype=tf.float32)
-        gauss_param_mlat = tf.zeros([batch_size,0,15], dtype=tf.float32)
-        gauss_param_y = tf.zeros([batch_size,0,15], dtype=tf.float32)
-        gauss_param_f = tf.zeros([batch_size,0,15], dtype=tf.float32)
-        gauss_param_fadj = tf.zeros([batch_size,0,15], dtype=tf.float32)
+        gauss_param_mlon = tf.zeros([batch_size,0, self.components_n*3], dtype=tf.float32)
+        gauss_param_mlat = tf.zeros([batch_size,0, self.components_n*3], dtype=tf.float32)
+        gauss_param_y = tf.zeros([batch_size,0, self.components_n*3], dtype=tf.float32)
+        gauss_param_f = tf.zeros([batch_size,0, self.components_n*3], dtype=tf.float32)
+        gauss_param_fadj = tf.zeros([batch_size,0, self.components_n*3], dtype=tf.float32)
 
         # first step conditional
         act_mlon = tf.slice(conditions[0], [0, 0, 0], [batch_size, 1, 1])
         act_mlat = tf.slice(conditions[1], [0, 0, 0], [batch_size, 1, 1])
         act_y = tf.slice(conditions[2], [0, 0, 0], [batch_size, 1, 1])
         act_f = tf.slice(conditions[3], [0, 0, 0], [batch_size, 1, 1])
-        act_fadj = tf.slice(conditions[4], [0, 0, 0], [batch_size, 1, 1])
+        act_fadj = tf.slice(conditions[4], [0, 0  , 0], [batch_size, 1, 1])
 
         step_cond_f = act_f
         step_cond_fadj = act_fadj
