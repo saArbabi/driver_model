@@ -40,7 +40,7 @@ class Decoder(tf.keras.Model):
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
         self.pred_h = config['data_config']['pred_h']
-        self.allowed_error = config['model_config']['allowed_error']
+        # self.allowed_error = config['model_config']['allowed_error']
         self.steps_n = None # note self.steps_n =< self.pred_h
         self.model_use = model_use # can be training or inference
         self.architecture_def()
@@ -99,6 +99,11 @@ class Decoder(tf.keras.Model):
         min = tf.math.subtract(true, self.allowed_error)
         return  tf.clip_by_value(sample, clip_value_min=min, clip_value_max=max)
 
+    def action_correction(self, true, sample):
+        """To deal with missing cars
+        """
+        return tf.math.divide_no_nan(tf.math.multiply(true, sample), true)
+
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
@@ -136,22 +141,10 @@ class Decoder(tf.keras.Model):
         act_f = tf.slice(conditions[3], [0, 0, 0], [batch_size, 1, 1])
         act_fadj = tf.slice(conditions[4], [0, 0  , 0], [batch_size, 1, 1])
 
-
-        s1 = tf.math.sign(act_mlon)
-        s2 = tf.math.sign(act_y)
-        s3 = tf.math.sign(act_f)
-        s4 = tf.math.sign(act_fadj)
-
-        d1 = tf.math.subtract(act_y, act_mlon)
-        d2 = tf.math.subtract(act_f, act_mlon)
-        d3 = tf.math.subtract(act_fadj, act_mlon)
-        d4 = tf.math.subtract(act_f, act_y)
-        d5 = tf.math.subtract(act_fadj, act_y)
-
-        step_cond_m = self.axis2_conc([s1, s2, s3, s4, d1, d2, d3, d4, d5])
-        step_cond_y = self.axis2_conc([act_mlat, s1, s2, s3, s4, d1, d2, d3, d4, d5])
-        step_cond_f = s3
-        step_cond_fadj = s4
+        step_cond_m = self.axis2_conc([act_mlon, act_mlat, act_y, act_f, act_fadj])
+        step_cond_y = step_cond_m
+        step_cond_f = act_f
+        step_cond_fadj = act_fadj
 
         for step in tf.range(steps_n):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
@@ -160,8 +153,8 @@ class Decoder(tf.keras.Model):
                             (gauss_param_y, tf.TensorShape([None,None,None])),
                             (gauss_param_f, tf.TensorShape([None,None,None])),
                             (gauss_param_fadj, tf.TensorShape([None,None,None])),
-                            (step_cond_m, tf.TensorShape([None,None,9])),
-                            (step_cond_y, tf.TensorShape([None,None,10])),
+                            (step_cond_m, tf.TensorShape([None,None,5])),
+                            (step_cond_y, tf.TensorShape([None,None,5])),
                             (step_cond_f, tf.TensorShape([None,None,1])),
                             (step_cond_fadj, tf.TensorShape([None,None,1])),
                             (act_mlon, tf.TensorShape([None,None,1])),
@@ -242,81 +235,20 @@ class Decoder(tf.keras.Model):
                     act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
 
-                    # act_mlon_checked = self.teacher_clip(act_mlon, sample_mlon)
-                    # act_mlat_checked = self.teacher_clip(act_mlat, sample_mlat)
-                    # act_y_checked = self.teacher_clip(act_y, sample_y)
-                    # act_f_checked = self.teacher_clip(act_f, sample_f)
-                    # act_fadj_checked = self.teacher_clip(act_fadj, sample_fadj)
-                    # act_mlon = self.teacher_clip(act_mlon, sample_mlon)
-                    # act_mlat = self.teacher_clip(act_mlat, sample_mlat)
-                    # act_y = self.teacher_clip(act_y, sample_y)
-                    # act_f = self.teacher_clip(act_f, sample_f)
-                    # act_fadj = self.teacher_clip(act_fadj, sample_fadj)
-
-                    s1 = tf.math.sign(act_mlon)
-                    s2 = tf.math.sign(act_y)
-                    s3 = tf.math.sign(act_f)
-                    s4 = tf.math.sign(act_fadj)
-
-                    d1 = tf.math.subtract(act_y, act_mlon)
-                    d2 = tf.math.subtract(act_f, act_mlon)
-                    d3 = tf.math.subtract(act_fadj, act_mlon)
-                    d4 = tf.math.subtract(act_f, act_y)
-                    d5 = tf.math.subtract(act_fadj, act_y)
-
-                    step_cond_m = self.axis2_conc([s1, s2, s3, s4, d1, d2, d3, d4, d5])
-                    step_cond_y = self.axis2_conc([act_mlat, s1, s2, s3, s4, d1, d2, d3, d4, d5])
-                    step_cond_f = s3
-                    step_cond_fadj = s4
-
+                    step_cond_m = self.axis2_conc([act_mlon, act_mlat, act_y, act_f, act_fadj])
+                    step_cond_y = step_cond_m
+                    step_cond_f = act_f
+                    step_cond_fadj = act_fadj
                 else:
-                    act_mlon = tf.math.add(sample_mlon, act_mlon)
-                    act_mlat = tf.math.add(sample_mlat, act_mlat)
-                    # act_y = tf.math.add(sample_y, act_y)
-                    act_y = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
+                    step_cond_f = self.action_correction(act_f, sample_f)
+                    step_cond_fadj = self.action_correction(act_fadj, sample_fadj)
 
-                    # act_f = tf.math.add(sample_f, act_f)
-                    # act_fadj = tf.math.add(sample_fadj, act_fadj)
+                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                        self.action_correction(act_y, sample_y),
+                                        step_cond_f, step_cond_fadj])
 
-                    # step_cond_f = act_f
-                    # step_cond_fadj = act_fadj
-                    #
-                    # step_cond_m = self.axis2_conc([act_mlon,
-                    #                                 act_mlat,
-                    #                                 act_y,
-                    #                                 act_f,
-                    #                                 act_fadj])
-                    #
-                    # step_cond_y = step_cond_m
-                    # s1 = tf.math.sign(sample_mlon)
-                    # s2 = tf.math.sign(sample_y)
-                    # s3 = tf.math.sign(sample_f)
-                    # s4 = tf.math.sign(sample_fadj)
-                    #
-                    # d1 = tf.math.subtract(sample_y, sample_mlon)
-                    # d2 = tf.math.subtract(sample_f, sample_mlon)
-                    # d3 = tf.math.subtract(sample_fadj, sample_mlon)
-                    # d4 = tf.math.subtract(sample_f, sample_y)
-                    # d5 = tf.math.subtract(sample_fadj, sample_y)
-                    act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
-                    act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
+                    step_cond_y = step_cond_m
 
-                    s1 = tf.math.sign(act_mlon)
-                    s2 = tf.math.sign(act_y)
-                    s3 = tf.math.sign(act_f)
-                    s4 = tf.math.sign(act_fadj)
-
-                    d1 = tf.math.subtract(act_y, act_mlon)
-                    d2 = tf.math.subtract(act_f, act_mlon)
-                    d3 = tf.math.subtract(act_fadj, act_mlon)
-                    d4 = tf.math.subtract(act_f, act_y)
-                    d5 = tf.math.subtract(act_fadj, act_y)
-
-                    step_cond_m = self.axis2_conc([s1, s2, s3, s4, d1, d2, d3, d4, d5])
-                    step_cond_y = self.axis2_conc([act_mlat, s1, s2, s3, s4, d1, d2, d3, d4, d5])
-
-                    step_cond_f = s3
-                    step_cond_fadj = s4
 
         gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
         gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
