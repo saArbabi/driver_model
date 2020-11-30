@@ -62,8 +62,8 @@ config = {
 "data_config": {"obs_n": 20,
                 "pred_h": 4,
                 "step_size": 5,
-                "Note": "lat/long motion not considered jointly"
-                # "Note": "jerk as target"
+                # "Note": "lat/long motion not considered jointly"
+                "Note": "jerk as target"
 
 },
 "exp_id": "NA",
@@ -128,7 +128,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp003 ')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp004')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
@@ -138,6 +138,7 @@ legend = [
             'with cond',
             'no cond',
             'cond but val',
+            'jerk',
         ]
 
 # legend = [
