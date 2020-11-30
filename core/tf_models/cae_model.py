@@ -237,19 +237,11 @@ class Decoder(tf.keras.Model):
             """
             if self.model_use == 'training' or self.model_use == 'validating':
                 if step < steps_n-1:
-                    act_mlon = tf.math.add(sample_mlon, act_mlon)
-                    act_mlat = tf.math.add(sample_mlat, act_mlat)
-                    act_y = self.action_correction(act_y, tf.math.add(sample_y, act_y))
-                    act_f = self.action_correction(act_f, tf.math.add(sample_f, act_f))
-                    act_fadj = self.action_correction(act_fadj, tf.math.add(sample_fadj, act_fadj))
-
-                    step_cond_f = act_f
-                    step_cond_fadj = act_fadj
-
-                    step_cond_m = self.axis2_conc([act_mlon, act_mlat,
-                                                            act_y,
-                                                            act_f,
-                                                            act_fadj])
+                    step_cond_f = self.action_correction(act_f, sample_f)
+                    step_cond_fadj = self.action_correction(act_fadj, sample_fadj)
+                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                self.action_correction(act_y, sample_y),
+                                step_cond_f, step_cond_fadj])
 
                     step_cond_y = step_cond_m
 
@@ -266,13 +258,13 @@ class Decoder(tf.keras.Model):
                 pred_act_f = self.concat_vecs(act_f, pred_act_f, step)
                 pred_act_fadj = self.concat_vecs(act_fadj, pred_act_fadj, step)
 
-                step_cond_f = act_f
-                step_cond_fadj = act_fadj
+                step_cond_f = sample_f
+                step_cond_fadj = sample_fadj
 
-                step_cond_m = self.axis2_conc([act_mlon, act_mlat,
-                                                        act_y,
-                                                        act_f,
-                                                        act_fadj])
+                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                        sample_y,
+                                                        sample_f,
+                                                        sample_fadj])
 
                 step_cond_y = step_cond_m
 

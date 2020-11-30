@@ -55,7 +55,7 @@ config = {
      "enc_units": 70,
      "dec_units": 70,
      "epochs_n": 50,
-     "components_n": 5,
+     "components_n": 10,
      "allowed_error": 0.5,
     "batch_size": 256
 },
@@ -128,7 +128,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp004')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp006')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
@@ -139,6 +139,8 @@ legend = [
             'no cond',
             'cond but val',
             'jerk',
+            'jerk2',
+            'jerk3',
         ]
 
 # legend = [
