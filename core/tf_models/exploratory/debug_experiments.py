@@ -128,18 +128,16 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     return durations, exp_trains, exp_vals
 
 # train_debugger()
-durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp003 ')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
 
 
 legend = [
-        'no-conditional',
-        'relational',
-        'relational - no teacher clip',
-        'bi-directional-act',
-        'uni-directional',
+            'with cond',
+            'no cond',
+            'cond but val',
         ]
 
 # legend = [

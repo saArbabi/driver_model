@@ -227,28 +227,17 @@ class Decoder(tf.keras.Model):
             """Conditioning
             """
             if step < steps_n-1:
-                if self.model_use == 'training':
 
-                    act_mlon = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1])
-                    act_mlat = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1])
-                    act_y = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
-                    act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
-                    act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
+                step_cond_f = self.action_correction(act_f, sample_f)
+                step_cond_fadj = self.action_correction(act_fadj, sample_fadj)
+                y_corrected = self.action_correction(act_y, sample_y)
 
-                    step_cond_m = self.axis2_conc([act_mlon, act_mlat, act_y, act_f, act_fadj])
-                    step_cond_y = step_cond_m
-                    step_cond_f = act_f
-                    step_cond_fadj = act_fadj
-                else:
-                    step_cond_f = self.action_correction(act_f, sample_f)
-                    step_cond_fadj = self.action_correction(act_fadj, sample_fadj)
+                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                        y_corrected,
+                                                        step_cond_f,
+                                                        step_cond_fadj])
 
-                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                        self.action_correction(act_y, sample_y),
-                                        step_cond_f, step_cond_fadj])
-
-                    step_cond_y = step_cond_m
-
+                step_cond_y = step_cond_m
 
         gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
         gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
