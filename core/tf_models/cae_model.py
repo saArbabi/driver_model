@@ -40,7 +40,6 @@ class Decoder(tf.keras.Model):
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
         self.pred_h = config['data_config']['pred_h']
-        # self.allowed_error = config['model_config']['allowed_error']
         self.steps_n = None # note self.steps_n =< self.pred_h
         self.model_use = model_use # can be training or inference
         self.architecture_def()
@@ -246,17 +245,11 @@ class Decoder(tf.keras.Model):
                     step_cond_y = step_cond_m
 
             elif self.model_use == 'inference':
-                act_mlon = tf.math.add(sample_mlon, act_mlon)
-                act_mlat = tf.math.add(sample_mlat, act_mlat)
-                act_y = tf.math.add(sample_y, act_y)
-                act_f = tf.math.add(sample_f, act_f)
-                act_fadj = tf.math.add(sample_fadj, act_fadj)
-
-                pred_act_mlon = self.concat_vecs(act_mlon, pred_act_mlon, step)
-                pred_act_mlat = self.concat_vecs(act_mlat, pred_act_mlat, step)
-                pred_act_y = self.concat_vecs(act_y, pred_act_y, step)
-                pred_act_f = self.concat_vecs(act_f, pred_act_f, step)
-                pred_act_fadj = self.concat_vecs(act_fadj, pred_act_fadj, step)
+                pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
+                pred_act_mlat = self.concat_vecs(sample_mlat, pred_act_mlat, step)
+                pred_act_y = self.concat_vecs(sample_y, pred_act_y, step)
+                pred_act_f = self.concat_vecs(sample_f, pred_act_f, step)
+                pred_act_fadj = self.concat_vecs(sample_fadj, pred_act_fadj, step)
 
                 step_cond_f = sample_f
                 step_cond_fadj = sample_fadj
