@@ -32,7 +32,7 @@ class DataPrep():
     def __init__(self, config, dirName):
         self.config = config['data_config']
         self.obs_n = self.config["obs_n"]
-        self.pred_h = self.config["pred_h"]
+        self.pred_step_n = self.config["pred_step_n"]
         self.step_size = self.config["step_size"]
         self.dirName = dirName
         os.mkdir(dirName)
@@ -48,7 +48,7 @@ class DataPrep():
                 prev_states.append(state_arr[i])
 
                 if len(prev_states) == self.obs_n:
-                    indx = np.arange(i, i+(self.pred_h+1)*self.step_size, self.step_size)
+                    indx = np.arange(i, i+(self.pred_step_n+1)*self.step_size, self.step_size)
                     indx = indx[indx<traj_len]
                     if indx.size < 2:
                         break
@@ -91,7 +91,7 @@ class DataPrep():
         self.obsSequence(state_arr, target_arr)
 
     def shuffle(self, data_dict, type):
-        for seq_n in range(1, self.pred_h+1):
+        for seq_n in range(1, self.pred_step_n+1):
             if type=='targs':
                 # targets and conditionals
                 data_dict[seq_n] = [np.array(shuffle(data_dict[seq_n][n], \
