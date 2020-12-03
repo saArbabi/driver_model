@@ -15,6 +15,23 @@ import time
 exp_trains = {}
 exp_vals = {}
 durations = {}
+
+# %%
+def teacher_check(true, sample):
+    allowed_error = 1
+    error = tf.math.abs(tf.math.subtract(sample, true))
+    less = tf.cast(tf.math.less(error, allowed_error), dtype='float')
+    greater = tf.cast(tf.math.greater_equal(error, allowed_error), dtype='float')
+    return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
+
+true = tf.constant([[5],[1.3]])
+max = tf.constant([[4],[1.1]])
+min = tf.constant([[2.9],[0.9]])
+tf.clip_by_value(true, clip_value_min=min, clip_value_max=max)
+
+# %%
+sample = tf.constant([[2,0.4],[2.9,1]])
+teacher_check(true, sample)
 # %%
 """
 Use this script for debugging the following:
@@ -35,25 +52,25 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 200,
-     "enc_in_linear_units": 200,
-     "dec_units": 200,
+     "enc_units": 70,
+     "dec_units": 70,
      "epochs_n": 50,
-     "components_n": 5,
-     "teacher_percent": 0.2,
-    "batch_size": 1024
+     "components_n": 10,
+    "batch_size": 256
 },
-"data_config": {"step_size": 1,
-                "obsSequence_n": 20,
-                "pred_horizon": 50,
-                "Note": ""
+"data_config": {"obs_n": 20,
+                "pred_h": 7,
+                "step_size": 3,
+                "Note": "lat/long motion not considered jointly"
+                # "Note": "jerk as target"
+
 },
 "exp_id": "NA",
-"Note": "NA"
+"Note": ""
 }
 
-reload(utils)
 from models.core.tf_models import utils
+reload(utils)
 
 from models.core.tf_models import cae_model
 reload(cae_model)
@@ -90,8 +107,9 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
     t0 = time.time()
     for epoch in range(5):
         t1 = time.time()
-
+        model.dec_model.model_use = 'training'
         model.train_loop(data_objs[0:3])
+        model.dec_model.model_use = 'validating'
         model.test_loop(data_objs[3:], epoch)
         train_loss.append(round(model.train_loss.result().numpy().item(), 2))
         valid_loss.append(round(model.test_loss.result().numpy().item(), 2))
@@ -108,18 +126,18 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
     return durations, exp_trains, exp_vals
 
-train_debugger()
-# durations, exp_trains, exp_vals = train_exp(durations, exp_trains, exp_vals, config, 'exp001')
+# train_debugger()
+durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
+                                        exp_vals, config, 'exp003')
 # del exp_trains['exp003']
-# del exp_vals['exp001']
-# del exp_trains['exp001']
+# del exp_vals['exp004']
+# del exp_trains['exp004']
 
 
 legend = [
-        '1024',
-        '128',
-        '20 steps',
-        # 'multi-head 200unit - ts[both]',
+            'other sample',
+            'other truth',
+            'other cor',
         ]
 
 # legend = [
@@ -133,7 +151,17 @@ legend = [
 for item in exp_vals:
 # for item in ['exp005', 'exp003']:
     plt.plot(exp_vals[item])
-    # plt.plot(exp_trains[item], '_')
+    # plt.plot(exp_trains[item], '--')
+
+plt.grid()
+plt.xticks(np.arange(10))
+
+plt.legend(legend)
+# %%
+for item in exp_vals:
+# for item in ['exp005', 'exp003']:
+    # plt.plot(exp_vals[item])
+    plt.plot(exp_trains[item], '--')
 
 plt.grid()
 plt.xticks(np.arange(10))
