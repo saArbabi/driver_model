@@ -49,7 +49,8 @@ def genExpSeires(series_id, test_variables, config):
             for param in test_variables[variable]:
                 last_exp_id = get_lastExpID(series_id, explogs)
                 config_i = config
-                config_i['model_config'][variable] = param
+                config_i['data_config'][variable] = param
+                # config_i['model_config'][variable] = param
                 exp_id = genExpID(series_id, last_exp_id)
                 config_i['exp_id'] = exp_id
                 genConfig(config_i)

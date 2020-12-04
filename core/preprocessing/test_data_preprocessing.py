@@ -21,7 +21,7 @@ config = {
      "components_n": 5
 },
 "data_config": {"obs_n": 20,
-                "pred_h": 7,
+                "pred_step_n": 17,
                 "step_size": 3,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
