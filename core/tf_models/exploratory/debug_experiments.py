@@ -52,14 +52,14 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 70,
-     "dec_units": 70,
+     "enc_units": 200,
+     "dec_units": 200,
      "epochs_n": 50,
      "components_n": 10,
     "batch_size": 256
 },
 "data_config": {"obs_n": 20,
-                "pred_h": 7,
+                "pred_step_n": 7,
                 "step_size": 3,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
@@ -128,7 +128,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
 # train_debugger()
 durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
-                                        exp_vals, config, 'exp003')
+                                        exp_vals, config, 'exp005')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
@@ -137,7 +137,8 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
 legend = [
             'other sample',
             'other truth',
-            'other cor',
+            'large',
+            'large2',
         ]
 
 # legend = [
