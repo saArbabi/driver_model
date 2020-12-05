@@ -16,6 +16,9 @@ exp_trains = {}
 exp_vals = {}
 durations = {}
 
+np.random.binomial(1, 0.1, size=20)
+
+tf.keras.backend.random_bernoulli([10,1], p=0.9, dtype=None, seed=None)
 # %%
 def teacher_check(true, sample):
     allowed_error = 1
@@ -52,8 +55,8 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 200,
-     "dec_units": 200,
+     "enc_units": 70,
+     "dec_units": 70,
      "epochs_n": 50,
      "components_n": 10,
     "batch_size": 256
@@ -128,17 +131,15 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
 # train_debugger()
 durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
-                                        exp_vals, config, 'exp005')
+                                        exp_vals, config, 'exp002')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
 
 
 legend = [
-            'other sample',
-            'other truth',
-            'large',
-            'large2',
+            '0.5',
+            '0.1 ',
         ]
 
 # legend = [
