@@ -177,8 +177,7 @@ class Decoder(tf.keras.Model):
                                 (act_fadj, tf.TensorShape([None,None,1]))])
 
 
-                dropout = K.random_bernoulli([batch_size,1], p=1-self.dropout, dtype=None, seed=None)
-                """Merger veh  icle long
+                """Merger vehicle long
                 """
                 outputs, state_h_m, state_c_m = self.lstm_layer_m(
                                             self.axis2_conc([step_cond_m, enc_h]),
@@ -256,15 +255,15 @@ class Decoder(tf.keras.Model):
                     act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
 
-                    step_cond_f = self.action_correction(act_f, sample_f)
-                    step_cond_fadj = self.action_correction(act_fadj, sample_fadj)
+                    step_cond_f = sample_f
+                    step_cond_fadj = sample_fadj
                     step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
                                 act_y,
                                 act_f,
                                 act_fadj])
 
                     step_cond_y = self.axis2_conc([act_mlon, act_mlat,
-                                self.action_correction(act_y, sample_y),
+                                sample_y,
                                 act_fadj])
 
         else:
@@ -357,16 +356,17 @@ class Decoder(tf.keras.Model):
                 """Conditioning
                 """
                 if self.model_use == 'validating':
-                    step_cond_f = self.action_correction(act_f, sample_f)
-                    step_cond_fadj = self.action_correction(act_fadj, sample_fadj)
-                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                act_y,
-                                act_f,
-                                act_fadj])
+                    step_cond_f = sample_f
+                    step_cond_fadj = sample_fadj
 
-                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
-                                self.action_correction(act_y, sample_y),
-                                act_fadj])
+                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                            sample_y,
+                                                            sample_f,
+                                                            sample_fadj])
+
+                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                            sample_y,
+                                                            sample_fadj])
 
                 elif self.model_use == 'inference':
                     pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
