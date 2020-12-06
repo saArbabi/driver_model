@@ -176,7 +176,7 @@ class Decoder(tf.keras.Model):
                                 (act_f, tf.TensorShape([None,None,1])),
                                 (act_fadj, tf.TensorShape([None,None,1]))])
 
-
+                dropout = K.random_bernoulli([batch_size,1], p=1-self.dropout, dtype=None, seed=None) 
                 """Merger vehicle long
                 """
                 outputs, state_h_m, state_c_m = self.lstm_layer_m(
