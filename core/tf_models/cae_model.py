@@ -39,7 +39,6 @@ class Decoder(tf.keras.Model):
         super(Decoder, self).__init__(name="Decoder")
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
-        # self.dropout = config['model_config']['dropout']
         self.steps_n = None # note self.steps_n =< pred_step_n
         self.model_use = model_use # can be training or inference
         self.architecture_def()
@@ -176,14 +175,12 @@ class Decoder(tf.keras.Model):
                                 (act_f, tf.TensorShape([None,None,1])),
                                 (act_fadj, tf.TensorShape([None,None,1]))])
 
-                dropout = K.random_bernoulli([batch_size,1], p=1-self.dropout, dtype=None, seed=None)
                 """Merger vehicle long
                 """
                 outputs, state_h_m, state_c_m = self.lstm_layer_m(
                                             self.axis2_conc([step_cond_m, enc_h]),
                                             initial_state=[state_h_m, state_c_m])
                 outputs = self.linear_layer_m(outputs)
-                state_h_m = tf.multiply(dropout, state_h_m)
 
                 alphas = self.alphas_mlon(outputs)
                 mus_long = self.mus_mlon(outputs)
@@ -207,7 +204,6 @@ class Decoder(tf.keras.Model):
                                         self.axis2_conc([step_cond_y, enc_h]),
                                         initial_state=[state_h_y, state_c_y])
                 outputs = self.linear_layer_y(outputs)
-                state_h_y = tf.multiply(dropout, state_h_y)
 
                 alphas = self.alphas_y(outputs)
                 mus_long = self.mus_y(outputs)
@@ -222,7 +218,6 @@ class Decoder(tf.keras.Model):
                                         self.axis2_conc([step_cond_f, enc_h]),
                                         initial_state=[state_h_f, state_c_f])
                 outputs = self.linear_layer_f(outputs)
-                state_h_f = tf.multiply(dropout, state_h_f)
 
                 alphas = self.alphas_f(outputs)
                 mus_long = self.mus_f(outputs)
@@ -237,7 +232,6 @@ class Decoder(tf.keras.Model):
                                         self.axis2_conc([step_cond_fadj, enc_h]),
                                         initial_state=[state_h_fadj, state_c_fadj])
                 outputs = self.linear_layer_fadj(outputs)
-                state_h_fadj = tf.multiply(dropout, state_h_fadj)
 
                 alphas = self.alphas_fadj(outputs)
                 mus_long = self.mus_fadj(outputs)
@@ -249,22 +243,17 @@ class Decoder(tf.keras.Model):
                 """Conditioning
                 """
                 if step < steps_n-1:
-                    act_mlon = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1])
-                    act_mlat = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1])
-                    act_y = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
-                    act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
-                    act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
-
                     step_cond_f = sample_f
                     step_cond_fadj = sample_fadj
-                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                act_y,
-                                act_f,
-                                act_fadj])
 
-                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
-                                sample_y,
-                                act_fadj])
+                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                            sample_y,
+                                                            sample_f,
+                                                            sample_fadj])
+
+                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                            sample_y,
+                                                            sample_fadj])
 
         else:
             for step in tf.range(steps_n):
