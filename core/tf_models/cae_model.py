@@ -254,7 +254,6 @@ class Decoder(tf.keras.Model):
                     step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
                                                             sample_y,
                                                             sample_fadj])
-
         else:
             for step in tf.range(steps_n):
                 tf.autograph.experimental.set_loop_options(shape_invariants=[
