@@ -24,15 +24,27 @@ class Encoder(tf.keras.Model):
         _, h_s2, c_s2 = self.lstm_layers_2(output1)
         return [h_s2, c_s2]
 
+    def none_linear_enc(self, inputs):
+        inputs = self.linear_enc_1(inputs)
+        inputs = self.linear_enc_2(inputs)
+        inputs = self.linear_enc_3(inputs)
+        inputs = self.linear_enc_4(inputs)
+        return inputs
+
     def architecture_def(self):
         self.lstm_layers_1 = LSTM(self.enc_units, return_sequences=True)
         self.lstm_layers_2 = LSTM(self.enc_units, return_state=True)
+        self.linear_enc_1 = TimeDistributed(Dense(100, activation='relu'))
+        self.linear_enc_2 = TimeDistributed(Dense(100, activation='relu'))
+        self.linear_enc_3 = TimeDistributed(Dense(100, activation='relu'))
+        self.linear_enc_4 = TimeDistributed(Dense(15))
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
         # _, state_h, state_c = self.lstm_layers(inputs)
         # _, state_h, state_c = self.lstm_layers(inputs)
-        return self.stacked_lstms(inputs)
+        # return self.stacked_lstms(inputs)
+        return self.stacked_lstms(self.none_linear_enc(inputs))
 
 class Decoder(tf.keras.Model):
     def __init__(self, config, model_use):
@@ -235,7 +247,6 @@ class Decoder(tf.keras.Model):
             """Conditioning
             """
             if self.model_use == 'training' or self.model_use == 'validating':
-                if step < steps_n-1:
                     step_cond_f = sample_f
                     step_cond_fadj = sample_fadj
 
@@ -247,19 +258,6 @@ class Decoder(tf.keras.Model):
                     step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
                                                             sample_y,
                                                             sample_fadj])
-
-            elif self.model_use == 'validating':
-                step_cond_f = sample_f
-                step_cond_fadj = sample_fadj
-
-                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                        sample_y,
-                                                        sample_f,
-                                                        sample_fadj])
-
-                step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
-                                                        sample_y,
-                                                        sample_fadj])
 
             elif self.model_use == 'inference':
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)

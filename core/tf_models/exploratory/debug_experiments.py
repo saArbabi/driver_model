@@ -16,9 +16,7 @@ exp_trains = {}
 exp_vals = {}
 durations = {}
 
-np.random.binomial(1, 0.1, size=20)
 
-tf.keras.backend.random_bernoulli([10,1], p=0.9, dtype=None, seed=None)
 # %%
 def teacher_check(true, sample):
     allowed_error = 1
@@ -60,7 +58,7 @@ config = {
      "epochs_n": 50,
      "components_n": 10,
      "dropout": 0.4,
-    "batch_size": 256,
+    "batch_size": 512,
 },
 "data_config": {"obs_n": 20,
                 "pred_step_n": 7,
@@ -139,9 +137,9 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
 
 
 legend = [
-            '0.5',
-            '0.1 ',
-            '0.1-2 ',
+            'no_enc',
+            'enc',
+            '512',
         ]
 
 # legend = [
