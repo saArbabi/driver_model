@@ -28,16 +28,15 @@ class Encoder(tf.keras.Model):
         inputs = self.linear_enc_1(inputs)
         inputs = self.linear_enc_2(inputs)
         inputs = self.linear_enc_3(inputs)
-        inputs = self.linear_enc_4(inputs)
-        return inputs
+        return self.linear_enc_4(inputs)
 
     def architecture_def(self):
         self.lstm_layers_1 = LSTM(self.enc_units, return_sequences=True)
         self.lstm_layers_2 = LSTM(self.enc_units, return_state=True)
-        self.linear_enc_1 = TimeDistributed(Dense(100, activation='relu'))
-        self.linear_enc_2 = TimeDistributed(Dense(100, activation='relu'))
-        self.linear_enc_3 = TimeDistributed(Dense(100, activation='relu'))
-        self.linear_enc_4 = TimeDistributed(Dense(15))
+        self.linear_enc_1 = TimeDistributed(Dense(200, activation='relu'))
+        self.linear_enc_2 = TimeDistributed(Dense(200, activation='relu'))
+        self.linear_enc_3 = TimeDistributed(Dense(200, activation='relu'))
+        self.linear_enc_4 = TimeDistributed(Dense(20))
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
@@ -176,12 +175,7 @@ class Decoder(tf.keras.Model):
                             (step_cond_m, tf.TensorShape([None,None,5])),
                             (step_cond_y, tf.TensorShape([None,None,4])),
                             (step_cond_f, tf.TensorShape([None,None,1])),
-                            (step_cond_fadj, tf.TensorShape([None,None,1])),
-                            (act_mlon, tf.TensorShape([None,None,1])),
-                            (act_mlat, tf.TensorShape([None,None,1])),
-                            (act_y, tf.TensorShape([None,None,1])),
-                            (act_f, tf.TensorShape([None,None,1])),
-                            (act_fadj, tf.TensorShape([None,None,1]))])
+                            (step_cond_fadj, tf.TensorShape([None,None,1]))])
 
             """Merger vehicle long
             """
@@ -247,17 +241,17 @@ class Decoder(tf.keras.Model):
             """Conditioning
             """
             if self.model_use == 'training' or self.model_use == 'validating':
-                    step_cond_f = sample_f
-                    step_cond_fadj = sample_fadj
+                step_cond_f = sample_f
+                step_cond_fadj = sample_fadj
 
-                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                            sample_y,
-                                                            sample_f,
-                                                            sample_fadj])
+                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                        sample_y,
+                                                        sample_f,
+                                                        sample_fadj])
 
-                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
-                                                            sample_y,
-                                                            sample_fadj])
+                step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                        sample_y,
+                                                        sample_fadj])
 
             elif self.model_use == 'inference':
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
