@@ -51,6 +51,7 @@ class Decoder(tf.keras.Model):
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
         self.pred_step_n = config['data_config']['pred_step_n']
+        self.teacher_percent = config['model_config']['teacher_percent']
         self.steps_n = None # note self.steps_n =< self.pred_step_n
         self.model_use = model_use # can be training or inference
         self.architecture_def()
@@ -104,15 +105,11 @@ class Decoder(tf.keras.Model):
         """concats tensor along the time-step axis(2)"""
         return tf.concat(items_list, axis=2)
 
-    def teacher_clip(self, true, sample):
-        max = tf.math.add(true, self.allowed_error)
-        min = tf.math.subtract(true, self.allowed_error)
-        return  tf.clip_by_value(sample, clip_value_min=min, clip_value_max=max)
-
-    def action_correction(self, true, sample):
-        """To deal with missing cars
-        """
-        return tf.math.divide_no_nan(tf.math.multiply(true, sample), true)
+    def teacher_force(self, true, sample):
+        if tf.random.uniform([1]) > self.teacher_percent:
+            return sample
+        else:
+            return true
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
@@ -175,7 +172,12 @@ class Decoder(tf.keras.Model):
                             (step_cond_m, tf.TensorShape([None,None,5])),
                             (step_cond_y, tf.TensorShape([None,None,4])),
                             (step_cond_f, tf.TensorShape([None,None,1])),
-                            (step_cond_fadj, tf.TensorShape([None,None,1]))])
+                            (step_cond_fadj, tf.TensorShape([None,None,1])),
+                            (act_mlon, tf.TensorShape([None,None,1])),
+                            (act_mlat, tf.TensorShape([None,None,1])),
+                            (act_y, tf.TensorShape([None,None,1])),
+                            (act_f, tf.TensorShape([None,None,1])),
+                            (act_fadj, tf.TensorShape([None,None,1]))])
 
             """Merger vehicle long
             """
@@ -240,7 +242,33 @@ class Decoder(tf.keras.Model):
             gauss_param_fadj = self.concat_vecs(gauss_param_vec, gauss_param_fadj, step)
             """Conditioning
             """
-            if self.model_use == 'training' or self.model_use == 'validating':
+            if self.model_use == 'training':
+                if step < steps_n-1:
+                    act_mlon = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1])
+                    act_mlat = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1])
+                    act_y = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
+                    act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
+                    act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
+
+                    sample_mlon = self.teacher_force(act_mlon, sample_mlon)
+                    sample_mlat = self.teacher_force(act_mlat, sample_mlat)
+                    sample_y = self.teacher_force(act_y, sample_y)
+                    sample_f = self.teacher_force(act_f, sample_f)
+                    sample_fadj = self.teacher_force(act_fadj, sample_fadj)
+
+                    step_cond_f = sample_f
+                    step_cond_fadj = sample_fadj
+
+                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                            sample_y,
+                                                            sample_f,
+                                                            sample_fadj])
+
+                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                            sample_y,
+                                                            sample_fadj])
+
+            elif self.model_use == 'validating':
                 step_cond_f = sample_f
                 step_cond_fadj = sample_fadj
 
