@@ -260,13 +260,13 @@ class Decoder(tf.keras.Model):
                     step_cond_fadj = sample_fadj
 
                     step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                            sample_y,
-                                                            sample_f,
-                                                            sample_fadj])
+                                                            act_y,
+                                                            act_f,
+                                                            act_fadj])
 
-                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
                                                             sample_y,
-                                                            sample_fadj])
+                                                            act_fadj])
 
             elif self.model_use == 'validating':
                 step_cond_f = sample_f
@@ -315,7 +315,8 @@ class Decoder(tf.keras.Model):
             gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
             gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
 
-            return sampled_actions, gmm_mlon, gmm_mlat
+            return sampled_actions
+            # return sampled_actions, gmm_mlon, gmm_mlat
 
 
 
