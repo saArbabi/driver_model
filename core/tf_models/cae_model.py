@@ -282,7 +282,12 @@ class Decoder(tf.keras.Model):
             return gmm_mlon, gmm_mlat, gmm_y, gmm_f, gmm_fadj
 
         elif self.model_use == 'inference':
-            return pred_act_mlon, pred_act_mlat, pred_act_y, pred_act_f, pred_act_fadj
+            sampled_actions = [pred_act_mlon, pred_act_mlat, pred_act_y, \
+                                                pred_act_f, pred_act_fadj]
+            gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
+            gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
+
+            return sampled_actions, gmm_mlon, gmm_mlat
 
 
 
