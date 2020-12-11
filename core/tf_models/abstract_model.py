@@ -49,7 +49,7 @@ class AbstractModel(tf.keras.Model):
     def train_loop(self, data_objs):
         """Covers one epoch
         """
-        for seq_len in range(1, self.pred_step_n+1):
+        for seq_len in range(5, self.pred_step_n+1):
             train_seq_data = [data_objs[0][seq_len],
                                 data_objs[1][seq_len][0],
                                 data_objs[1][seq_len][1],
@@ -67,7 +67,7 @@ class AbstractModel(tf.keras.Model):
                 self.train_step(s, [t0, t1, t2, t3, t4], [c0, c1, c2, c3, c4])
 
     def test_loop(self, data_objs, epoch):
-        for seq_len in range(1, self.pred_step_n+1):
+        for seq_len in range(5, self.pred_step_n+1):
             test_seq_data = [data_objs[0][seq_len],
                                 data_objs[1][seq_len][0],
                                 data_objs[1][seq_len][1],

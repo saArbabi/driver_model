@@ -58,11 +58,11 @@ config = {
      "components_n": 5,
      "dropout": 0.4,
     "batch_size": 1024,
-    "teacher_percent": 0.2,
+    "teacher_percent": 0.9,
 },
 "data_config": {"obs_n": 20,
-                "pred_step_n": 7,
-                "step_size": 3,
+                "pred_step_n": 20,
+                "step_size": 1,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 
