@@ -137,8 +137,8 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
 
 
 legend = [
-            '10c',
-            '5c',
+            'v1',
+            'v2',
         ]
 
 # legend = [
