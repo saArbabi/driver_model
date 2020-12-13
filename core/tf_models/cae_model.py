@@ -260,13 +260,13 @@ class Decoder(tf.keras.Model):
                     step_cond_fadj = sample_fadj
 
                     step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                            act_y,
-                                                            act_f,
-                                                            act_fadj])
-
-                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
                                                             sample_y,
-                                                            act_fadj])
+                                                            sample_f,
+                                                            sample_fadj])
+
+                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                            sample_y,
+                                                            sample_fadj])
 
             elif self.model_use == 'inference':
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
@@ -302,8 +302,8 @@ class Decoder(tf.keras.Model):
             gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
             gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
 
-            # return sampled_actions
-            return sampled_actions, gmm_mlon, gmm_mlat
+            return sampled_actions
+            # return sampled_actions, gmm_mlon, gmm_mlat
 
 
 
