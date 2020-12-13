@@ -16,7 +16,6 @@ exp_trains = {}
 exp_vals = {}
 durations = {}
 
-
 # %%
 def teacher_check(true, sample):
     allowed_error = 1
@@ -56,13 +55,14 @@ config = {
      "enc_units": 70,
      "dec_units": 70,
      "epochs_n": 50,
-     "components_n": 10,
+     "components_n": 5,
      "dropout": 0.4,
-    "batch_size": 512,
+    "batch_size": 1024,
+    "teacher_percent": 0.9,
 },
 "data_config": {"obs_n": 20,
-                "pred_step_n": 7,
-                "step_size": 3,
+                "pred_step_n": 20,
+                "step_size": 1,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 
@@ -130,16 +130,15 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
 # train_debugger()
 durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
-                                        exp_vals, config, 'exp003')
+                                        exp_vals, config, 'exp002')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
 
 
 legend = [
-            'no_enc',
-            'enc',
-            '512',
+            'v1',
+            'v2',
         ]
 
 # legend = [
