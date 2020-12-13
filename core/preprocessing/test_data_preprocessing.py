@@ -21,8 +21,8 @@ config = {
      "components_n": 5
 },
 "data_config": {"obs_n": 20,
-                "pred_step_n": 17,
-                "step_size": 3,
+                "pred_step_n": 20,
+                "step_size": 1,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 },
@@ -49,7 +49,7 @@ for i in range(0, 5):
 # %%
 for i in range(0, 5):
     plt.figure()
-    plt.hist(targets_train[4][i][:,0,:], bins=125)
+    plt.hist(targets_train[20][i][:,0,:], bins=125)
 
 # %%
 for i in range(0, 17):

@@ -111,6 +111,12 @@ class Decoder(tf.keras.Model):
         else:
             return true
 
+    def sample_action(self, gmm, batch_size):
+        """Also trim the actions so avoid errors cascating
+        """
+        action = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
+        return tf.clip_by_value(action, -3.0, 3.0)
+
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
         # input[1] = encoder states
@@ -190,7 +196,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_mlon(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_mlon = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
+            sample_mlon = self.sample_action(gmm, batch_size)
             gauss_param_mlon = self.concat_vecs(gauss_param_vec, gauss_param_mlon, step)
             """Merger vehicle lat
             """
@@ -199,7 +205,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_mlat(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_mlat = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
+            sample_mlat = self.sample_action(gmm, batch_size)
             gauss_param_mlat = self.concat_vecs(gauss_param_vec, gauss_param_mlat, step)
             """Yielder vehicle
             """
@@ -212,7 +218,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_y(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_y = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
+            sample_y = self.sample_action(gmm, batch_size)
             gauss_param_y = self.concat_vecs(gauss_param_vec, gauss_param_y, step)
             """F vehicle
             """
@@ -225,7 +231,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_f(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_f = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
+            sample_f = self.sample_action(gmm, batch_size)
             gauss_param_f = self.concat_vecs(gauss_param_vec, gauss_param_f, step)
             """Fadj vehicle
             """
@@ -238,7 +244,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_fadj(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_fadj = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
+            sample_fadj = self.sample_action(gmm, batch_size)
             gauss_param_fadj = self.concat_vecs(gauss_param_vec, gauss_param_fadj, step)
             """Conditioning
             """
