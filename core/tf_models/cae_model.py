@@ -262,18 +262,17 @@ class Decoder(tf.keras.Model):
                     sample_f = self.teacher_force(act_f, sample_f)
                     sample_fadj = self.teacher_force(act_fadj, sample_fadj)
 
-
                     step_cond_f = sample_f
                     step_cond_fadj = sample_fadj
 
                     step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                            sample_y,
-                                                            sample_f,
-                                                            sample_fadj])
+                                                            act_y,
+                                                            act_f,
+                                                            act_fadj])
 
-                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
                                                             sample_y,
-                                                            sample_fadj])
+                                                            act_fadj])
 
             elif self.model_use == 'inference':
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
