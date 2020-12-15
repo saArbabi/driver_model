@@ -262,6 +262,7 @@ class Decoder(tf.keras.Model):
                     sample_f = self.teacher_force(act_f, sample_f)
                     sample_fadj = self.teacher_force(act_fadj, sample_fadj)
 
+
                     step_cond_f = sample_f
                     step_cond_fadj = sample_fadj
 
