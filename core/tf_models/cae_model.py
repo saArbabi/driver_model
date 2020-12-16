@@ -178,12 +178,7 @@ class Decoder(tf.keras.Model):
                             (step_cond_m, tf.TensorShape([None,None,5])),
                             (step_cond_y, tf.TensorShape([None,None,4])),
                             (step_cond_f, tf.TensorShape([None,None,1])),
-                            (step_cond_fadj, tf.TensorShape([None,None,1])),
-                            (act_mlon, tf.TensorShape([None,None,1])),
-                            (act_mlat, tf.TensorShape([None,None,1])),
-                            (act_y, tf.TensorShape([None,None,1])),
-                            (act_f, tf.TensorShape([None,None,1])),
-                            (act_fadj, tf.TensorShape([None,None,1]))])
+                            (step_cond_fadj, tf.TensorShape([None,None,1]))])
 
             """Merger vehicle long
             """
@@ -266,13 +261,14 @@ class Decoder(tf.keras.Model):
                     step_cond_fadj = sample_fadj
 
                     step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                            sample_y,
-                                                            sample_f,
-                                                            sample_fadj])
+                                                            act_y,
+                                                            act_f,
+                                                            act_fadj])
 
-                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
                                                             sample_y,
-                                                            sample_fadj])
+                                                            act_fadj])
+
 
             elif self.model_use == 'inference':
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
