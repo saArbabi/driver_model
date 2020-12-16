@@ -178,12 +178,7 @@ class Decoder(tf.keras.Model):
                             (step_cond_m, tf.TensorShape([None,None,5])),
                             (step_cond_y, tf.TensorShape([None,None,4])),
                             (step_cond_f, tf.TensorShape([None,None,1])),
-                            (step_cond_fadj, tf.TensorShape([None,None,1])),
-                            (act_mlon, tf.TensorShape([None,None,1])),
-                            (act_mlat, tf.TensorShape([None,None,1])),
-                            (act_y, tf.TensorShape([None,None,1])),
-                            (act_f, tf.TensorShape([None,None,1])),
-                            (act_fadj, tf.TensorShape([None,None,1]))])
+                            (step_cond_fadj, tf.TensorShape([None,None,1]))])
 
             """Merger vehicle long
             """
@@ -248,7 +243,7 @@ class Decoder(tf.keras.Model):
             gauss_param_fadj = self.concat_vecs(gauss_param_vec, gauss_param_fadj, step)
             """Conditioning
             """
-            if self.model_use == 'training' or self.model_use == 'validating':
+            if self.model_use == 'training':
                 if step < steps_n-1:
                     act_mlon = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1])
                     act_mlat = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1])
@@ -273,6 +268,19 @@ class Decoder(tf.keras.Model):
                     step_cond_y = self.axis2_conc([act_mlon, act_mlat,
                                                             sample_y,
                                                             act_fadj])
+
+            elif self.model_use == 'validating':
+                step_cond_f = sample_f
+                step_cond_fadj = sample_fadj
+
+                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                        sample_y,
+                                                        sample_f,
+                                                        sample_fadj])
+
+                step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                        sample_y,
+                                                        sample_fadj])
 
             elif self.model_use == 'inference':
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)

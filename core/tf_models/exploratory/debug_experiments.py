@@ -57,11 +57,11 @@ config = {
      "epochs_n": 50,
      "components_n": 10,
     "batch_size": 1024,
-    "teacher_percent": 0.7,
+    "teacher_percent": 1.0,
 },
 "data_config": {"obs_n": 20,
-                "pred_step_n": 20,
-                "step_size": 1,
+                "pred_step_n": 2,
+                "step_size": 10,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 
@@ -136,9 +136,9 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
 
 
 legend = [
-            '70',
-            '100',
-            '200',
+            '0.7',
+            '2',
+            '3',
         ]
 
 # legend = [
