@@ -288,8 +288,6 @@ class Decoder(tf.keras.Model):
                 mus = self.mus_mlon(outputs)
                 sigmas = self.sigmas_mlon(outputs)
                 gauss_param_vec = self.pvector([alphas, mus, sigmas])
-                gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-                sample_mlon = self.sample_action(gmm, batch_size)
                 gauss_param_mlon = self.concat_vecs(gauss_param_vec, gauss_param_mlon, step)
                 """Merger vehicle lat
                 """
@@ -297,8 +295,6 @@ class Decoder(tf.keras.Model):
                 mus = self.mus_mlat(outputs)
                 sigmas = self.sigmas_mlat(outputs)
                 gauss_param_vec = self.pvector([alphas, mus, sigmas])
-                gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-                sample_mlat = self.sample_action(gmm, batch_size)
                 gauss_param_mlat = self.concat_vecs(gauss_param_vec, gauss_param_mlat, step)
                 """Yielder vehicle
                 """
@@ -310,8 +306,6 @@ class Decoder(tf.keras.Model):
                 mus = self.mus_y(outputs)
                 sigmas = self.sigmas_y(outputs)
                 gauss_param_vec = self.pvector([alphas, mus, sigmas])
-                gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-                sample_y = self.sample_action(gmm, batch_size)
                 gauss_param_y = self.concat_vecs(gauss_param_vec, gauss_param_y, step)
                 """F vehicle
                 """
@@ -323,8 +317,6 @@ class Decoder(tf.keras.Model):
                 mus = self.mus_f(outputs)
                 sigmas = self.sigmas_f(outputs)
                 gauss_param_vec = self.pvector([alphas, mus, sigmas])
-                gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-                sample_f = self.sample_action(gmm, batch_size)
                 gauss_param_f = self.concat_vecs(gauss_param_vec, gauss_param_f, step)
                 """Fadj vehicle
                 """
@@ -336,28 +328,7 @@ class Decoder(tf.keras.Model):
                 mus = self.mus_fadj(outputs)
                 sigmas = self.sigmas_fadj(outputs)
                 gauss_param_vec = self.pvector([alphas, mus, sigmas])
-                gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-                sample_fadj = self.sample_action(gmm, batch_size)
                 gauss_param_fadj = self.concat_vecs(gauss_param_vec, gauss_param_fadj, step)
-
-
-                pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
-                pred_act_mlat = self.concat_vecs(sample_mlat, pred_act_mlat, step)
-                pred_act_y = self.concat_vecs(sample_y, pred_act_y, step)
-                pred_act_f = self.concat_vecs(sample_f, pred_act_f, step)
-                pred_act_fadj = self.concat_vecs(sample_fadj, pred_act_fadj, step)
-
-                step_cond_f = sample_f
-                step_cond_fadj = sample_fadj
-
-                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                        sample_y,
-                                                        sample_f,
-                                                        sample_fadj])
-
-                step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
-                                                        sample_y,
-                                                        sample_fadj])
 
                 """Conditioning
                 """
@@ -371,12 +342,12 @@ class Decoder(tf.keras.Model):
                     step_cond_f = act_f
                     step_cond_fadj = act_fadj
 
-                    step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                    step_cond_m = self.axis2_conc([act_mlon, act_mlat,
                                                             act_y,
                                                             act_f,
                                                             act_fadj])
 
-                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
                                                             act_y,
                                                             act_fadj])
 
