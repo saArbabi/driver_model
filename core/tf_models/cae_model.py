@@ -153,6 +153,7 @@ class Decoder(tf.keras.Model):
         step_cond_y = self.axis2_conc([act_mlon, act_mlat, act_y, act_fadj, enc_h, enc_h])
         step_cond_f = act_f
         step_cond_fadj = act_fadj
+        coin_flip = tf.random.uniform([1])
 
         for step in tf.range(steps_n):
             tf.autograph.experimental.set_loop_options(shape_invariants=[
@@ -240,28 +241,48 @@ class Decoder(tf.keras.Model):
             """
             if self.model_use == 'training' or self.model_use == 'validating':
                 if step < steps_n-1:
-                    act_mlon = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1])
-                    act_mlat = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1])
-                    act_y = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
-                    act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
-                    act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
+                    if coin_flip < 0.8:
 
-                    step_cond_f = act_f
-                    step_cond_fadj = act_fadj
+                        act_mlon = tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1])
+                        act_mlat = tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1])
+                        act_y = tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1])
+                        act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
+                        act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
 
-                    step_cond_m = self.axis2_conc([act_mlon, act_mlat,
-                                                            act_y,
-                                                            act_f,
-                                                            act_fadj,
-                    tf.reshape(state_h_y, [batch_size, 1, self.dec_units]),
-                    tf.reshape(state_h_f, [batch_size, 1, self.dec_units]),
-                    tf.reshape(state_h_fadj, [batch_size, 1, self.dec_units])])
+                        step_cond_f = act_f
+                        step_cond_fadj = act_fadj
 
-                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
-                                                            act_y,
-                                                            act_fadj,
-                    tf.reshape(state_h_m, [batch_size, 1, self.dec_units]),
-                    tf.reshape(state_h_fadj, [batch_size, 1, self.dec_units])])
+                        step_cond_m = self.axis2_conc([act_mlon, act_mlat,
+                                                                act_y,
+                                                                act_f,
+                                                                act_fadj,
+                        tf.reshape(state_h_y, [batch_size, 1, self.dec_units]),
+                        tf.reshape(state_h_f, [batch_size, 1, self.dec_units]),
+                        tf.reshape(state_h_fadj, [batch_size, 1, self.dec_units])])
+
+                        step_cond_y = self.axis2_conc([act_mlon, act_mlat,
+                                                                act_y,
+                                                                act_fadj,
+                        tf.reshape(state_h_m, [batch_size, 1, self.dec_units]),
+                        tf.reshape(state_h_fadj, [batch_size, 1, self.dec_units])])
+
+                    else:
+                        step_cond_f = sample_f
+                        step_cond_fadj = sample_fadj
+
+                        step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                                sample_y,
+                                                                sample_f,
+                                                                sample_fadj,
+                        tf.reshape(state_h_y, [batch_size, 1, self.dec_units]),
+                        tf.reshape(state_h_f, [batch_size, 1, self.dec_units]),
+                        tf.reshape(state_h_fadj, [batch_size, 1, self.dec_units])])
+
+                        step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                                sample_y,
+                                                                sample_fadj,
+                        tf.reshape(state_h_m, [batch_size, 1, self.dec_units]),
+                        tf.reshape(state_h_fadj, [batch_size, 1, self.dec_units])])
 
             elif self.model_use == 'inference':
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
