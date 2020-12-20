@@ -162,7 +162,7 @@ class Decoder(tf.keras.Model):
         act_f = tf.slice(conditions[3], [0, 0, 0], [batch_size, 1, 1])
         act_fadj = tf.slice(conditions[4], [0, 0  , 0], [batch_size, 1, 1])
 
-        step_cond_m = self.axis2_conc([act_mlon, act_mlat, act_y, act_f, act_fadj])
+        step_cond_m = self.axis2_conc([act_mlon, act_y, act_f, act_fadj])
         step_cond_y = self.axis2_conc([act_mlon, act_mlat, act_y, act_fadj])
         step_cond_f = act_f
         step_cond_fadj = act_fadj
@@ -175,7 +175,7 @@ class Decoder(tf.keras.Model):
                             (gauss_param_y, tf.TensorShape([None,None,None])),
                             (gauss_param_f, tf.TensorShape([None,None,None])),
                             (gauss_param_fadj, tf.TensorShape([None,None,None])),
-                            (step_cond_m, tf.TensorShape([None,None,5])),
+                            (step_cond_m, tf.TensorShape([None,None,4])),
                             (step_cond_y, tf.TensorShape([None,None,4])),
                             (step_cond_f, tf.TensorShape([None,None,1])),
                             (step_cond_fadj, tf.TensorShape([None,None,1]))])
@@ -254,7 +254,7 @@ class Decoder(tf.keras.Model):
                 step_cond_f = sample_f
                 step_cond_fadj = sample_fadj
 
-                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                step_cond_m = self.axis2_conc([sample_mlon,
                                                         act_y,
                                                         act_f,
                                                         act_fadj])
