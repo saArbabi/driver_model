@@ -162,7 +162,7 @@ class Decoder(tf.keras.Model):
         act_f = tf.slice(conditions[3], [0, 0, 0], [batch_size, 1, 1])
         act_fadj = tf.slice(conditions[4], [0, 0  , 0], [batch_size, 1, 1])
 
-        step_cond_m = self.axis2_conc([act_mlon, act_y, act_f, act_fadj])
+        step_cond_m = self.axis2_conc([act_mlon, act_mlat, act_y, act_f, act_fadj])
         step_cond_y = self.axis2_conc([act_mlon, act_mlat, act_y, act_fadj])
         step_cond_f = act_f
         step_cond_fadj = act_fadj
@@ -175,7 +175,7 @@ class Decoder(tf.keras.Model):
                             (gauss_param_y, tf.TensorShape([None,None,None])),
                             (gauss_param_f, tf.TensorShape([None,None,None])),
                             (gauss_param_fadj, tf.TensorShape([None,None,None])),
-                            (step_cond_m, tf.TensorShape([None,None,4])),
+                            (step_cond_m, tf.TensorShape([None,None,5])),
                             (step_cond_y, tf.TensorShape([None,None,4])),
                             (step_cond_f, tf.TensorShape([None,None,1])),
                             (step_cond_fadj, tf.TensorShape([None,None,1]))])
@@ -251,30 +251,20 @@ class Decoder(tf.keras.Model):
                 # act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
                 # act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
 
-                step_cond_f = sample_f
-                step_cond_fadj = sample_fadj
+            step_cond_f = sample_f
+            step_cond_fadj = sample_fadj
 
-                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                        sample_y,
-                                                        sample_f,
-                                                        sample_fadj])
+            step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
+                                                    sample_y,
+                                                    sample_f,
+                                                    sample_fadj])
 
-                step_cond_y = self.axis2_conc([sample_mlon, sample_mlat, 
-                                                        sample_y,
-                                                        sample_fadj])
+            step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                    sample_y,
+                                                    sample_fadj])
 
             if self.model_use == 'inference':
-                step_cond_f = sample_f
-                step_cond_fadj = sample_fadj
 
-                step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                        sample_y,
-                                                        sample_f,
-                                                        sample_fadj])
-
-                step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
-                                                        sample_y,
-                                                        sample_fadj])
 
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
                 pred_act_mlat = self.concat_vecs(sample_mlat, pred_act_mlat, step)
