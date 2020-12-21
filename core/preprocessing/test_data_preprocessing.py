@@ -21,8 +21,8 @@ config = {
      "components_n": 5
 },
 "data_config": {"obs_n": 20,
-                "pred_step_n": 20,
-                "step_size": 1,
+                "pred_step_n": 4,
+                "step_size": 5,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 },
@@ -42,6 +42,11 @@ for i in targets_train.keys():
     size += states_train[i].shape[0]
 size
 
+# %%
+states_train[4].shape
+# %%
+plt.plot(states_train[4][0, :, 3])
+plt.plot(states_train[4][0, :, 3]+np.random.normal(0, 0.2, 20))
 # %%
 for i in range(0, 5):
     plt.figure()

@@ -16,6 +16,7 @@ exp_trains = {}
 exp_vals = {}
 durations = {}
 
+
 # %%
 def teacher_check(true, sample):
     allowed_error = 1
@@ -136,7 +137,8 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
 
 
 legend = [
-            'no tf',
+            'with noise',
+            'with no noise',
             'no tf100% tf',
             'no tf100% tf-repeat',
         ]
@@ -147,7 +149,20 @@ legend = [
 #         # 'multi-head 200unit - ts[both]',
 
 #         ]
+# %%
+x = np.arange(-3,3,0.1)
+x
+y = np.random.normal(0, 0.2, 100)
+plt.plot(y)
+plt.plot(x,y)
+np.durations
+tf.math.add(2,
+            tf.random.normal(y_shape[0], mean=0.0,
+            stddev=0.2, dtype=tf.dtypes.float32)) # to help avoid overfitting
+# %%
 
+tf.random.normal([], mean=0.0,
+stddev=0.2, dtype=tf.dtypes.float32)
 # %%
 for item in exp_vals:
 # for item in ['exp005', 'exp003']:
