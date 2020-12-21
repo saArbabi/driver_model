@@ -34,7 +34,9 @@ states_train, targets_train, conditions_train, \
                             states_val, targets_val, conditions_val = data_objs
 
 states_train[4][10][-1]
-conditions_train[4][1][10]
+conditions_train[4][2][10]
+.shape
+[1][10]
 targets_train[4][1][10]
 
 size = 0
@@ -46,7 +48,7 @@ size
 states_train[4].shape
 # %%
 plt.plot(states_train[4][0, :, 3])
-plt.plot(states_train[4][0, :, 3]+np.random.normal(0, 0.2, 20))
+plt.plot(states_train[4][0, :, 3]+np.random.normal(0, 0.3, 20))
 # %%
 for i in range(0, 5):
     plt.figure()
