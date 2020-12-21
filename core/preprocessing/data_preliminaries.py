@@ -141,15 +141,27 @@ vis_dataDistribution(target_arr, target_col)
 
 
 #%%
+spec['frm_n'].plot.hist(bins=125)
 all_episodes = spec['episode_id'].values
-validation_episodes = np.random.choice(all_episodes, int(0.1*len(all_episodes)), replace=False)
-test_episodes = spec.loc[(spec['episode_id'].isin(validation_episodes)) &
-                                        (spec['frm_n']>60) &
-                                        (spec['f_id']>0) &
-                                        (spec['fadj_id']>0)]['episode_id'].sample(50).values
+test_episodes = spec.loc[(spec['frm_n']>40) &
+                        (spec['frm_n']<50) &
+                        (spec['f_id']>0) &
+                        (spec['fadj_id']>0)]['episode_id'].sample(50, replace=False).values
+validation_n = int(0.08*len(all_episodes))-int(len(test_episodes))
+validation_episodes = spec[~spec['episode_id'].isin(test_episodes)]['episode_id'].sample(  \
+                                    validation_n, replace=False).values
+validation_episodes = np.append(validation_episodes, test_episodes)
+validation_episodes = np.append(validation_episodes, [2895, 1289, 1037, 2870, 2400, 1344, 2872, 2266, 2765, 2215])
 training_episodes = np.setdiff1d(all_episodes, validation_episodes)
-
 len(validation_episodes)/len(training_episodes)
+
+# %%
+
+np.random.choice(all_episodes,), replace=False)
+
+
+# %%
+
 all_episodes[all_episodes == 2895]
 test_episodes[test_episodes == 2895]
 training_episodes[training_episodes == 2895]
@@ -182,7 +194,7 @@ for episode_id in all_episodes[0:5]:
 
 data_saver(state_arr, 'states_arr')
 data_saver(target_arr, 'targets_arr')
-data_saver(condition_arr, 'conditions_arr')
+# data_saver(condition_arr, 'conditions_arr')
 
 data_saver(training_episodes, 'training_episodes')
 data_saver(validation_episodes, 'validation_episodes')
