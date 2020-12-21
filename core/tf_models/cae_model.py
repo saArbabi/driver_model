@@ -31,19 +31,22 @@ class Encoder(tf.keras.Model):
         return self.linear_enc_4(inputs)
 
     def architecture_def(self):
-        self.lstm_layers_1 = LSTM(self.enc_units, return_sequences=True)
+        # self.lstm_layers_1 = LSTM(self.enc_units, return_sequences=True)
         self.lstm_layers_2 = LSTM(self.enc_units, return_state=True)
-        self.linear_enc_1 = TimeDistributed(Dense(200, activation='relu'))
-        self.linear_enc_2 = TimeDistributed(Dense(200, activation='relu'))
-        self.linear_enc_3 = TimeDistributed(Dense(200, activation='relu'))
-        self.linear_enc_4 = TimeDistributed(Dense(20))
+        # self.linear_enc_1 = TimeDistributed(Dense(200, activation='relu'))
+        # self.linear_enc_2 = TimeDistributed(Dense(200, activation='relu'))
+        # self.linear_enc_3 = TimeDistributed(Dense(200, activation='relu'))
+        # self.linear_enc_4 = TimeDistributed(Dense(20))
 
     def call(self, inputs):
         # Defines the computation from inputs to outputs
         # _, state_h, state_c = self.lstm_layers(inputs)
         # _, state_h, state_c = self.lstm_layers(inputs)
         # return self.stacked_lstms(inputs)
-        return self.stacked_lstms(self.none_linear_enc(inputs))
+        # return self.stacked_lstms(self.none_linear_enc(inputs))
+        _, h_s2, c_s2 = self.lstm_layers_2(inputs)
+
+        return [h_s2, c_s2]
 
 class Decoder(tf.keras.Model):
     def __init__(self, config, model_use):
