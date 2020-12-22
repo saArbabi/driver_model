@@ -53,8 +53,8 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 100,
-     "dec_units": 100,
+     "enc_units": 200,
+     "dec_units": 200,
      "epochs_n": 50,
      "components_n": 10,
     "batch_size": 1024,
@@ -130,18 +130,15 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
 # train_debugger()
 durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
-                                        exp_vals, config, 'exp005')
+                                        exp_vals, config, 'exp002')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
 
 
 legend = [
-            'with noise',
-            'with no noise',
-            'with noise, truth',
-            'with noise, truth2',
-            'with noise, truth3',
+            'jerk',
+            'jerk2',
         ]
 
 # legend = [
