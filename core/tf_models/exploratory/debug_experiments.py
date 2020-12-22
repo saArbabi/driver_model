@@ -61,8 +61,8 @@ config = {
     "teacher_percent": 1.0,
 },
 "data_config": {"obs_n": 20,
-                "pred_step_n": 4,
-                "step_size": 5,
+                "pred_step_n": 20,
+                "step_size": 1,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 
@@ -130,7 +130,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
 # train_debugger()
 durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
-                                        exp_vals, config, 'exp002')
+                                        exp_vals, config, 'exp006')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
@@ -139,6 +139,9 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
 legend = [
             'jerk',
             'jerk2',
+            'jerk3',
+            'jerk3-0.3',
+            'jerk3-0.0.1',
         ]
 
 # legend = [
@@ -155,9 +158,10 @@ for item in exp_vals:
     # plt.plot(exp_trains[item], '--')
 
 plt.grid()
-plt.xticks(np.arange(10))
+plt.xticks(np.arange(5))
 
 plt.legend(legend)
+
 # %%
 for item in exp_vals:
 # for item in ['exp005', 'exp003']:

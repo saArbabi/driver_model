@@ -48,7 +48,7 @@ size
 states_train[4].shape
 # %%
 plt.plot(states_train[4][100, :, 3])
-plt.plot(states_train[4][100, :, 3]+np.random.normal(0, 0.02, 20))
+plt.plot(states_train[4][100, :, 3]+np.random.normal(0, 0.01, 20))
 # %%
 for i in range(0, 5):
     plt.figure()

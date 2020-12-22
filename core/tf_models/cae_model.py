@@ -109,7 +109,7 @@ class Decoder(tf.keras.Model):
         """Also trim the actions so avoid errors cascating
         """
         action = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
-        return tf.clip_by_value(action, -3.0, 3.0) 
+        return tf.clip_by_value(action, -3.0, 3.0)
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
@@ -250,12 +250,12 @@ class Decoder(tf.keras.Model):
             if self.model_use == 'training' or self.model_use == 'validating':
                 if step < steps_n-1:
 
-                    step_cond_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
-                    step_cond_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
+                    step_cond_f = act_f
+                    step_cond_fadj = act_fadj
 
                     step_cond_m = self.axis2_conc([
-                                    tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1]),
-                                    tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1]),
+                                    act_mlon,
+                                    act_mlat,
                                     tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1]),
                                     tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1]),
                                     tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])])
@@ -263,7 +263,7 @@ class Decoder(tf.keras.Model):
                     step_cond_y = self.axis2_conc([
                                     tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1]),
                                     tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1]),
-                                    tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1]),
+                                    act_y,
                                     tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])])
 
             elif self.model_use == 'inference':
