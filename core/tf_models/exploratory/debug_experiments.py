@@ -53,16 +53,16 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 200,
-     "dec_units": 200,
+     "enc_units": 100,
+     "dec_units": 100,
      "epochs_n": 50,
      "components_n": 10,
     "batch_size": 1024,
     "teacher_percent": 1.0,
 },
 "data_config": {"obs_n": 20,
-                "pred_step_n": 20,
-                "step_size": 1,
+                "pred_step_n": 4,
+                "step_size": 5,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 
