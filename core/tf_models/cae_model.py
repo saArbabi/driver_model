@@ -184,7 +184,6 @@ class Decoder(tf.keras.Model):
             outputs, state_h_m, state_c_m = self.lstm_layer_m(self.axis2_conc([step_cond_m, enc_h]), \
                                     initial_state=[state_h_m, state_c_m])
             outputs = self.linear_layer_m(outputs)
-
             alphas = self.alphas_mlon(outputs)
             mus = tf.math.add(self.mus_mlon(outputs), act_mlon)
             sigmas = self.sigmas_mlon(outputs)
@@ -248,19 +247,38 @@ class Decoder(tf.keras.Model):
             act_f = sample_f
             act_fadj = sample_fadj
 
-            step_cond_f = sample_f
-            step_cond_fadj = sample_fadj
+            if self.model_use == 'training' or self.model_use == 'validating':
+                if step < steps_n-1:
 
-            step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                    sample_y,
-                                                    sample_f,
-                                                    sample_fadj])
+                    step_cond_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
+                    step_cond_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
 
-            step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
-                                                    sample_y,
-                                                    sample_fadj])
+                    step_cond_m = self.axis2_conc([
+                                    tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1]),
+                                    tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1]),
+                                    tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1]),
+                                    tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1]),
+                                    tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])])
 
-            if self.model_use == 'inference':
+                    step_cond_y = self.axis2_conc([
+                                    tf.slice(conditions[0], [0, step+1, 0], [batch_size, 1, 1]),
+                                    tf.slice(conditions[1], [0, step+1, 0], [batch_size, 1, 1]),
+                                    tf.slice(conditions[2], [0, step+1, 0], [batch_size, 1, 1]),
+                                    tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])])
+
+            elif self.model_use == 'inference':
+                step_cond_f = act_f
+                step_cond_fadj = act_fadj
+
+                step_cond_m = self.axis2_conc([act_mlon, act_mlat,
+                                                        act_y,
+                                                        act_f,
+                                                        act_fadj])
+
+                step_cond_y = self.axis2_conc([act_mlon, act_mlat,
+                                                        act_y,
+                                                        act_fadj])
+
                 pred_act_mlon = self.concat_vecs(act_mlon, pred_act_mlon, step)
                 pred_act_mlat = self.concat_vecs(act_mlat, pred_act_mlat, step)
                 pred_act_y = self.concat_vecs(act_y, pred_act_y, step)

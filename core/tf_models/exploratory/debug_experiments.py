@@ -15,7 +15,7 @@ import time
 exp_trains = {}
 exp_vals = {}
 durations = {}
-
+# %%
 
 # %%
 def teacher_check(true, sample):
