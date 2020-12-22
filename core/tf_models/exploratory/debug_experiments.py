@@ -130,15 +130,15 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
 # train_debugger()
 durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
-                                        exp_vals, config, 'exp001')
+                                        exp_vals, config, 'exp002')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
 
 
 legend = [
-            'jerk',
             'no jerk',
+            'jerk',
         ]
 
 # legend = [
