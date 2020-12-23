@@ -243,7 +243,7 @@ class Decoder(tf.keras.Model):
                     step_cond_fadj = sample_fadj
 
                     step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
-                                                            sample_y,
+                                                            act_y,
                                                             act_f,
                                                             act_fadj])
 
