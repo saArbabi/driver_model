@@ -58,7 +58,7 @@ config = {
      "epochs_n": 50,
      "components_n": 5,
     "batch_size": 1024,
-    "teacher_percent": 1.0,
+    "teacher_percent": 0.9,
 },
 "data_config": {"obs_n": 20,
                 "pred_step_n": 4,
@@ -130,17 +130,16 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
 # train_debugger()
 durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
-                                        exp_vals, config, 'exp004')
+                                        exp_vals, config, 'exp002')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
 
 
 legend = [
-            'no jerk',
-            'jerk',
-            'no jerk 5',
-            'no jerk 5, 70',
+            '1',
+            '0.9',
+            '0.5',
 
         ]
 
