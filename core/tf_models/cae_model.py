@@ -244,12 +244,12 @@ class Decoder(tf.keras.Model):
 
                     step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
                                                             sample_y,
-                                                            sample_f,
-                                                            sample_fadj])
+                                                            act_f,
+                                                            act_fadj])
 
-                    step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
                                                             sample_y,
-                                                            sample_fadj])
+                                                            act_fadj])
 
 
             elif self.model_use == 'inference':
