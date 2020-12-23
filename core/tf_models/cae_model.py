@@ -289,8 +289,6 @@ class Decoder(tf.keras.Model):
             return sampled_actions
             # return sampled_actions, gmm_mlon, gmm_mlat
 
-
-
 class CAE(abstract_model.AbstractModel):
     def __init__(self, config, model_use):
         super(CAE, self).__init__(config)
