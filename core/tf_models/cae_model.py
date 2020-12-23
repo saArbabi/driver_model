@@ -286,8 +286,8 @@ class Decoder(tf.keras.Model):
             gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
             gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
 
-            return sampled_actions
-            # return sampled_actions, gmm_mlon, gmm_mlat
+            # return sampled_actions
+            return sampled_actions, gmm_mlon, gmm_mlat
 
 class CAE(abstract_model.AbstractModel):
     def __init__(self, config, model_use):
