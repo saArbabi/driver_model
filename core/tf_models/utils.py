@@ -74,7 +74,7 @@ def loss_other(y, mvn):
     y_shape = tf.shape(y)
     y = tf.math.add(y,
                 tf.random.normal([y_shape[0], 1, 1], mean=0.0,
-                stddev=0.2, dtype=tf.dtypes.float32)) # to help avoid overfitting
+                stddev=0.01, dtype=tf.dtypes.float32)) # to help avoid overfitting
 
     log_likelihood = mvn.log_prob(tf.reshape(y, [y_shape[0], y_shape[1]]))
     # shape: [sample_shape, batch_shape]
