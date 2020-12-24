@@ -251,7 +251,6 @@ class Decoder(tf.keras.Model):
                                                             sample_y,
                                                             act_fadj])
 
-
             elif self.model_use == 'inference':
                 pred_act_mlon = self.concat_vecs(sample_mlon, pred_act_mlon, step)
                 pred_act_mlat = self.concat_vecs(sample_mlat, pred_act_mlat, step)

@@ -53,16 +53,16 @@ https://www.tensorflow.org/probability/examples/Understanding_TensorFlow_Distrib
 config = {
  "model_config": {
      "learning_rate": 1e-3,
-     "enc_units": 70,
-     "dec_units": 70,
+     "enc_units": 100,
+     "dec_units": 100,
      "epochs_n": 50,
      "components_n": 5,
     "batch_size": 1024,
     "teacher_percent": 0.9,
 },
 "data_config": {"obs_n": 20,
-                "pred_step_n": 4,
-                "step_size": 5,
+                "pred_step_n": 7,
+                "step_size": 3,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 
@@ -137,8 +137,8 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
 
 
 legend = [
-            '1',
-            '0.9',
+            '70',
+            '100',
             '0.5',
 
         ]
