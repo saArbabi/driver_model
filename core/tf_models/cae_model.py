@@ -150,7 +150,7 @@ class Decoder(tf.keras.Model):
                                 (gauss_param_mlon, tf.TensorShape([None,None,None])),
                                 (gauss_param_mlat, tf.TensorShape([None,None,None])),
                                 (gauss_param_y, tf.TensorShape([None,None,None])),
-                                (gauss_param_f, tf.TensorShape([None,None,None])), 
+                                (gauss_param_f, tf.TensorShape([None,None,None])),
                                 (gauss_param_fadj, tf.TensorShape([None,None,None])),
                                 (step_cond_m, tf.TensorShape([None,None,5])),
                                 (step_cond_y, tf.TensorShape([None,None,4])),
@@ -341,8 +341,8 @@ class Decoder(tf.keras.Model):
             gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
             gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
 
-            return sampled_actions
-            # return sampled_actions, gmm_mlon, gmm_mlat
+            # return sampled_actions
+            return sampled_actions, gmm_mlon, gmm_mlat
 
 
 
