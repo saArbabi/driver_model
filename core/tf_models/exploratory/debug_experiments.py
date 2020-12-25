@@ -58,7 +58,6 @@ config = {
      "epochs_n": 50,
      "components_n": 5,
     "batch_size": 1024,
-    "teacher_percent": 0.9,
 },
 "data_config": {"obs_n": 20,
                 "pred_step_n": 7,
@@ -137,9 +136,9 @@ durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
 
 
 legend = [
-            '70',
-            '100',
-            '0.5',
+            '1',
+            '2',
+            '3',
 
         ]
 

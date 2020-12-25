@@ -19,13 +19,22 @@ class Encoder(tf.keras.Model):
         self.enc_units = config['model_config']['enc_units']
         self.architecture_def()
 
+    def enc_embedding(self, inputs):
+        output = self.linear_layer_1(inputs)
+        output = self.linear_layer_2(output)
+        output = self.linear_layer_3(output)
+        return self.linear_layer_4(output)
+
     def architecture_def(self):
+        self.linear_layer_1 = TimeDistributed(Dense(100, activation=K.relu))
+        self.linear_layer_2 = TimeDistributed(Dense(100, activation=K.relu))
+        self.linear_layer_3 = TimeDistributed(Dense(100, activation=K.relu))
+        self.linear_layer_4 = TimeDistributed(Dense(20))
         self.lstm_layer = LSTM(self.enc_units, return_state=True)
 
     def call(self, inputs):
-        _, h_s2, c_s2 = self.lstm_layer(inputs)
+        _, h_s2, c_s2 = self.lstm_layer(self.enc_embedding(inputs))
         return [h_s2, c_s2]
-
 
 class Decoder(tf.keras.Model):
     def __init__(self, config, model_use):
