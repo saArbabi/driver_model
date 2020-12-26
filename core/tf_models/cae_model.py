@@ -19,22 +19,13 @@ class Encoder(tf.keras.Model):
         self.enc_units = config['model_config']['enc_units']
         self.architecture_def()
 
-    def enc_embedding(self, inputs):
-        output = self.linear_layer_1(inputs)
-        output = self.linear_layer_2(output)
-        output = self.linear_layer_3(output)
-        return self.linear_layer_4(output)
-
     def architecture_def(self):
-        self.linear_layer_1 = TimeDistributed(Dense(100, activation=K.relu))
-        self.linear_layer_2 = TimeDistributed(Dense(100, activation=K.relu))
-        self.linear_layer_3 = TimeDistributed(Dense(100, activation=K.relu))
-        self.linear_layer_4 = TimeDistributed(Dense(20))
         self.lstm_layer = LSTM(self.enc_units, return_state=True)
 
     def call(self, inputs):
-        _, h_s2, c_s2 = self.lstm_layer(self.enc_embedding(inputs))
+        _, h_s2, c_s2 = self.lstm_layer(inputs)
         return [h_s2, c_s2]
+
 
 class Decoder(tf.keras.Model):
     def __init__(self, config, model_use):
@@ -148,7 +139,7 @@ class Decoder(tf.keras.Model):
         act_fadj = tf.slice(conditions[4], [0, 0  , 0], [batch_size, 1, 1])
 
         step_cond_m = self.axis2_conc([act_mlon, act_mlat, act_y, act_f, act_fadj])
-        step_cond_y = act_y
+        step_cond_y = self.axis2_conc([act_mlon, act_mlat, act_y, act_fadj])
         step_cond_f = act_f
         step_cond_fadj = act_fadj
 
@@ -162,7 +153,7 @@ class Decoder(tf.keras.Model):
                                 (gauss_param_f, tf.TensorShape([None,None,None])),
                                 (gauss_param_fadj, tf.TensorShape([None,None,None])),
                                 (step_cond_m, tf.TensorShape([None,None,5])),
-                                (step_cond_y, tf.TensorShape([None,None,1])),
+                                (step_cond_y, tf.TensorShape([None,None,4])),
                                 (step_cond_f, tf.TensorShape([None,None,1])),
                                 (step_cond_fadj, tf.TensorShape([None,None,1]))])
 
@@ -239,13 +230,14 @@ class Decoder(tf.keras.Model):
                 step_cond_f = sample_f
                 step_cond_fadj = sample_fadj
 
-
                 step_cond_m = self.axis2_conc([sample_mlon, sample_mlat,
                                                         sample_y,
                                                         sample_f,
                                                         sample_fadj])
 
-                step_cond_y = sample_y
+                step_cond_y = self.axis2_conc([sample_mlon, sample_mlat,
+                                                        sample_y,
+                                                        sample_fadj])
 
         else:
 
@@ -257,7 +249,7 @@ class Decoder(tf.keras.Model):
                                 (gauss_param_f, tf.TensorShape([None,None,None])),
                                 (gauss_param_fadj, tf.TensorShape([None,None,None])),
                                 (step_cond_m, tf.TensorShape([None,None,5])),
-                                (step_cond_y, tf.TensorShape([None,None,1])),
+                                (step_cond_y, tf.TensorShape([None,None,4])),
                                 (step_cond_f, tf.TensorShape([None,None,1])),
                                 (step_cond_fadj, tf.TensorShape([None,None,1]))])
 
@@ -325,13 +317,14 @@ class Decoder(tf.keras.Model):
                     step_cond_f = act_f
                     step_cond_fadj = act_fadj
 
-
                     step_cond_m = self.axis2_conc([act_mlon, act_mlat,
                                                             act_y,
                                                             act_f,
                                                             act_fadj])
 
-                    step_cond_y = act_y
+                    step_cond_y = self.axis2_conc([act_mlon, act_mlat,
+                                                            act_y,
+                                                            act_fadj])
 
         if self.model_use == 'training' or self.model_use == 'validating':
             gmm_mlon = get_pdf(gauss_param_mlon, 'other_vehicle')
@@ -350,9 +343,7 @@ class Decoder(tf.keras.Model):
 
             # return sampled_actions
             return sampled_actions, gmm_mlon, gmm_mlat
-
-
-
+ 
 class CAE(abstract_model.AbstractModel):
     def __init__(self, config, model_use):
         super(CAE, self).__init__(config)
