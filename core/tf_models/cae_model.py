@@ -50,7 +50,6 @@ class Decoder(tf.keras.Model):
         self.context_linear_y = TimeDistributed(Dense(self.dec_units+10))
         self.context_linear_f = TimeDistributed(Dense(self.dec_units+10))
         self.context_linear_fadj = TimeDistributed(Dense(self.dec_units+10))
-
         """Merger vehicle
         """
         self.alphas_mlon = Dense(self.components_n, activation=K.softmax, name="alphas")
@@ -262,7 +261,8 @@ class Decoder(tf.keras.Model):
 
                 """Merger vehicle long
                 """
-                outputs, state_h_m, state_c_m = self.lstm_layer_m(self.axis2_conc([step_cond_m, enc_h]), \
+                outputs, state_h_m, state_c_m = self.lstm_layer_m(
+                self.context_linear_m(self.axis2_conc([step_cond_m, enc_h])), \
                                         initial_state=[state_h_m, state_c_m])
                 outputs = self.gmm_linear_m(outputs)
 
@@ -280,7 +280,8 @@ class Decoder(tf.keras.Model):
                 gauss_param_mlat = self.concat_vecs(gauss_param_vec, gauss_param_mlat, step)
                 """Yielder vehicle
                 """
-                outputs, state_h_y, state_c_y = self.lstm_layer_y(self.axis2_conc([step_cond_y, enc_h]), \
+                outputs, state_h_y, state_c_y = self.lstm_layer_y(
+                self.context_linear_y(self.axis2_conc([step_cond_y, enc_h])), \
                                         initial_state=[state_h_y, state_c_y])
                 outputs = self.gmm_linear_y(outputs)
 
@@ -291,7 +292,8 @@ class Decoder(tf.keras.Model):
                 gauss_param_y = self.concat_vecs(gauss_param_vec, gauss_param_y, step)
                 """F vehicle
                 """
-                outputs, state_h_f, state_c_f = self.lstm_layer_f(self.axis2_conc([step_cond_f, enc_h]), \
+                outputs, state_h_f, state_c_f = self.lstm_layer_f(
+                self.context_linear_f(self.axis2_conc([step_cond_f, enc_h])), \
                                         initial_state=[state_h_f, state_c_f])
                 outputs = self.gmm_linear_f(outputs)
 
@@ -302,7 +304,8 @@ class Decoder(tf.keras.Model):
                 gauss_param_f = self.concat_vecs(gauss_param_vec, gauss_param_f, step)
                 """Fadj vehicle
                 """
-                outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(self.axis2_conc([step_cond_fadj, enc_h]), \
+                outputs, state_h_fadj, state_c_fadj = self.lstm_layer_fadj(
+                self.context_linear_fadj(self.axis2_conc([step_cond_fadj, enc_h])), \
                                         initial_state=[state_h_fadj, state_c_fadj])
                 outputs = self.gmm_linear_fadj(outputs)
 
