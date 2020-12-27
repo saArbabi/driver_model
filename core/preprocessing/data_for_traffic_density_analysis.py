@@ -31,13 +31,14 @@ def data_saver(data, data_name):
 
 
 # %%
-high_density_episodes = pickup_episodes(speeds, max_speed=25, min_speed=14, episode_n=50)
+low_density_episodes = pickup_episodes(speeds, max_speed=25, min_speed=14, episode_n=50)
 medium_density_episodes = pickup_episodes(speeds, max_speed=16, min_speed=8, episode_n=50)
-low_density_episodes = pickup_episodes(speeds, max_speed=8, min_speed=0, episode_n=50)
+high_density_episodes = pickup_episodes(speeds, max_speed=8, min_speed=0, episode_n=50)
 
-data_saver(high_density_episodes, 'high_density_test_episodes')
 data_saver(medium_density_episodes, 'medium_density_test_episodes')
 data_saver(low_density_episodes, 'low_density_test_episodes')
+data_saver(high_density_episodes, 'high_density_test_episodes')
+
 # %%
 file_name = './datasets/' + 'high_density_states_test'
 with open(file_name, "wb") as f:
