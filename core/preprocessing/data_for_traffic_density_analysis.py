@@ -38,7 +38,11 @@ high_density_episodes = pickup_episodes(speeds, max_speed=8, min_speed=0, episod
 data_saver(medium_density_episodes, 'medium_density_test_episodes')
 data_saver(low_density_episodes, 'low_density_test_episodes')
 data_saver(high_density_episodes, 'high_density_test_episodes')
-
+894,  800, 2714, 2636, 1694, 2872, 1281, 1793, 2577, 2173, 2840,
+       1935, 1115, 2553, 1585, 2895, 1933,  895, 2546, 2521, 1669, 2026,
+       2800, 2772, 2126, 1563, 1601, 2815, 2047, 1732,  640, 1952,  835,
+       2870, 1251, 1618, 2625, 1515, 1841, 2584, 2000, 2691, 1962, 2344,
+       2753, 1462,  839, 2891, 2423, 2805
 # %%
 file_name = './datasets/' + 'high_density_states_test'
 with open(file_name, "wb") as f:
@@ -66,4 +70,10 @@ file_name = './datasets/' + 'low_density_targets_test'
 with open(file_name, "wb") as f:
     _arr = all_target_arr[np.isin(all_target_arr[:, 0], low_density_episodes)]
     pickle.dump(_arr, f)
+
+
 # %%
+hist
+plt.hist(_arr[:,1], bins=50)
+plt.hist(_arr[:,1], bins=50)
+_arr
