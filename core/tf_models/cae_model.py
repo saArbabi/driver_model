@@ -50,7 +50,6 @@ class Decoder(tf.keras.Model):
         self.context_linear_y = TimeDistributed(Dense(self.dec_units+10))
         self.context_linear_f = TimeDistributed(Dense(self.dec_units+10))
         self.context_linear_fadj = TimeDistributed(Dense(self.dec_units+10))
-
         """Merger vehicle
         """
         self.alphas_mlon = Dense(self.components_n, activation=K.softmax, name="alphas")
