@@ -33,7 +33,7 @@ class Decoder(tf.keras.Model):
         self.components_n = config['model_config']['components_n'] # number of Mixtures
         self.dec_units = config['model_config']['dec_units']
         self.pred_step_n = config['data_config']['pred_step_n']
-        self.teacher_percent = config['model_config']['teacher_percent']
+        self.allowed_error = config['model_config']['allowed_error']
         self.steps_n = None # note self.steps_n =< self.pred_step_n
         self.model_use = model_use # can be training or inference
         self.architecture_def()
@@ -51,7 +51,7 @@ class Decoder(tf.keras.Model):
         self.context_linear_m = TimeDistributed(Dense(self.dec_units+10))
         self.context_linear_y = TimeDistributed(Dense(self.dec_units+10))
         self.context_linear_f = TimeDistributed(Dense(self.dec_units+10))
-        self.context_linear_fadj = TimeDistributed(Dense(self.dec_units+10)) 
+        self.context_linear_fadj = TimeDistributed(Dense(self.dec_units+10))
 
         """Merger vehicle
         """
@@ -91,11 +91,11 @@ class Decoder(tf.keras.Model):
         """concats tensor along the time-step axis(2)"""
         return tf.concat(items_list, axis=2)
 
-    def teacher_force(self, true, sample, batch_size):
-        coin_flip = tf.random.uniform([batch_size, 1, 1])
-        less = tf.cast(tf.math.less(coin_flip, self.teacher_percent), dtype='float')
-        greater = tf.cast(tf.math.greater_equal(coin_flip, self.teacher_percent), dtype='float')
-        return  tf.math.add(tf.multiply(less, true), tf.multiply(greater, sample))
+    def teacher_check(self, true, sample):
+        error = tf.math.abs(tf.math.subtract(sample, true))
+        less = tf.cast(tf.math.less(error, self.allowed_error), dtype='float')
+        greater = tf.cast(tf.math.greater_equal(error, self.allowed_error), dtype='float')
+        return  tf.math.add(tf.multiply(greater, true), tf.multiply(less, sample))
 
     def sample_action(self, gmm, batch_size):
         """Also trim the actions so avoid errors cascating
@@ -241,11 +241,11 @@ class Decoder(tf.keras.Model):
                     act_f = tf.slice(conditions[3], [0, step+1, 0], [batch_size, 1, 1])
                     act_fadj = tf.slice(conditions[4], [0, step+1, 0], [batch_size, 1, 1])
 
-                    sample_mlon = self.teacher_force(act_mlon, sample_mlon, batch_size)
-                    sample_mlat = self.teacher_force(act_mlat, sample_mlat, batch_size)
-                    sample_y = self.teacher_force(act_y, sample_y, batch_size)
-                    sample_f = self.teacher_force(act_f, sample_f, batch_size)
-                    sample_fadj = self.teacher_force(act_fadj, sample_fadj, batch_size)
+                    sample_mlon = self.teacher_check(act_mlon, sample_mlon)
+                    sample_mlat = self.teacher_check(act_mlat, sample_mlat)
+                    sample_y = self.teacher_check(act_y, sample_y)
+                    sample_f = self.teacher_check(act_f, sample_f)
+                    sample_fadj = self.teacher_check(act_fadj, sample_fadj)
 
                     step_cond_f = sample_f
                     step_cond_fadj = sample_fadj

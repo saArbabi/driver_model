@@ -58,6 +58,7 @@ config = {
      "epochs_n": 50,
      "components_n": 5,
     "batch_size": 1024,
+    "allowed_error": 0.3,
 },
 "data_config": {"obs_n": 20,
                 "pred_step_n": 7,
@@ -129,7 +130,7 @@ def train_exp(durations, exp_trains, exp_vals, config, exp_name):
 
 # train_debugger()
 durations, exp_trains, exp_vals = train_exp(durations, exp_trains,
-                                        exp_vals, config, 'exp001')
+                                        exp_vals, config, 'exp002')
 # del exp_trains['exp003']
 # del exp_vals['exp004']
 # del exp_trains['exp004']
