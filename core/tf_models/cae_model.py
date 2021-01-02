@@ -99,9 +99,11 @@ class Decoder(tf.keras.Model):
 
     def sample_action(self, gmm, batch_size):
         """Also trim the actions so avoid errors cascating
+        TODO: Refactor to speed up training
         """
-        action = tf.reshape(gmm.sample(1), [batch_size, 1, 1])
-        return tf.clip_by_value(action, -3.0, 3.0)
+        action = gmm.sample(1)
+        likelihood = gmm.prob(action)
+        return tf.reshape(action, [batch_size, 1, 1]), tf.reshape(likelihood, [batch_size, 1, 1])
 
     def call(self, inputs):
         # input[0] = conditions, shape = (batch, steps_n, feature_size)
@@ -142,6 +144,9 @@ class Decoder(tf.keras.Model):
         pred_act_f = tf.zeros([batch_size, 1, 1], dtype=tf.float32)
         pred_act_fadj = tf.zeros([batch_size, 1, 1], dtype=tf.float32)
 
+        pred_prob_mlon = tf.zeros([batch_size, 1, 1], dtype=tf.float32)
+        pred_prob_mlat = tf.zeros([batch_size, 1, 1], dtype=tf.float32)
+
         # First step conditional
         act_mlon = tf.slice(conditions[0], [0, 0, 0], [batch_size, 1, 1])
         act_mlat = tf.slice(conditions[1], [0, 0, 0], [batch_size, 1, 1])
@@ -178,7 +183,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_mlon(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_mlon = self.sample_action(gmm, batch_size)
+            sample_mlon, prob_mlon = self.sample_action(gmm, batch_size)
             gauss_param_mlon = self.concat_vecs(gauss_param_vec, gauss_param_mlon, step)
             """Merger vehicle lat
             """
@@ -187,7 +192,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_mlat(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_mlat = self.sample_action(gmm, batch_size)
+            sample_mlat, prob_mlat = self.sample_action(gmm, batch_size)
             gauss_param_mlat = self.concat_vecs(gauss_param_vec, gauss_param_mlat, step)
             """Yielder vehicle
             """
@@ -201,7 +206,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_y(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_y = self.sample_action(gmm, batch_size)
+            sample_y, _ = self.sample_action(gmm, batch_size)
             gauss_param_y = self.concat_vecs(gauss_param_vec, gauss_param_y, step)
             """F vehicle
             """
@@ -215,7 +220,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_f(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_f = self.sample_action(gmm, batch_size)
+            sample_f, _ = self.sample_action(gmm, batch_size)
             gauss_param_f = self.concat_vecs(gauss_param_vec, gauss_param_f, step)
             """Fadj vehicle
             """
@@ -229,7 +234,7 @@ class Decoder(tf.keras.Model):
             sigmas = self.sigmas_fadj(outputs)
             gauss_param_vec = self.pvector([alphas, mus, sigmas])
             gmm = get_pdf(gauss_param_vec, 'other_vehicle')
-            sample_fadj = self.sample_action(gmm, batch_size)
+            sample_fadj, _ = self.sample_action(gmm, batch_size)
             gauss_param_fadj = self.concat_vecs(gauss_param_vec, gauss_param_fadj, step)
             """Conditioning
             """
@@ -266,6 +271,9 @@ class Decoder(tf.keras.Model):
                 pred_act_f = self.concat_vecs(sample_f, pred_act_f, step)
                 pred_act_fadj = self.concat_vecs(sample_fadj, pred_act_fadj, step)
 
+                pred_prob_mlon = self.concat_vecs(prob_mlon, pred_prob_mlon, step)
+                pred_prob_mlat = self.concat_vecs(prob_mlat, pred_prob_mlat, step)
+
                 step_cond_f = sample_f
                 step_cond_fadj = sample_fadj
 
@@ -294,7 +302,7 @@ class Decoder(tf.keras.Model):
             gmm_mlat = get_pdf(gauss_param_mlat, 'other_vehicle')
 
             # return sampled_actions
-            return sampled_actions, gmm_mlon, gmm_mlat
+            return sampled_actions, gmm_mlon, gmm_mlat, pred_prob_mlon, pred_prob_mlat
 
 class CAE(abstract_model.AbstractModel):
     def __init__(self, config, model_use):
