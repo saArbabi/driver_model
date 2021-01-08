@@ -141,6 +141,7 @@ vis_dataDistribution(target_arr, target_col)
 
 
 #%%
+len(all_episodes)
 spec['frm_n'].plot.hist(bins=125)
 all_episodes = spec['episode_id'].values
 test_episodes = spec.loc[(spec['frm_n']>40) &

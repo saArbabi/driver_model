@@ -20,9 +20,9 @@ config = {
      "epochs_n": 50,
      "components_n": 5
 },
-"data_config": {"obs_n": 20,
-                "pred_step_n": 4,
-                "step_size": 5,
+"data_config": {"obs_n": 10,
+                "pred_step_n": 7,
+                "step_size": 3,
                 "Note": "lat/long motion not considered jointly"
                 # "Note": "jerk as target"
 },
@@ -33,7 +33,10 @@ data_objs =  DataObj(config).loadData()
 states_train, targets_train, conditions_train, \
                             states_val, targets_val, conditions_val = data_objs
 
+
+# %%
 states_train[4][10][-1]
+states_train[4][10].shape
 conditions_train[4][2][10]
 .shape
 [1][10]
